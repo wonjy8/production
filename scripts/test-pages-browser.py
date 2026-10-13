@@ -86,7 +86,7 @@ with tempfile.TemporaryDirectory() as td:
    page.wait_for_function('!!window.activeReferenceId')
    assert page.locator('.breadcrumbs button').all_text_contents()[:2]==['자료','레퍼런스']
    canvas_width=page.locator('.canvas').bounding_box()['width']
-   page.locator('.sidebar-hub').click()
+   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
    page.wait_for_function("document.body.classList.contains('hub-visible')")
    page.wait_for_timeout(250)
    assert page.locator('.canvas').bounding_box()['width']<canvas_width-250
@@ -207,14 +207,32 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.get_by_role('button',name='연결 해제',exact=True).click()
    assert fresh_page.get_by_label('Figma 연결 주소').input_value()==''
    fresh_page.set_viewport_size({'width':390,'height':844})
-   fresh_page.locator('#menu').click()
-   fresh_page.locator('.sidebar-hub').click()
-   fresh_page.locator('.hub-sidebar').wait_for(state='visible')
-   assert fresh_page.locator('.hub-sidebar').is_visible()
-   assert fresh_page.locator('.hub-sidebar').bounding_box()['width']<=390
-   fresh_page.get_by_role('button',name='Hub 닫기',exact=True).click()
-   fresh_page.wait_for_function("!document.body.classList.contains('hub-visible')")
+   assert fresh_page.locator('.mobile-bottom-nav').is_visible()
+   fresh_page.wait_for_function('document.querySelectorAll(".mobile-bottom-nav [data-main-space]").length === 4')
+   assert not fresh_page.locator('#sidebar').is_visible()
+   fresh_page.locator('.mobile-bottom-nav [data-main-space=references]').click()
+   fresh_page.locator('.workspace-landing-card[data-workspace-section=sources]').wait_for()
+   assert fresh_page.locator('.workspace-landing-card').all_text_contents()==['레퍼런스','소스','포트폴리오']
+   fresh_page.locator('.workspace-landing-card[data-workspace-section=sources]').click()
+   fresh_page.locator('#refpanel').wait_for(state='visible')
+   fresh_page.get_by_role('button',name='워크스페이스 첫 화면으로 돌아가기').click()
+   fresh_page.locator('.workspace-landing-card').first.wait_for()
+   fresh_page.locator('.mobile-bottom-nav [data-main-space=database]').click()
+   fresh_page.locator('.workspace-landing-card[data-workspace-section=locations]').wait_for()
+   assert fresh_page.locator('.workspace-landing-card').all_text_contents()==['멤버·장비','대여처','장소']
+   fresh_page.locator('.workspace-landing-card[data-workspace-section=locations]').click()
+   fresh_page.locator('#database-panel').wait_for(state='visible')
+   fresh_page.locator('.mobile-bottom-nav [data-main-space=settings]').click()
+   fresh_page.locator('.workspace-landing-card[data-workspace-section=connections]').wait_for()
+   fresh_page.locator('.workspace-landing-card[data-workspace-section=connections]').click()
+   fresh_page.get_by_label('Figma 연결 주소').wait_for()
+   fresh_page.locator('.mobile-bottom-nav [data-main-space=home]').click()
+   fresh_page.wait_for_function('window.activeWorkspace === "home" && !window.mobileWorkspaceHome')
    fresh_page.set_viewport_size({'width':1280,'height':900})
+   fresh_page.wait_for_function('document.querySelector("#sidebar .sidebar-settings") !== null')
+   fresh_page.locator('.sidebar-settings').click()
+   fresh_page.locator('[data-settings-category=connections]').click()
+   fresh_page.get_by_label('Figma 연결 주소').wait_for()
    old_version=fresh_page.locator('meta[name=pn-build]').get_attribute('content')
    new_version='f'*64 if old_version!='f'*64 else 'a'*64
    fresh_page.route('**/version.json?*',lambda route:route.fulfill(status=200,content_type='application/json',body=__import__('json').dumps({'version':new_version})))
@@ -232,7 +250,7 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    fresh.close()
-   print('PASS: three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, Wordcraft WASM startup, text editing, DOCX download and reopen, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow/mobile, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, Wordcraft WASM startup, text editing, DOCX download and reopen, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow, mobile bottom navigation/category landing/back, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

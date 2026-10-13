@@ -1,3 +1,5 @@
+import {installDelayedPointerDrag} from './touch-drag.js';
+window.installDelayedPointerDrag=installDelayedPointerDrag;
 import {renderFigmaSettings} from './figma-settings.js';
 window.renderFigmaSettings=renderFigmaSettings;
 import {sortMembers,reorderMembers} from '../production/member-sort.js';

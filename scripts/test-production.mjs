@@ -64,7 +64,7 @@ assert.equal(state.projects[0].deleted,true);assert.equal(state.projects[0].modu
 b.production('g');assert.equal(preferences.get('pn-production-view'),'production');assert.equal(preferences.get('pn-active-production'),'g');
 state.productions[0].deleted=false;let productionTransition;context.openProduction=(...args)=>{productionTransition=args};vm.runInContext('switchProductionSpace()',context);assert.deepEqual(productionTransition,[undefined,'overview',false,'g']);
 context.settingsPanel={hidden:true};context.databasePanel={hidden:true};context.ResizeObserver=class{observe(){}};
-vm.runInContext(await readFile(new URL('../ui/navigation.js',import.meta.url),'utf8'),context);
+context.isMobileViewport=()=>false;vm.runInContext(await readFile(new URL('../ui/navigation.js',import.meta.url),'utf8'),context);
 vm.runInContext('syncBreadcrumbs()',context);assert.match(vm.runInContext('breadcrumbNav.innerHTML',context),/data-location="home"/);assert.match(vm.runInContext('breadcrumbNav.innerHTML',context),/data-location="production" data-id="g"/);
 vm.runInContext("breadcrumbNav.onclick({target:{closest:()=>({dataset:{location:'production',id:'g'}})}})",context);assert.deepEqual(productionTransition,[undefined,'overview',false,'g']);
 vm.runInContext("selected='new';productionPage=true;productionSection='tasks';syncBreadcrumbs()",context);assert.match(vm.runInContext('breadcrumbNav.innerHTML',context),/data-location="project" data-id="new"/);assert.match(vm.runInContext('breadcrumbNav.innerHTML',context),/data-section="tasks"/);
