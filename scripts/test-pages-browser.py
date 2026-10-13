@@ -45,11 +45,15 @@ with tempfile.TemporaryDirectory() as td:
    assert any(c['name']=='__Host-pn-pages' and c['httpOnly'] and c['secure'] and c.get('partitionKey') for c in cookies), 'Missing partitioned session cookie'
    page.locator('[data-main-space=references]').click()
    page.locator('#refadd').click()
-   page.get_by_role('button',name='Hub 둘러보기').click()
+   page.locator('.sidebar-hub').click()
    page.get_by_role('button',name='학교',exact=True).click()
-   page.get_by_role('button',name=re.compile('출석부')).click()
+   card=page.get_by_role('button',name=re.compile('출석부'))
+   assert card.locator('strong').inner_text()=='출석부'
+   assert card.locator('.hub-preview').is_visible()
+   if os.environ.get('HUB_SCREENSHOT'): page.screenshot(path=os.environ['HUB_SCREENSHOT'],full_page=True)
+   card.click()
    page.get_by_role('button',name='항목 추가').wait_for()
-   page.get_by_role('button',name='Hub 둘러보기').click()
+   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
    page.get_by_role('button',name='학교',exact=True).click()
    page.get_by_role('button',name=re.compile('과제 현황')).drag_to(page.locator('.snap-canvas'),target_position={'x':20,'y':20})
    assert page.locator('.workspace-module').count()==2
