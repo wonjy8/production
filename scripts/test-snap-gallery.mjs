@@ -12,3 +12,9 @@ assert.equal(resizeHeight(220,43),256);assert.equal(resizeHeight(200,-500),160);
 const {fittedRows,maximumGalleryHeight}=await import('../production/justified-gallery.js');for(const height of [150,400,1000,4000]){const ratios=[1.5,.7,2,1],rows=fittedRows(ratios,700,height),actual=rows.reduce((s,r)=>s+r.height,0)+10*(rows.length-1);assert.ok(Math.abs(actual-Math.min(height,maximumGalleryHeight(ratios,700)))<.001);for(const row of rows)row.widths.forEach((w,i)=>assert.ok(Math.abs(w/row.height-ratios[row.start+i])<.001))}console.log('Height fitting: grows/reflows to requested height, keeps aspect ratios and stops at single-image width limit');
 
 assert.equal(resizeHeight(3000,5000),8000);assert.equal(resizeHeight(8000,32000),40000);console.log("Module height: no maximum, magnetic steps and minimum preserved");
+const separated=snapBoxes([{id:'tall',span:6},{id:'short',span:6},{id:'line',kind:'divider',span:3},{id:'below',span:6}],{tall:500,short:100,below:100},1000);
+assert.equal(separated.boxes.line.left,0);assert.equal(separated.boxes.line.width,1000);assert.ok(separated.boxes.line.top>separated.boxes.tall.top+500);assert.ok(separated.boxes.below.top>separated.boxes.line.top+32);
+const divided=[{id:'a',span:6},{id:'line',kind:'divider'},{id:'b',span:6}];const dividedLayout=snapBoxes(divided,{},1000);
+assert.deepEqual(dropModule(divided,dividedLayout.boxes,'a',0,2000).map(i=>i.id),['a','line','b']);
+assert.deepEqual(dropModule(divided,dividedLayout.boxes,'line',0,2000).map(i=>i.id),['a','b','line']);
+console.log('Divider: full width, independent section packing, constrained module drops and vertical divider reorder passed');

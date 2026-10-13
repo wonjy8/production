@@ -1,3 +1,4 @@
+import './accent.js';
 import {installDelayedPointerDrag} from './touch-drag.js';
 window.installDelayedPointerDrag=installDelayedPointerDrag;
 import {renderFigmaSettings} from './figma-settings.js';

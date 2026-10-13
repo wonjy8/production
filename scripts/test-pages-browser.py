@@ -47,6 +47,13 @@ with tempfile.TemporaryDirectory() as td:
    assert page.evaluate('window.appWorkspaces.map(w=>w.label)')==['홈','자료','데이터베이스']
    assert page.locator('.sidebar-main-spaces [data-main-space]').count()==3
    assert page.locator('.breadcrumbs [data-location=home]').inner_text()=='홈'
+   assert page.locator('.topbar').evaluate('(el)=>getComputedStyle(el).borderBottomWidth')=='0px'
+   page.locator('#share').click();fresh_drawer=page.get_by_role('dialog',name='공유',exact=True)
+   fresh_drawer.wait_for();assert fresh_drawer.bounding_box()['x']>700
+   page.get_by_role('button',name='공유 닫기',exact=True).click();fresh_drawer.wait_for(state='hidden')
+   page.get_by_role('button',name='검색',exact=True).click();page.locator('#app-search').wait_for(state='visible')
+   assert page.locator('#app-search').bounding_box()['x']>700
+   page.get_by_role('button',name='검색 닫기',exact=True).click();page.locator('#app-search').wait_for(state='hidden')
    page.locator('[data-main-space=references]').click()
    page.wait_for_function('window.activeWorkspace === "references"')
    assert page.locator('.sidebar-source-sections button[data-source-section]').count()==3
@@ -86,27 +93,50 @@ with tempfile.TemporaryDirectory() as td:
    page.wait_for_function('!!window.activeReferenceId')
    assert page.locator('.breadcrumbs button').all_text_contents()[:2]==['자료','레퍼런스']
    canvas_width=page.locator('.canvas').bounding_box()['width']
-   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
+   page.locator('.custom-module-tab .module-add-footer button').click()
    page.wait_for_function("document.body.classList.contains('hub-visible')")
    page.wait_for_timeout(250)
    assert page.locator('.canvas').bounding_box()['width']<canvas_width-250
    assert page.locator('.hub-sidebar').evaluate('(el)=>getComputedStyle(el).boxShadow')=='none'
-   page.get_by_role('button',name='학교',exact=True).click()
-   card=page.get_by_role('button',name=re.compile('출석부'))
-   assert card.locator('strong').inner_text()=='출석부'
-   assert card.locator('.hub-preview').is_visible()
+   page.get_by_role('button',name='기본',exact=True).click()
+   card=page.get_by_role('button',name=re.compile('^체크리스트'))
+   assert card.locator('strong').inner_text()=='체크리스트'
+   assert card.locator('.hub-preview').count()==0
+   assert abs(page.locator('.hub-sidebar').bounding_box()['y']-page.locator('#sidebar').bounding_box()['y'])<2
+   assert abs(page.locator('.hub-sidebar').bounding_box()['height']-page.locator('#sidebar').bounding_box()['height'])<2
+   page.get_by_role('button',name='Hub 검색 열기',exact=True).click()
+   page.get_by_label('Hub 검색',exact=True).fill('체크리스트')
+   assert not page.locator('.hub-categories').count()
+   page.get_by_role('button',name='Hub 검색 닫기',exact=True).click()
    if os.environ.get('HUB_SCREENSHOT'): page.screenshot(path=os.environ['HUB_SCREENSHOT'],full_page=True)
    card.click()
    page.get_by_role('button',name='항목 추가').wait_for()
-   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
-   page.get_by_role('button',name='학교',exact=True).click()
-   page.get_by_role('button',name=re.compile('과제 현황')).drag_to(page.locator('.snap-canvas'),target_position={'x':20,'y':20})
+   page.locator('.custom-module-tab .module-add-footer button').click()
+   page.get_by_role('button',name='기본',exact=True).click()
+   page.get_by_role('button',name=re.compile('^메모')).drag_to(page.locator('.snap-canvas'),target_position={'x':20,'y':20})
    assert page.locator('.workspace-module').count()==2
+   remove=page.locator('.module-outside-title .inline-remove .compact-remove').first
+   remove.click();assert page.get_by_role('button',name='모듈 삭제 확인',exact=True).is_visible()
+   assert page.locator('dialog[open]').count()==0
+   assert page.get_by_role('button',name='모듈 삭제 확인',exact=True).bounding_box()['height']==24
+   page.locator('.topbar').click(position={'x':5,'y':5});assert page.get_by_role('button',name='모듈 삭제 확인',exact=True).count()==0
+   page.locator('.module-outside-title .inline-remove .compact-remove').first.click()
+   page.evaluate('window.dispatchEvent(new Event("scroll"))')
+   page.get_by_role('button',name='모듈 삭제 확인',exact=True).wait_for(state='detached')
+   page.locator('.custom-module-tab .module-add-footer button').click()
+   page.get_by_role('button',name='기본',exact=True).click()
+   page.get_by_role('button',name=re.compile('^구분선')).click()
+   line=page.get_by_role('separator',name='구분선 이동',exact=True)
+   line.wait_for();assert line.evaluate('(el)=>Math.abs(el.getBoundingClientRect().width-el.closest(".snap-canvas").getBoundingClientRect().width)')<2
+   assert page.locator('.divider-box .fluid-resize-edge').count()==0
+   line.hover();line.get_by_role('button',name='내용 제거',exact=True).click()
+   line.get_by_role('button',name='모듈 삭제 확인',exact=True).click()
+   assert page.get_by_role('separator',name='구분선 이동',exact=True).count()==0
    page.get_by_role('button',name='화면 나누기').click()
-   page.get_by_role('button',name='학교',exact=True).click()
-   page.get_by_role('button',name=re.compile('수업 관리')).click()
-   assert page.locator('.workspace-module').count()==3
-   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
+   page.get_by_role('button',name='기본',exact=True).click()
+   page.get_by_role('button',name=re.compile('^빈 탭')).click()
+   assert page.locator('.workspace-module').count()==0
+   page.locator('.custom-module-tab .module-add-footer button').click()
    page.get_by_role('button',name='학교',exact=True).click()
    page.get_by_role('button',name=re.compile('학점 계산기')).click()
    calculator=page.locator('.grade-calculator')
@@ -119,21 +149,21 @@ with tempfile.TemporaryDirectory() as td:
    assert '3.38 / 4.5' in calculator.inner_text()
    assert not page.evaluate("document.body.classList.contains('hub-visible')")
    page.route('https://www.figma.com/**',lambda route:route.fulfill(status=200,content_type='text/html',body='<p>Figma test frame</p>'))
-   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
+   page.locator('.custom-module-tab .module-add-footer button').click()
    page.get_by_role('button',name='미디어',exact=True).click()
    page.get_by_role('button',name=re.compile('Figma 임베드')).click()
    page.get_by_label('Figma 임베드 코드 또는 링크',exact=True).fill('https://www.figma.com/design/Ab123/Example')
    page.get_by_label('이 주소를 다음 Figma 모듈에서도 사용',exact=True).check()
    page.locator('dialog[open]').get_by_role('button',name='추가',exact=True).click()
    assert page.locator('.embed-frame').count()==1
-   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
+   page.locator('.custom-module-tab .module-add-footer button').click()
    page.get_by_role('button',name='미디어',exact=True).click()
    page.get_by_role('button',name=re.compile('Figma 임베드')).click()
    assert page.get_by_label('Figma 임베드 코드 또는 링크',exact=True).input_value()=='https://www.figma.com/design/Ab123/Example'
    page.keyboard.press('Escape')
    figma_embed='https://embed.figma.com/design/EmbedExample123/%EB%94%94%EC%9E%90%EC%9D%B8?embed-host=share'
    page.route('https://embed.figma.com/**',lambda route:route.fulfill(body='<p>Figma embed fixture</p>',content_type='text/html'))
-   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
+   page.locator('.custom-module-tab .module-add-footer button').click()
    page.get_by_role('button',name='미디어',exact=True).click()
    page.get_by_role('button',name=re.compile('Figma 임베드')).click()
    page.get_by_label('Figma 임베드 코드 또는 링크',exact=True).fill('<iframe style="border: 1px solid rgba(0, 0, 0, 0.1);" width="800" height="450" src="'+figma_embed+'" allowfullscreen></iframe>')
@@ -145,7 +175,7 @@ with tempfile.TemporaryDirectory() as td:
    page.get_by_label('임베드 코드 또는 링크 수정',exact=True).fill('<iframe src="'+figma_embed+'&amp;node-id=1-2"></iframe>')
    figma_module.get_by_role('button',name='저장',exact=True).click()
    assert figma_module.locator('iframe.embed-frame').get_attribute('src')==figma_embed+'&node-id=1-2'
-   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
+   page.locator('.custom-module-tab .module-add-footer button').click()
    page.get_by_role('button',name='기본',exact=True).click()
    assert page.get_by_role('button',name=re.compile('Wordcraft 문서')).count()==0
    page.get_by_role('button',name=re.compile('^메모')).click()
@@ -226,6 +256,9 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.evaluate("async(id)=>[...(new Uint8Array(await(await fetch('/production/api/ref-files/'+id)).arrayBuffer()))].join(',')",local['id'])=='1,2,3,4'
    fresh_page.locator('[data-main-space=home]').click()
    fresh_page.locator('[data-production-id=workspace-project]').click()
+   fresh_page.get_by_role('heading',name='오늘 할 일',exact=True).wait_for()
+   assert fresh_page.get_by_role('heading',name='업무 그룹',exact=True).is_visible()
+   assert fresh_page.locator('.module-add-footer').bounding_box()['y']>fresh_page.locator('.overview-activity').bounding_box()['y']
    fresh_page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes("워크스페이스 프로젝트")')
    assert fresh_page.locator('.breadcrumbs button').all_text_contents()[:2]==['홈','워크스페이스 프로젝트']
    assert fresh_page.evaluate('window.activeWorkspace')=='home'
@@ -234,6 +267,13 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.goto('https://pages.test:9443/production/')
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
+   fresh_page.locator('.sidebar-settings').click()
+   fresh_page.locator('[data-settings-category=general]').click()
+   assert fresh_page.locator('[data-accent]').count()==5
+   fresh_page.locator('[data-accent=purple]').click()
+   assert fresh_page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()")=='#7c3aed'
+   fresh_page.reload();fresh_page.wait_for_function('window.appAccount?.localMode === true')
+   assert fresh_page.evaluate("localStorage.getItem('pn-accent')")=='purple'
    fresh_page.locator('.sidebar-settings').click()
    fresh_page.locator('[data-settings-category=connections]').click()
    fresh_page.get_by_label('Figma 연결 주소').fill('https://www.figma.com/design/Local123/Example')
@@ -286,6 +326,12 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.get_by_label('Figma 연결 주소').wait_for()
    fresh_page.locator('.mobile-bottom-nav [data-main-space=home]').click()
    fresh_page.wait_for_function('window.activeWorkspace === "home" && !window.mobileWorkspaceHome')
+   fresh_page.locator('.home-groups .merge-project').filter(has_text='워크스페이스 프로젝트').click()
+   fresh_page.locator('.module-add-footer button').click()
+   fresh_page.locator('.hub-sidebar').wait_for(state='visible')
+   mobile_hub=fresh_page.locator('.hub-sidebar').bounding_box()
+   assert mobile_hub['y']+mobile_hub['height']<fresh_page.locator('.mobile-bottom-nav').bounding_box()['y']
+   fresh_page.get_by_role('button',name='Hub 닫기',exact=True).click()
    fresh_page.set_viewport_size({'width':1280,'height':900})
    fresh_page.wait_for_function('document.querySelector("#sidebar .sidebar-settings") !== null')
    fresh_page.locator('.sidebar-settings').click()
@@ -299,17 +345,22 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.evaluate('window.prepareAppUpdate=async()=>false;window.dispatchEvent(new Event("focus"))')
    fresh_page.wait_for_timeout(300)
    assert fresh_page.locator('meta[name=pn-build]').get_attribute('content')==old_version
-   fresh_page.get_by_label('Figma 연결 주소').focus()
-   fresh_page.evaluate('window.prepareAppUpdate=async()=>true;window.dispatchEvent(new Event("focus"))')
-   fresh_page.wait_for_timeout(300)
+   fresh_page.wait_for_function('window.appUpdates.available === true')
+   fresh_page.get_by_role('button',name='앱 업데이트',exact=True).click()
+   fresh_page.wait_for_timeout(200)
    assert fresh_page.locator('meta[name=pn-build]').get_attribute('content')==old_version
+   fresh_page.evaluate('window.prepareAppUpdate=async()=>true')
+   fresh_page.get_by_label('Figma 연결 주소').focus()
    fresh_page.get_by_label('Figma 연결 주소').evaluate('(el)=>el.blur()')
+   fresh_page.wait_for_timeout(200)
+   assert fresh_page.locator('meta[name=pn-build]').get_attribute('content')==old_version
+   fresh_page.get_by_role('button',name='앱 업데이트',exact=True).click()
    fresh_page.wait_for_function("document.querySelector('meta[name=pn-build]')?.content === "+repr(new_version))
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    assert not errors,errors
    fresh.close()
-   print('PASS: three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, manual update icon with save deferral and persisted local data, aligned floating panels, Hub search motion and removed previews, inline deletion, full-width divider, five accent colors and overview activity, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

@@ -68,3 +68,5 @@ assert.deepEqual(calls,[['home',undefined,'dashboard'],['references'],['database
 nav.window.appAccount.role='viewer';nav.window.sidebarMainNav.onclick({target:{closest:()=>({dataset:{mainSpace:'home'}})}});
 assert.equal(calls.at(-1)[2],'overview');
 console.log('Unified projects: one project level, preserved IDs/members/files, exact task origins, board insertion without groups, reference scope and real navigation actions passed');
+
+const {overviewBoardSection}=await import('../production/project-structure.js');assert.equal(overviewBoardSection({customTabs:[{defaultBoard:true,boardSection:'tasks',modules:[{id:'existing'}]}]},'production'),'tasks');assert.equal(overviewBoardSection({customTabs:[]},'production'),'overview');assert.equal(overviewBoardSection({customTabs:[{defaultBoard:true,boardSection:'tasks'}]},'project'),'overview');

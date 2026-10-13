@@ -57,3 +57,9 @@ export function projectFolders(workspace, folder) {
     ]};
   });
 }
+
+// Older production overviews used the same default board as Tasks.
+export function overviewBoardSection(owner,kind){
+ const tabs=owner.customTabs||[];
+ return kind==='production'&&!tabs.some(t=>t.defaultBoard&&(t.boardSection||'overview')==='overview')&&tabs.some(t=>t.defaultBoard&&t.boardSection==='tasks')?'tasks':'overview';
+}

@@ -1,8 +1,8 @@
 import fs from 'node:fs';import assert from 'node:assert/strict';import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url),esbuild=require(process.env.PRODUCTION_ESBUILD||'esbuild');
-const theme=fs.readFileSync('ui/theme.css','utf8');assert.match(theme,/--accent:#242526/);assert.match(theme,/--font-body:400;--font-medium:500;--font-heading:600/);
+const theme=fs.readFileSync('ui/theme.css','utf8');assert.match(theme,/--accent:var\(--user-accent,#242526\)/);assert.match(theme,/--font-body:400;--font-medium:500;--font-heading:600/);
 for(const dir of ['ui','production'])for(const name of fs.readdirSync(dir).filter(n=>n.endsWith('.css'))){const s=fs.readFileSync(dir+'/'+name,'utf8');const parsed=esbuild.transformSync(s,{loader:'css',minify:true});assert.equal(parsed.warnings.length,0,dir+'/'+name);assert.doesNotMatch(s,/font-weight\s*:\s*(650|700|750|800|850|900)\b/);assert.doesNotMatch(s,/#(?:1683ff|1677ff|2684ff|2675da|2563eb|3b82f6)\b/i)}
 for(const width of [320,375,390,600]){const viewport=width-24;assert.ok(viewport>=296);assert.match(theme,/@media\(max-width:600px\)/);assert.match(theme,/\.editor-dialog,\.create-dialog\{width:calc\(100vw - 24px\)!important/);assert.match(theme,/\.reference-module-editor \.reference-metadata\{grid-template-columns:minmax\(0,1fr\)!important/)}
 assert.match(theme,/\.photo-editor-v2 \.photo-edit-workspace\{grid-template-columns:minmax\(0,1fr\)!important/);assert.match(theme,/\.calendar-scroll,\.tt-scroll,\.task-board,\.merge-sections\{max-width:100%;min-width:0\}/);assert.match(theme,/font-size:16px!important/);
-const {productionCSS}=await import('../worker/production-assets.js'),{uiCSS}=await import('../worker/ui-assets.js');assert.ok(productionCSS.endsWith(theme));assert.ok(uiCSS.endsWith(theme));
+const {productionCSS}=await import('../worker/production-assets.js'),{uiCSS}=await import('../worker/ui-assets.js');assert.ok(productionCSS.includes(theme));assert.ok(uiCSS.includes(theme));
 console.log('UI theme: both roots share neutral accent, consistent weights, valid CSS, responsive editor/forms, locally scrolling views and mobile inputs passed');

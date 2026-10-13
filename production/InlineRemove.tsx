@@ -1,0 +1,7 @@
+import {useEffect,useRef,useState} from 'react';
+import {IconButton} from './Icon';
+export function InlineRemove({label='내용 제거',onDelete}:{label?:string;onDelete:()=>void}){
+ const [armed,setArmed]=useState(false),root=useRef<HTMLSpanElement>(null);
+ useEffect(()=>{if(!armed)return;root.current?.querySelector('button')?.focus();const outside=(e:Event)=>{if(!e.composedPath().includes(root.current!))setArmed(false)},scroll=()=>setArmed(false),key=(e:KeyboardEvent)=>{if(e.key==='Escape')setArmed(false)};const scope=root.current?.getRootNode();scope?.addEventListener('scroll',scroll,true);document.addEventListener('pointerdown',outside,true);window.addEventListener('scroll',scroll,true);window.addEventListener('keydown',key);return()=>{scope?.removeEventListener('scroll',scroll,true);document.removeEventListener('pointerdown',outside,true);window.removeEventListener('scroll',scroll,true);window.removeEventListener('keydown',key)}},[armed]);
+ return <span ref={root} className="inline-remove" onPointerDown={e=>e.stopPropagation()}>{armed?<span className="inline-remove-confirm"><button className="keep-label" aria-label="삭제 취소" onClick={()=>setArmed(false)}>취소</button><button className="keep-label" aria-label="모듈 삭제 확인" onClick={onDelete}>진짜 삭제하겠습니까?</button></span>:<IconButton name="close" className="button ui-icon-button compact-remove" label={label} onClick={()=>setArmed(true)}/>}</span>
+}
