@@ -11,7 +11,7 @@ assert.equal(resolveSharedModule({source}, {projects:[],productions:[]},[]),null
 assert.equal(resolveSharedModule({source:{kind:'reference',ownerId:'r',moduleId:'img'}},w,[legacy]).files[0].id,'file-id');
 assert.equal(resolveSharedModule({source:{kind:'reference',ownerId:'r',moduleId:'img'}},w,[{...legacy,deleted:true}]),null);
 const linked={id:'r2',title:'공유',modules:[{id:'linked',kind:'schedule',source}]};assert.deepEqual(sharedChoices(w,[linked])[0].source,source);
-assert.deepEqual(moduleKinds.map(k=>k[0]),['schedule-list','text','image','video','file','link','embed','divider','accounting','checklist','tracker','materials','tasks','schedule','timetable']);
+assert.deepEqual(moduleKinds.map(k=>k[0]),['grade-calculator','schedule-list','text','image','video','file','link','embed','divider','accounting','checklist','tracker','materials','tasks','schedule','timetable']);
 assert.match(youtubeURL('https://youtu.be/abcdefghijk'),/youtube-nocookie/);assert.equal(youtubeURL('javascript:alert(1)'),'');
 // Verify queued edits never restore stale data after the editor closes.
 const queueSource=fs.readFileSync('ui/reference-modules.js','utf8').split('let referenceEditorCleanup')[0];

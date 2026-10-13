@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {calculateGrades,gradePoints} from '../production/grade-calculator.js';
+import {createHubModule} from '../production/module-hub.js';
+assert.deepEqual(calculateGrades([{credits:3,grade:'A+'},{credits:1,grade:'F'},{credits:2,grade:'P'},{credits:1,grade:'NP'}]),{attempted:7,earned:5,graded:4,gpa:3.375});
+assert.equal(calculateGrades([{credits:3,grade:'A-'},{credits:3,grade:'B+'}],'4.3').gpa,3.5);
+assert.equal(calculateGrades([{credits:3,grade:'P'}]).gpa,null);
+assert.equal(calculateGrades([{credits:-1,grade:'A+'},{credits:'bad',grade:'A0'},{credits:3,grade:''}]).graded,0);
+assert.equal(gradePoints('A-','4.5'),null);
+assert.equal(gradePoints('A+','4.0'),4);
+const a=createHubModule('grade-calculator'),b=createHubModule('grade-calculator');assert.notEqual(a.courses,b.courses);assert.equal(a.gradeScale,'4.5');
+console.log('Grade calculator: weighted GPA, F, P/NP, empty/invalid entries, grading scales and independent modules passed');

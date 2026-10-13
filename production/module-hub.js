@@ -16,6 +16,7 @@ export const moduleTemplates = [
  {id:'materials',category:'basic',name:'자료 모음',description:'자료를 그룹으로 정리',icon:'folder',kind:'materials'},
  {id:'accounting',category:'basic',name:'회계',description:'수입·지출과 잔액 기록',icon:'table',kind:'accounting'},
  {id:'divider',category:'basic',name:'구분선',description:'내용 구역 나누기',icon:'list',kind:'divider'},
+ {id:'grade-calculator',category:'school',name:'학점 계산기',description:'과목별 학점·성적과 평균 평점 계산',icon:'table',kind:'grade-calculator'},
  {id:'class-roster',category:'school',name:'출석부',description:'학생별 출결과 메모 기록',icon:'users',kind:'tracker',fields:['이름','출결','메모'],states:['출석','지각','결석']},
  {id:'assignments',category:'school',name:'과제 현황',description:'과제별 제출 상태 관리',icon:'tasks',kind:'tracker',fields:['과제','상태','메모'],states:['미제출','제출','확인']},
  {id:'class-plan',category:'school',name:'수업 계획',description:'수업 내용과 준비물 작성',icon:'calendar',kind:'text',initialText:'수업 목표\n\n진행 순서\n\n준비물\n'},
@@ -53,6 +54,7 @@ export function createHubModule(id, options={}) {
   ...(template.initialText?{text:template.initialText}:{}),
   ...(template.fields?{fields:[...template.fields],states:[...template.states],rows:[]}:{}),
   ...(template.kind==='checklist'?{items:[]}:{}),
+  ...(template.kind==='grade-calculator'?{gradeScale:'4.5',courses:[]}:{}),
   ...options};
 }
 

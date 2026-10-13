@@ -52,3 +52,14 @@ body[data-motion=off] .sidebar-main-spaces .sidebar-ref-link,body[data-motion=of
 
 .project-page-heading{margin:0 0 16px;min-width:0}.project-page-heading h1{margin:0;font-size:24px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}.project-page>.merge-sections{margin-top:0}.project-page .production-overview>.overview-heading>h2,.project-page .project-overview>.overview-heading>div:first-child{display:none}.project-page .production-overview>.overview-heading,.project-page .project-overview>.overview-heading{justify-content:flex-end}.calendar-event{display:flex!important;align-items:center;justify-content:flex-start!important;flex-wrap:wrap;gap:5px!important;text-align:left}.calendar-event-title{min-width:0;overflow-wrap:anywhere}.calendar-event .project-name-chip{flex:none;max-width:100%;font-weight:500}
 .sidebar-footer{display:flex;flex-direction:column;align-items:stretch;gap:4px}.sidebar-footer .sidebar-hub{justify-content:flex-start}
+
+:root{--hub-panel-width:360px}
+.layout{transition:padding-right 180ms ease;box-sizing:border-box}
+body.hub-visible .layout{padding-right:calc(var(--hub-panel-width) + 24px)}
+body.hub-visible .canvas{min-width:0}
+@media(min-width:721px) and (max-width:1100px){:root{--hub-panel-width:320px}body.hub-visible .layout{grid-template-columns:minmax(0,1fr)}body.hub-visible .sidebar{display:none}}
+@media(max-width:720px){body.hub-visible .layout{padding-right:0}.hub-visible .canvas{visibility:hidden}}
+@media(prefers-reduced-motion:reduce){.layout{transition:none}}
+body[data-motion=off] .layout{transition:none}
+
+.figma-settings{display:grid;gap:16px;max-width:680px}.figma-settings h2,.figma-settings p{margin:0}.figma-settings label{display:grid;gap:8px}.figma-settings-actions{display:flex;flex-wrap:wrap;gap:8px}.figma-settings .muted{font-size:12px;color:var(--text-muted)}

@@ -1,3 +1,5 @@
+import {renderFigmaSettings} from './figma-settings.js';
+window.renderFigmaSettings=renderFigmaSettings;
 import {sortMembers,reorderMembers} from '../production/member-sort.js';
 window.sortMembers=sortMembers;window.reorderMembers=reorderMembers;
 import {parseMemberLines} from '../production/member-import.js';

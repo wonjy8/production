@@ -45,7 +45,7 @@ try {
       }
     };
   } else {
-    const response = await fetch('./app.html', {cache:'no-store'});
+    const response = await fetch('./app.html?build='+Date.now(), {cache:'no-store'});
     if (!response.ok) throw Error('앱을 불러오지 못했습니다. 새로고침해 주세요.');
     const html = await response.text(); document.open(); document.write(html); document.close();
   }

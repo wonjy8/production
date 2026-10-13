@@ -28,9 +28,20 @@ for (const [route, file] of Object.entries(routes)) {
   if (file === 'app.html') text = text.replace('</body>', '<a href="./?connection=1" style="position:fixed;right:12px;bottom:8px;z-index:10000;font:12px system-ui;background:white;color:#555;padding:6px;border-radius:4px">저장 방식 변경</a></body>');
   await writeFile(output+'/'+file, text);
 }
-for (const file of ['pages-sw.js', 'pages-local.js', 'pages-loader.js']) {
+for (const file of ['pages-sw.js', 'pages-local.js', 'pages-loader.js', 'pages-updates.js']) {
   await writeFile(output+'/'+file, await readFile('ui/'+file, 'utf8'));
 }
 await writeFile(output+'/.nojekyll', '');
-await writeFile(output+'/index.html', await readFile('ui/pages-index.html', 'utf8'));
+const helpers = {};
+for (const file of ['pages-sw.js','pages-local.js','pages-loader.js','pages-updates.js','index.html']) {
+  helpers[file] = await readFile(file==='index.html'?'ui/pages-index.html':output+'/'+file,'utf8');
+}
+const hash = text => createHash('sha256').update(text).digest('hex');
+const version = hash(JSON.stringify({rendered,helpers,base}));
+const worker = helpers['pages-sw.js'].replace("'./pages-local.js'", JSON.stringify('./pages-local.js?v='+hash(helpers['pages-local.js']).slice(0,12)));
+await writeFile(output+'/pages-sw.js',worker);
+const app = await readFile(output+'/app.html','utf8');
+await writeFile(output+'/app.html',app.replace('</head>', '<meta name="pn-build" content="'+version+'"><script src="'+base+'pages-updates.js?v='+hash(helpers['pages-updates.js']).slice(0,12)+'"></script></head>'));
+await writeFile(output+'/index.html',helpers['index.html'].replace('./pages-loader.js','./pages-loader.js?v='+hash(helpers['pages-loader.js']).slice(0,12)));
+await writeFile(output+'/version.json',JSON.stringify({version})+'\n');
 console.log('GitHub Pages built: '+output+' (server address is configured in the browser only)');

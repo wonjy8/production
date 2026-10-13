@@ -1,4 +1,4 @@
-export const moduleKinds=[['schedule-list','일정 목록','calendar'],['text','텍스트','file'],['image','사진','reference'],['video','영상','video'],['file','파일','file'],['link','링크','link'],['embed','임베드','video'],['divider','구분선','list'],['accounting','회계','table'],['checklist','체크리스트','tasks'],['tracker','현황표','table'],['materials','자료','folder'],['tasks','할 일','tasks'],['schedule','일정','calendar'],['timetable','타임테이블','calendar']];
+export const moduleKinds=[['grade-calculator','학점 계산기','table'],['schedule-list','일정 목록','calendar'],['text','텍스트','file'],['image','사진','reference'],['video','영상','video'],['file','파일','file'],['link','링크','link'],['embed','임베드','video'],['divider','구분선','list'],['accounting','회계','table'],['checklist','체크리스트','tasks'],['tracker','현황표','table'],['materials','자료','folder'],['tasks','할 일','tasks'],['schedule','일정','calendar'],['timetable','타임테이블','calendar']];
 export function referenceModules(r){
  if(Array.isArray(r.tabs))return r.tabs.flatMap(t=>t.modules||[]);
  if(Array.isArray(r.modules))return r.modules;
@@ -29,6 +29,7 @@ export function embedURL(raw){try{const u=new URL(raw);if(u.protocol!=='https:'|
 export function instagramURL(raw){try{const u=new URL(raw);if(!['http:','https:'].includes(u.protocol)||!['instagram.com','www.instagram.com','m.instagram.com'].includes(u.hostname)||u.username||u.password)return '';const match=u.pathname.match(/^\/(p|reel|reels|tv)\/([A-Za-z0-9_-]+)\/?$/);return match?'https://www.instagram.com/'+(match[1]==='reels'?'reel':match[1])+'/'+match[2]+'/embed/':''}catch{return ''}}
 
 export const moduleGroups=[
+ {id:'school',label:'학교',kinds:['grade-calculator']},
  {id:'work',label:'업무·일정',kinds:['tasks','schedule','schedule-list','timetable']},
  {id:'content',label:'콘텐츠',kinds:['text','image','video']},
  {id:'materials',label:'자료·링크',kinds:['materials','file','link','embed','divider','accounting']},

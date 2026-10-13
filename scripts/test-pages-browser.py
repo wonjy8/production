@@ -45,7 +45,12 @@ with tempfile.TemporaryDirectory() as td:
    assert any(c['name']=='__Host-pn-pages' and c['httpOnly'] and c['secure'] and c.get('partitionKey') for c in cookies), 'Missing partitioned session cookie'
    page.locator('[data-main-space=references]').click()
    page.locator('#refadd').click()
+   canvas_width=page.locator('.canvas').bounding_box()['width']
    page.locator('.sidebar-hub').click()
+   page.wait_for_function("document.body.classList.contains('hub-visible')")
+   page.wait_for_timeout(250)
+   assert page.locator('.canvas').bounding_box()['width']<canvas_width-250
+   assert page.locator('.hub-sidebar').evaluate('(el)=>getComputedStyle(el).boxShadow')=='none'
    page.get_by_role('button',name='학교',exact=True).click()
    card=page.get_by_role('button',name=re.compile('출석부'))
    assert card.locator('strong').inner_text()=='출석부'
@@ -61,6 +66,30 @@ with tempfile.TemporaryDirectory() as td:
    page.get_by_role('button',name='학교',exact=True).click()
    page.get_by_role('button',name=re.compile('수업 관리')).click()
    assert page.locator('.workspace-module').count()==3
+   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
+   page.get_by_role('button',name='학교',exact=True).click()
+   page.get_by_role('button',name=re.compile('학점 계산기')).click()
+   calculator=page.locator('.grade-calculator')
+   calculator.get_by_role('button',name='과목 추가',exact=True).click()
+   calculator.get_by_label('과목 1 이름',exact=True).fill('전공')
+   calculator.get_by_label('과목 1 성적',exact=True).select_option('A+')
+   calculator.get_by_role('button',name='과목 추가',exact=True).click()
+   calculator.get_by_label('과목 2 학점',exact=True).fill('1')
+   calculator.get_by_label('과목 2 성적',exact=True).select_option('F')
+   assert '3.38 / 4.5' in calculator.inner_text()
+   assert not page.evaluate("document.body.classList.contains('hub-visible')")
+   page.route('https://www.figma.com/**',lambda route:route.fulfill(status=200,content_type='text/html',body='<p>Figma test frame</p>'))
+   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
+   page.get_by_role('button',name='미디어',exact=True).click()
+   page.get_by_role('button',name=re.compile('Figma 임베드')).click()
+   page.get_by_label('링크 주소',exact=True).fill('https://www.figma.com/design/Ab123/Example')
+   page.locator('dialog[open]').get_by_role('button',name='추가',exact=True).click()
+   assert page.locator('.embed-frame').count()==1
+   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
+   page.get_by_role('button',name='미디어',exact=True).click()
+   page.get_by_role('button',name=re.compile('Figma 임베드')).click()
+   assert page.get_by_label('링크 주소',exact=True).input_value()=='https://www.figma.com/design/Ab123/Example'
+   page.keyboard.press('Escape')
    media=page.evaluate('''async()=>{const id=crypto.randomUUID(),url='/production/api/ref-files/'+id;const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='),c=>c.charCodeAt(0));const r=await fetch(url,{method:'PUT',headers:{'Content-Type':'image/png'},body:bytes});if(!r.ok)throw Error(await r.text());const image=new Image();image.src=url;await image.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=1;canvas.getContext('2d').drawImage(image,0,0);return canvas.toDataURL().startsWith('data:image/png');}''')
    assert media
    cdp=context.new_cdp_session(page);cdp.send('ServiceWorker.enable');cdp.send('ServiceWorker.stopAllWorkers')
@@ -81,8 +110,44 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.locator('[name=endpoint]').fill('https://nas.test:9444');fresh_page.locator('#connection-form button').click();fresh_page.locator('#account-form').wait_for()
    fresh_page.goto('https://pages.test:9443/production/?connection=1');fresh_page.locator('#connection-form').wait_for(state='visible');fresh_page.locator('[name=endpoint]').fill('');fresh_page.locator('#connection-form button').click();fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
+   fresh_page.locator('.sidebar-settings').click()
+   fresh_page.locator('[data-settings-category=connections]').click()
+   fresh_page.get_by_label('Figma 연결 주소').fill('https://www.figma.com/design/Local123/Example')
+   fresh_page.get_by_role('button',name='연결 저장',exact=True).click()
+   assert '저장했습니다' in fresh_page.locator('.figma-settings [data-status]').inner_text()
+   fresh_page.reload();fresh_page.wait_for_function('window.appAccount?.localMode === true')
+   fresh_page.locator('.sidebar-settings').click()
+   fresh_page.locator('[data-settings-category=connections]').click()
+   assert fresh_page.get_by_label('Figma 연결 주소').input_value()=='https://www.figma.com/design/Local123/Example'
+   fresh_page.get_by_role('button',name='연결 해제',exact=True).click()
+   assert fresh_page.get_by_label('Figma 연결 주소').input_value()==''
+   fresh_page.set_viewport_size({'width':390,'height':844})
+   fresh_page.locator('#menu').click()
+   fresh_page.locator('.sidebar-hub').click()
+   fresh_page.locator('.hub-sidebar').wait_for(state='visible')
+   assert fresh_page.locator('.hub-sidebar').is_visible()
+   assert fresh_page.locator('.hub-sidebar').bounding_box()['width']<=390
+   fresh_page.get_by_role('button',name='Hub 닫기',exact=True).click()
+   fresh_page.wait_for_function("!document.body.classList.contains('hub-visible')")
+   fresh_page.set_viewport_size({'width':1280,'height':900})
+   old_version=fresh_page.locator('meta[name=pn-build]').get_attribute('content')
+   new_version='f'*64 if old_version!='f'*64 else 'a'*64
+   fresh_page.route('**/version.json?*',lambda route:route.fulfill(status=200,content_type='application/json',body=__import__('json').dumps({'version':new_version})))
+   new_html=(root/'dist/pages/app.html').read_text().replace(old_version,new_version)
+   fresh_page.route('**/app.html?*',lambda route:route.fulfill(status=200,content_type='text/html',body=new_html))
+   fresh_page.evaluate('window.prepareAppUpdate=async()=>false;window.dispatchEvent(new Event("focus"))')
+   fresh_page.wait_for_timeout(300)
+   assert fresh_page.locator('meta[name=pn-build]').get_attribute('content')==old_version
+   fresh_page.get_by_label('Figma 연결 주소').focus()
+   fresh_page.evaluate('window.prepareAppUpdate=async()=>true;window.dispatchEvent(new Event("focus"))')
+   fresh_page.wait_for_timeout(300)
+   assert fresh_page.locator('meta[name=pn-build]').get_attribute('content')==old_version
+   fresh_page.get_by_label('Figma 연결 주소').evaluate('(el)=>el.blur()')
+   fresh_page.wait_for_function("document.querySelector('meta[name=pn-build]')?.content === "+repr(new_version))
+   fresh_page.wait_for_function('window.appAccount?.localMode === true')
+   assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    fresh.close()
-   print('PASS: NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow/mobile, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()
