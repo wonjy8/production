@@ -8,7 +8,7 @@ assert.equal(route(base+'nas.example.com',base),'https://nas.example.com');
 assert.equal(route(base+'nas.example.com:8788/',base),'https://nas.example.com:8788');
 assert.equal(route(base+encodeURIComponent('https://nas.example.com:8788'),base),'https://nas.example.com:8788');
 assert.equal(route(base+'https://nas.example.com/',base),'https://nas.example.com');
-for(const address of ['http://nas.example.com','nas.example.com/path','user:secret@nas.example.com','nas.example.com%3Fsecret=1','nas.example.com%23fragment','%E0%A4%A','nas.example.com:99999'])assert.throws(()=>route(base+address,base));
+for(const address of ['http://nas.example.com','nas.example.com/path','user:secret@nas.example.com','nas.example.com%3Fsecret=1','nas.example.com%23fragment','%E0%A4%A','nas.example.com:99999','production-nas-install.zip','production-nas-update.zip'])assert.throws(()=>route(base+address,base));
 assert.throws(()=>route('https://other.test/production/nas.example.com',base));
 assert.throws(()=>route('https://example.github.io/other/nas.example.com',base));
 console.log('URL routing: default local mode, HTTPS NAS origin/port, encoded URLs, invalid addresses and scope isolation passed');

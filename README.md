@@ -45,3 +45,7 @@ node scripts/test-schedule-list.mjs
 현재 데이터와 파일은 NAS 서버에 저장됩니다. 소스를 이 저장소에 올리는 것만으로 사이트의 호스팅이나 NAS 데이터 위치가 바뀌지는 않습니다.
 
 NAS 구성과 인증 서버 실행 방법은 [nas/README.md](nas/README.md)를 참고하세요. NAS의 실제 `.env`, 데이터베이스, 업로드 파일은 이 저장소에 포함되어 있지 않습니다. 새 환경에 배포할 때는 기존 Worker의 환경 변수를 해당 환경에 별도로 설정해야 합니다.
+
+## 다른 사람의 NAS에 설치
+
+[새 NAS Docker 설치 안내](nas/INSTALL.md)를 따르세요. `python3 scripts/package-nas.py`로 공유할 `dist/production-nas-install.zip`과 기존 서버용 `dist/production-nas-update.zip`을 만듭니다. ZIP에는 소스·설치 스크립트·README만 포함하며 실제 설정·DB·사용자 파일은 포함하지 않습니다. Pages 빌드에도 두 ZIP이 포함됩니다. 배포 후 `/production/production-nas-install.zip`에서 다운로드할 수 있습니다.

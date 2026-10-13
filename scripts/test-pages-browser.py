@@ -143,6 +143,13 @@ with tempfile.TemporaryDirectory() as td:
    fresh=browser.new_context();fresh_page=fresh.new_page();fresh_page.goto('https://pages.test:9443/production/')
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>fetch('/production/api/storage').then(r=>r.json()).then(x=>x.mode)")=='browser'
+   fresh_page.evaluate("()=>{const a=document.createElement('a');a.id='nas-install-download';a.href=new URL('production-nas-install.zip',document.baseURI).href;a.textContent='NAS 설치 파일';document.body.append(a)}")
+   with fresh_page.expect_download() as package_download:
+    fresh_page.locator('#nas-install-download').click()
+   package_download.value.save_as('/tmp/production-nas-download-check.zip')
+   with __import__('zipfile').ZipFile('/tmp/production-nas-download-check.zip') as package:
+    assert {'Dockerfile','compose.yaml','install.sh','configure.py','README.md'}<=set(package.namelist())
+    assert '.env' not in package.namelist()
    local=fresh_page.evaluate('''async()=>{const url='/production/api/data',r=await fetch(url),data=await r.json();data.projects.push({id:crypto.randomUUID(),name:'로컬 프로젝트'});const saved=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json','If-Match':r.headers.get('ETag')},body:JSON.stringify(data)});if(!saved.ok)throw Error(await saved.text());const id=crypto.randomUUID(),bytes=new Uint8Array([1,2,3,4]);const file=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:bytes});if(!file.ok)throw Error(await file.text());const refId=crypto.randomUUID();const ref=await fetch('/production/api/references/'+refId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:refId,title:'로컬 자료',category:'',tags:[],description:'',blocks:[]})});if(!ref.ok)throw Error(await ref.text());return {id,refId}}''')
    fresh_page.reload();fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
@@ -190,7 +197,7 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    fresh.close()
-   print('PASS: direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, Wordcraft WASM startup, text editing, DOCX download and reopen, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow/mobile, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, Wordcraft WASM startup, text editing, DOCX download and reopen, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow/mobile, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

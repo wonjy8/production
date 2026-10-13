@@ -9,6 +9,7 @@ if (!/^\/(?:[A-Za-z0-9_-]+\/)*$/.test(base)) throw Error('Invalid PAGES_BASE_PAT
 const output = 'dist/pages';
 await rm(output, {recursive:true, force:true});
 await mkdir(output, {recursive:true});
+execFileSync('python3',['scripts/package-nas.py','--output-dir',output],{stdio:'inherit'});
 execFileSync('python3',['scripts/prepare-wordcraft.py',output+'/modules/wordcraft/0.6.1'],{stdio:'inherit'});
 const routes = {'/':'app.html', '/production-app':'production-app.js', '/production-style':'production-style.css', '/ui-app':'ui-app.js', '/ui-style':'ui-style.css', '/account-app':'account-app.js'};
 const rendered = {};

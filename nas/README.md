@@ -1,4 +1,6 @@
-# NAS 로그인 — 이메일 인증 없이 사용
+# NAS 서버 운영·업데이트
+
+다른 사람의 NAS에 처음 설치하려면 [새 설치 안내](INSTALL.md)를 따르세요. `install.sh`와 `configure.py`가 초기 설정을 준비합니다. 기존 NAS에는 `update.sh`를 사용합니다.
 
 Supabase와 SMTP를 사용하지 않습니다. 계정·세션·권한·제작 데이터·파일은 기존 NAS에 보관합니다.
 
@@ -50,4 +52,4 @@ SMTP 환경변수는 더 이상 필요하지 않습니다. 기존 `.env`에 남�
 
 ## GitHub Pages 연결
 
-[상위 PAGES.md](../PAGES.md)의 업데이트 절차를 따르세요. `PAGES_ORIGINS`에 실제 Pages 원본 주소를 기존 `.env`에 추가하고 새 `browser_gateway.py`를 포함해 컨테이너를 재빌드합니다. 이 값이 비어 있으면 브라우저 직접 접속은 비활성화됩니다. 기존 Worker API와 NAS 데이터는 유지됩니다.
+[NAS 설치·HTTPS 연결 안내](INSTALL.md)의 업데이트 절차를 따르세요. `PAGES_ORIGINS`에 실제 Pages 원본 주소를 기존 `.env`에 추가하고 새 `browser_gateway.py`를 포함해 컨테이너를 재빌드합니다. 이 값이 비어 있으면 브라우저 직접 접속은 비활성화됩니다. 기존 Worker API와 NAS 데이터는 유지됩니다.
