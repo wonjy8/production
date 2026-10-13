@@ -25,10 +25,10 @@ function rewrite(text) {
 }
 for (const [route, file] of Object.entries(routes)) {
   let text = rewrite(rendered[file]);
-  if (file === 'app.html') text = text.replace('</body>', '<a href="./?connection=1" style="position:fixed;right:12px;bottom:8px;z-index:10000;font:12px system-ui;background:white;color:#555;padding:6px;border-radius:4px">서버 연결 설정</a></body>');
+  if (file === 'app.html') text = text.replace('</body>', '<a href="./?connection=1" style="position:fixed;right:12px;bottom:8px;z-index:10000;font:12px system-ui;background:white;color:#555;padding:6px;border-radius:4px">저장 방식 변경</a></body>');
   await writeFile(output+'/'+file, text);
 }
-for (const file of ['pages-sw.js', 'pages-loader.js']) {
+for (const file of ['pages-sw.js', 'pages-local.js', 'pages-loader.js']) {
   await writeFile(output+'/'+file, await readFile('ui/'+file, 'utf8'));
 }
 await writeFile(output+'/.nojekyll', '');

@@ -68,8 +68,21 @@ with tempfile.TemporaryDirectory() as td:
    page.evaluate("async()=>{await fetch('/production/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}")
    assert page.evaluate("async()=>(await fetch('/production/api/data')).status")==401
    assert not errors,errors
-   fresh=browser.new_context();fresh_page=fresh.new_page();fresh_page.goto('https://pages.test:9443/production/');fresh_page.locator('#connection-form').wait_for(state='visible');assert fresh_page.locator('[name=endpoint]').input_value()=='';fresh.close()
-   print('PASS: private browser-only connection, HTTPS validation, new browser has no address, login, data, media/canvas, worker restart and logout')
+   fresh=browser.new_context();fresh_page=fresh.new_page();fresh_page.goto('https://pages.test:9443/production/');fresh_page.locator('#connection-form').wait_for(state='visible');assert fresh_page.locator('[name=endpoint]').input_value()==''
+   fresh_page.locator('#connection-form button').click()
+   fresh_page.wait_for_function('window.appAccount?.localMode === true')
+   assert fresh_page.evaluate("async()=>fetch('/production/api/storage').then(r=>r.json()).then(x=>x.mode)")=='browser'
+   local=fresh_page.evaluate('''async()=>{const url='/production/api/data',r=await fetch(url),data=await r.json();data.projects.push({id:crypto.randomUUID(),name:'로컬 프로젝트'});const saved=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json','If-Match':r.headers.get('ETag')},body:JSON.stringify(data)});if(!saved.ok)throw Error(await saved.text());const id=crypto.randomUUID(),bytes=new Uint8Array([1,2,3,4]);const file=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:bytes});if(!file.ok)throw Error(await file.text());const refId=crypto.randomUUID();const ref=await fetch('/production/api/references/'+refId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:refId,title:'로컬 자료',category:'',tags:[],description:'',blocks:[]})});if(!ref.ok)throw Error(await ref.text());return {id,refId}}''')
+   fresh_page.reload();fresh_page.wait_for_function('window.appAccount?.localMode === true')
+   assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
+   assert fresh_page.evaluate("async()=>(await fetch('/production/api/references')).json().then(x=>x.some(r=>r.title==='로컬 자료'))")
+   assert fresh_page.evaluate("async(id)=>[...(new Uint8Array(await(await fetch('/production/api/ref-files/'+id)).arrayBuffer()))].join(',')",local['id'])=='1,2,3,4'
+   fresh_page.goto('https://pages.test:9443/production/?connection=1');fresh_page.locator('#connection-form').wait_for(state='visible');assert fresh_page.locator('[name=endpoint]').input_value()==''
+   fresh_page.locator('[name=endpoint]').fill('https://nas.test:9444');fresh_page.locator('#connection-form button').click();fresh_page.locator('#account-form').wait_for()
+   fresh_page.goto('https://pages.test:9443/production/?connection=1');fresh_page.locator('#connection-form').wait_for(state='visible');fresh_page.locator('[name=endpoint]').fill('');fresh_page.locator('#connection-form button').click();fresh_page.wait_for_function('window.appAccount?.localMode === true')
+   assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
+   fresh.close()
+   print('PASS: NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

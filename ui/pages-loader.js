@@ -22,10 +22,15 @@ try {
   // Wait for the runtime-configurable worker when upgrading an older deployment.
   const current = await workerMessage('connection:get');
   if (!current || new URL(location.href).searchParams.get('connection') === '1') {
-    form.hidden = false; input.value = current || ''; status.textContent = '';
+    form.hidden = false; input.value = current === 'local' ? '' : current || ''; status.textContent = '';
     form.onsubmit = async event => {
       event.preventDefault(); const button = form.querySelector('button'); button.disabled = true;
       try {
+        if (!input.value.trim()) {
+          await workerMessage('connection:set', 'local');
+          const target = new URL(location.href); target.searchParams.delete('connection'); location.replace(target.href);
+          return;
+        }
         const url = new URL(input.value.trim());
         if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw Error('경로 없이 HTTPS 서버 주소만 입력하세요.');
         status.textContent = '서버 연결 확인 중…';

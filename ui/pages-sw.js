@@ -1,9 +1,10 @@
 /* API bridge keeps media, canvas and downloads same-origin on GitHub Pages.
  * Authentication is an HttpOnly, Secure, partitioned cookie at the NAS.
- * No API responses or private files are cached by this worker. */
+ * NAS responses are not cached. Local mode stores data in IndexedDB. */
+importScripts('./pages-local.js');
 self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
-// Only the connection origin is persisted, never API data, sessions or files.
+// Connection choice is separate from local workspace data.
 function connection(value) {
   return new Promise((resolve, reject) => {
     const open = indexedDB.open('production-connection:'+self.registration.scope, 1);
@@ -27,6 +28,7 @@ self.addEventListener('message', event => {
       let value;
       if (event.data?.type === 'connection:get') value = await connection();
       else if (event.data?.type === 'connection:set') {
+        if (event.data.value === 'local') { value = await connection('local'); event.ports[0].postMessage({value}); return; }
         const url = new URL(event.data.value);
         if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw Error('올바른 HTTPS 서버 주소가 필요합니다.');
         value = await connection(url.origin);
@@ -46,6 +48,7 @@ self.addEventListener('fetch', event => {
     }
     try {
       const origin = await connection();
+      if (origin === 'local') return self.handleLocalRequest(event.request);
       if (!origin) return Response.json({error:'서버 연결 설정이 필요합니다.'}, {status:503});
       const target = origin + '/browser/api/' + url.pathname.slice(prefix.pathname.length) + url.search;
       const response = await fetch(target, {
