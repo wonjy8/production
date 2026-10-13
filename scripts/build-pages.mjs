@@ -1,3 +1,4 @@
+import {execFileSync} from 'node:child_process';
 import {mkdir, readFile, writeFile, rm} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {application} from '../worker/index.js';
@@ -8,6 +9,7 @@ if (!/^\/(?:[A-Za-z0-9_-]+\/)*$/.test(base)) throw Error('Invalid PAGES_BASE_PAT
 const output = 'dist/pages';
 await rm(output, {recursive:true, force:true});
 await mkdir(output, {recursive:true});
+execFileSync('python3',['scripts/prepare-wordcraft.py',output+'/modules/wordcraft/0.6.1'],{stdio:'inherit'});
 const routes = {'/':'app.html', '/production-app':'production-app.js', '/production-style':'production-style.css', '/ui-app':'ui-app.js', '/ui-style':'ui-style.css', '/account-app':'account-app.js'};
 const rendered = {};
 for (const [route, file] of Object.entries(routes)) {
@@ -37,7 +39,8 @@ for (const file of ['pages-sw.js','pages-local.js','pages-loader.js','pages-upda
   helpers[file] = await readFile(file==='index.html'?'ui/pages-index.html':output+'/'+file,'utf8');
 }
 const hash = text => createHash('sha256').update(text).digest('hex');
-const version = hash(JSON.stringify({rendered,helpers,base}));
+const wordcraft = JSON.parse(await readFile('third_party/wordcraft/source.json','utf8'));
+const version = hash(JSON.stringify({rendered,helpers,base,wordcraft}));
 const worker = helpers['pages-sw.js'].replace("'./pages-local.js'", JSON.stringify('./pages-local.js?v='+hash(helpers['pages-local.js']).slice(0,12)));
 await writeFile(output+'/pages-sw.js',worker);
 const app = await readFile(output+'/app.html','utf8');

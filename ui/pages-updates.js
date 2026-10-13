@@ -17,7 +17,7 @@
   return focused.some(el=>el.isContentEditable||el.matches?.('input,textarea,select,[contenteditable="true"],dialog[open]'))||document.querySelector('dialog[open]');
  }
  async function apply(){
-  if(reloading||latest===version||document.hidden||writes||editing())return;
+  if(reloading||latest===version||document.hidden||writes||window.wordcraftOpenCount||editing())return;
   try{
    if(window.prepareAppUpdate){if(await window.prepareAppUpdate()===false)return}
    if(writes||editing())return;

@@ -5,6 +5,7 @@ export const hubCategories = [
 ];
 
 export const moduleTemplates = [
+ {id:'wordcraft',category:'basic',name:'Wordcraft 문서',description:'DOCX 문서 작성·서식·표·파일 저장',icon:'file',kind:'wordcraft'},
  {id:'note',category:'basic',name:'메모',description:'자유롭게 작성하는 텍스트',icon:'file',kind:'text'},
  {id:'checklist',category:'basic',name:'체크리스트',description:'항목을 완료하며 진행 상황 확인',icon:'tasks',kind:'checklist'},
  {id:'tasks',category:'basic',name:'할 일',description:'프로젝트 할 일 연결',icon:'tasks',kind:'tasks'},
@@ -55,6 +56,7 @@ export function createHubModule(id, options={}) {
   ...(template.fields?{fields:[...template.fields],states:[...template.states],rows:[]}:{}),
   ...(template.kind==='checklist'?{items:[]}:{}),
   ...(template.kind==='grade-calculator'?{gradeScale:'4.5',courses:[]}:{}),
+  ...(template.kind==='wordcraft'?{span:12}:{}),
   ...options};
 }
 

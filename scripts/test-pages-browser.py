@@ -90,6 +90,39 @@ with tempfile.TemporaryDirectory() as td:
    page.get_by_role('button',name=re.compile('Figma 임베드')).click()
    assert page.get_by_label('링크 주소',exact=True).input_value()=='https://www.figma.com/design/Ab123/Example'
    page.keyboard.press('Escape')
+   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
+   page.get_by_role('button',name='기본',exact=True).click()
+   page.get_by_role('button',name=re.compile('Wordcraft 문서')).click()
+   wordcraft=page.locator('.wordcraft-module')
+   wordcraft.get_by_role('button',name='문서 편집 시작',exact=True).click()
+   editor=page.frame_locator('iframe.wordcraft-frame')
+   editor.locator('#wordcraft_canvas').wait_for(state='visible',timeout=90000)
+   editor.locator('#wordcraft_loading').wait_for(state='detached',timeout=90000)
+   assert page.evaluate('window.wordcraftOpenCount')==1
+   editor.locator('#wordcraft_canvas').click(position={'x':300,'y':160})
+   page.keyboard.type('Wordcraft integration smoke',delay=40)
+   editor.locator('#wordcraft_canvas').evaluate('()=>window.showSaveFilePicker=undefined')
+   with page.expect_download(timeout=20000) as exported:
+    page.keyboard.press('Control+s')
+   download=exported.value
+   assert download.suggested_filename.endswith('.docx')
+   download.save_as('/tmp/wordcraft-smoke.docx')
+   with __import__('zipfile').ZipFile('/tmp/wordcraft-smoke.docx') as document:
+    assert 'Wordcraft integration smoke' in document.read('word/document.xml').decode()
+   editor.locator('#wordcraft_canvas').click(position={'x':28,'y':54})
+   editor.locator('#wordcraft_canvas').click(position={'x':45,'y':167})
+   page.wait_for_timeout(200)
+   page.locator('iframe.wordcraft-frame').screenshot(path='/tmp/wordcraft-open.png')
+   with page.expect_file_chooser(timeout=15000) as chooser:
+    editor.locator('#wordcraft_canvas').click(position={'x':280,'y':90})
+   chooser.value.set_files('/tmp/wordcraft-smoke.docx')
+   page.wait_for_timeout(500)
+   with page.expect_download(timeout=20000) as reopened:
+    page.keyboard.press('Control+s')
+   reopened.value.save_as('/tmp/wordcraft-reopened.docx')
+   with __import__('zipfile').ZipFile('/tmp/wordcraft-reopened.docx') as document:
+    assert 'Wordcraft integration smoke' in document.read('word/document.xml').decode()
+   page.locator('iframe.wordcraft-frame').screenshot(path='/tmp/wordcraft-module.png')
    media=page.evaluate('''async()=>{const id=crypto.randomUUID(),url='/production/api/ref-files/'+id;const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='),c=>c.charCodeAt(0));const r=await fetch(url,{method:'PUT',headers:{'Content-Type':'image/png'},body:bytes});if(!r.ok)throw Error(await r.text());const image=new Image();image.src=url;await image.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=1;canvas.getContext('2d').drawImage(image,0,0);return canvas.toDataURL().startsWith('data:image/png');}''')
    assert media
    cdp=context.new_cdp_session(page);cdp.send('ServiceWorker.enable');cdp.send('ServiceWorker.stopAllWorkers')
@@ -147,7 +180,7 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    fresh.close()
-   print('PASS: automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow/mobile, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: Wordcraft WASM startup, text editing, DOCX download and reopen, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow/mobile, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()
