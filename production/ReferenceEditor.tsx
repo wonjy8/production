@@ -8,7 +8,7 @@ import {uploadModuleFiles} from './module-upload.js';
 import {tabDragBindings,reorderTabs} from '../ui/tab-drag.js';
 import {itemMenuBindings,moveInList} from '../ui/item-menu.js';
 import {Modal} from './Modal';
-import React,{useState,useEffect,useRef} from 'react';
+import React,{useState,useEffect,useRef,useLayoutEffect} from 'react';
 import {createRoot} from 'react-dom/client';
 import {ModuleTab,TabEditor} from './ModuleTab';
 import {referenceModules,referenceTabs,normalizeReferenceTabs,updateReferenceModule} from './shared-modules.js';
@@ -20,6 +20,7 @@ function ReferenceEditor({initial,onClose}:{initial:any;onClose:()=>void}){
  const [r,setR]=useState(()=>normalizeReferenceTabs(initial)),[w,setW]=useState(()=>window.productionBridge.read()),[status,setStatus]=useState('저장됨'),[error,setError]=useState('');
  const [activeTabId,setActiveTabId]=useState(()=>((window as any).productionSearchTarget?.referenceId===initial.id?(window as any).productionSearchTarget.tabId:undefined)||referenceTabs(initial)[0]?.id||''),[tabEditor,setTabEditor]=useState<any>(null),[tabDelete,setTabDelete]=useState(''),[hubTabs,setHubTabs]=useState(false);
  const tabs=referenceTabs(r),activeTab=tabs.find(t=>t.id===activeTabId)||tabs[0];
+ useLayoutEffect(()=>{(window as any).activeReferenceTabId=activeTab?.id||'';(window as any).appNavigation?.changed()},[activeTab?.id]);
  const [categoryOpen,setCategoryOpen]=useState(false),[tagDraft,setTagDraft]=useState(''),[coverEditing,setCoverEditing]=useState(false),[uploading,setUploading]=useState(false),[fileHover,setFileHover]=useState(false);const uploadBusy=useRef(false);
  const selectedCategories=activeTab?.categories||[];
  function addTags(value:string){const values=value.split(/[,\n]+/).map(t=>t.trim().replace(/^#+/,'')).filter(Boolean);if(values.length)update((old:any)=>({...old,tabs:old.tabs.map((t:any)=>t.id===activeTab?.id?{...t,tags:[...new Set([...(t.tags||[]).map((t:string)=>t.replace(/^#+/,'')),...values])].slice(0,30)}:t)}));setTagDraft('')}

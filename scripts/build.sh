@@ -6,6 +6,7 @@ dist_root="$project_root/dist"
 
 rm -rf "$dist_root"
 mkdir -p "$dist_root/server" "$dist_root/.openai"
+cp "$project_root/worker/app-navigation.js" "$dist_root/server/app-navigation.js"
 cp "$project_root/worker/index.js" "$dist_root/server/index.js"
 cp "$project_root/worker/production-assets.js" "$dist_root/server/production-assets.js"
 cp "$project_root/worker/ui-assets.js" "$dist_root/server/ui-assets.js"

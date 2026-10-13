@@ -48,6 +48,27 @@ with tempfile.TemporaryDirectory() as td:
    assert page.locator('.sidebar-main-spaces [data-main-space]').count()==3
    assert page.locator('.breadcrumbs [data-location=home]').inner_text()=='홈'
    assert page.locator('.topbar').evaluate('(el)=>getComputedStyle(el).borderBottomWidth')=='0px'
+   page.wait_for_function('new URL(location.href).searchParams.get("view")==="home"')
+   page.locator('[data-main-space=references]').click()
+   page.wait_for_function('new URL(location.href).searchParams.get("view")==="references"')
+   page.locator('.sidebar-source-sections button[data-source-section=sources]').click()
+   page.wait_for_function('new URL(location.href).searchParams.get("section")==="sources"')
+   source_url=page.url
+   assert '/production/nas.test:9444' in source_url
+   page.go_back()
+   page.wait_for_function('window.activeWorkspace==="references" && new URL(location.href).searchParams.get("section")==="references"')
+   page.go_back()
+   page.wait_for_function('window.activeWorkspace==="home"')
+   page.go_forward()
+   page.wait_for_function('window.activeWorkspace==="references"')
+   page.go_forward()
+   page.wait_for_function('new URL(location.href).searchParams.get("section")==="sources"')
+   page.reload()
+   page.wait_for_function('document.querySelector(".breadcrumbs")?.textContent.includes("소스")')
+   assert page.url==source_url
+   page.locator('[data-main-space=home]').click()
+   page.wait_for_function('new URL(location.href).searchParams.get("view")==="home"')
+
    page.locator('#share').click();fresh_drawer=page.get_by_role('dialog',name='공유',exact=True)
    fresh_drawer.wait_for();assert fresh_drawer.bounding_box()['x']>700
    page.get_by_role('button',name='공유 닫기',exact=True).click();fresh_drawer.wait_for(state='hidden')
@@ -92,6 +113,16 @@ with tempfile.TemporaryDirectory() as td:
    page.locator('#refadd').click()
    page.wait_for_function('!!window.activeReferenceId')
    assert page.locator('.breadcrumbs button').all_text_contents()[:2]==['자료','레퍼런스']
+   page.wait_for_function('new URL(location.href).searchParams.get("record")===window.activeReferenceId && !!new URL(location.href).searchParams.get("tab")')
+   reference_url=page.url
+   page.go_back()
+   page.wait_for_function('!window.activeReferenceId && window.activeWorkspace==="references"')
+   page.go_forward()
+   page.wait_for_function('!!window.activeReferenceId')
+   page.reload()
+   page.wait_for_function('!!window.activeReferenceId && !!window.activeReferenceTabId')
+   assert page.url==reference_url
+
    canvas_width=page.locator('.canvas').bounding_box()['width']
    page.locator('.custom-module-tab .module-add-footer button').click()
    page.wait_for_function("document.body.classList.contains('hub-visible')")
@@ -257,6 +288,20 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.locator('[data-main-space=home]').click()
    fresh_page.locator('[data-production-id=workspace-project]').click()
    fresh_page.get_by_role('heading',name='오늘 할 일',exact=True).wait_for()
+   fresh_page.wait_for_function('new URL(location.href).searchParams.get("group")==="workspace-project"')
+   fresh_page.locator('[data-tab-id=schedule]').click()
+   fresh_page.wait_for_function('new URL(location.href).searchParams.get("section")==="schedule"')
+   group_schedule_url=fresh_page.url
+   fresh_page.go_back()
+   fresh_page.get_by_role('heading',name='오늘 할 일',exact=True).wait_for()
+   fresh_page.go_forward()
+   fresh_page.wait_for_function('window.productionSearchContext?.section==="schedule"')
+   fresh_page.reload()
+   fresh_page.wait_for_function('window.productionSearchContext?.section==="schedule"')
+   assert fresh_page.url==group_schedule_url
+   fresh_page.go_back()
+   fresh_page.get_by_role('heading',name='오늘 할 일',exact=True).wait_for()
+
    assert fresh_page.get_by_role('heading',name='업무 그룹',exact=True).is_visible()
    assert fresh_page.locator('.module-add-footer').bounding_box()['y']>fresh_page.locator('.overview-activity').bounding_box()['y']
    fresh_page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes("워크스페이스 프로젝트")')
@@ -360,7 +405,7 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    assert not errors,errors
    fresh.close()
-   print('PASS: three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, manual update icon with save deferral and persisted local data, aligned floating panels, Hub search motion and removed previews, inline deletion, full-width divider, five accent colors and overview activity, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: URL screen history/back/forward, reference detail/tab reload, project schedule tab reload, preserved NAS path, three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, manual update icon with save deferral and persisted local data, aligned floating panels, Hub search motion and removed previews, inline deletion, full-width divider, five accent colors and overview activity, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()
