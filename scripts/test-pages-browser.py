@@ -43,6 +43,34 @@ with tempfile.TemporaryDirectory() as td:
    page.wait_for_function('window.appAccount?.role === "superadmin"')
    page.wait_for_function('typeof window.mountProduction === "function"')
    assert page.locator('[data-main-space="references"]').get_attribute('aria-label')=='자료'
+   page.wait_for_function('window.activeWorkspace === "home"')
+   assert page.evaluate('window.appWorkspaces.map(w=>w.label)')==['홈','자료','데이터베이스']
+   assert page.locator('.sidebar-main-spaces [data-main-space]').count()==3
+   assert page.locator('.breadcrumbs [data-location=home]').inner_text()=='홈'
+   page.locator('[data-main-space=references]').click()
+   page.wait_for_function('window.activeWorkspace === "references"')
+   assert page.locator('.sidebar-source-sections button[data-source-section]').count()==3
+   for ident,label in [('references','레퍼런스'),('sources','소스'),('portfolios','포트폴리오')]:
+    page.locator('.sidebar-source-sections button[data-source-section='+ident+']').click()
+    page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes('+repr(label)+')')
+    assert page.locator('.breadcrumbs button').all_text_contents()==['자료',label]
+   page.get_by_role('button',name='갤러리 보기',exact=True).click()
+   page.locator('.source-gallery').wait_for(state='visible')
+   assert page.evaluate('window.activeWorkspace')=='references'
+   assert page.locator('.breadcrumbs button').all_text_contents()==['자료','포트폴리오','갤러리']
+   page.locator('.sidebar-source-sections button[data-source-section=references]').click()
+   page.locator('[data-main-space=database]').click()
+   page.wait_for_function('window.activeWorkspace === "database"')
+   assert page.locator('[data-db-scope]').count()==3
+   for ident,label in [('members','멤버·장비'),('rental-shops','대여처'),('locations','장소')]:
+    page.locator('[data-db-scope='+ident+']').click()
+    page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes('+repr(label)+')')
+    assert page.locator('.breadcrumbs button').all_text_contents()==['데이터베이스',label]
+   page.locator('[data-main-space=home]').click()
+   page.wait_for_function('window.activeWorkspace === "home"')
+   assert page.locator('.breadcrumbs button').all_text_contents()==['홈']
+   page.locator('[data-main-space=references]').click()
+   page.locator('.sidebar-source-sections button[data-source-section=references]').click()
    result=page.evaluate('''async()=>{const r=await fetch('/production/api/data');return {status:r.status,data:await r.json()}}''')
    assert result['status']==200,result
    local_tab=context.new_page();local_tab.goto('https://pages.test:9443/production/')
@@ -55,6 +83,8 @@ with tempfile.TemporaryDirectory() as td:
    assert any(c['name']=='__Host-pn-pages' and c['httpOnly'] and c['secure'] and c.get('partitionKey') for c in cookies), 'Missing partitioned session cookie'
    page.locator('[data-main-space=references]').click()
    page.locator('#refadd').click()
+   page.wait_for_function('!!window.activeReferenceId')
+   assert page.locator('.breadcrumbs button').all_text_contents()[:2]==['자료','레퍼런스']
    canvas_width=page.locator('.canvas').bounding_box()['width']
    page.locator('.sidebar-hub').click()
    page.wait_for_function("document.body.classList.contains('hub-visible')")
@@ -150,11 +180,16 @@ with tempfile.TemporaryDirectory() as td:
    with __import__('zipfile').ZipFile('/tmp/production-nas-download-check.zip') as package:
     assert {'Dockerfile','compose.yaml','install.sh','configure.py','README.md'}<=set(package.namelist())
     assert '.env' not in package.namelist()
-   local=fresh_page.evaluate('''async()=>{const url='/production/api/data',r=await fetch(url),data=await r.json();data.projects.push({id:crypto.randomUUID(),name:'로컬 프로젝트'});const saved=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json','If-Match':r.headers.get('ETag')},body:JSON.stringify(data)});if(!saved.ok)throw Error(await saved.text());const id=crypto.randomUUID(),bytes=new Uint8Array([1,2,3,4]);const file=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:bytes});if(!file.ok)throw Error(await file.text());const refId=crypto.randomUUID();const ref=await fetch('/production/api/references/'+refId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:refId,title:'로컬 자료',category:'',tags:[],description:'',blocks:[]})});if(!ref.ok)throw Error(await ref.text());return {id,refId}}''')
+   local=fresh_page.evaluate('''async()=>{const url='/production/api/data',r=await fetch(url),data=await r.json();data.projects.push({id:crypto.randomUUID(),name:'로컬 프로젝트'});data.productions.push({id:'workspace-project',name:'워크스페이스 프로젝트',tasks:[],customTabs:[],memberIds:[],teams:[]});const saved=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json','If-Match':r.headers.get('ETag')},body:JSON.stringify(data)});if(!saved.ok)throw Error(await saved.text());const id=crypto.randomUUID(),bytes=new Uint8Array([1,2,3,4]);const file=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:bytes});if(!file.ok)throw Error(await file.text());const refId=crypto.randomUUID();const ref=await fetch('/production/api/references/'+refId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:refId,title:'로컬 자료',category:'',tags:[],description:'',blocks:[]})});if(!ref.ok)throw Error(await ref.text());return {id,refId}}''')
    fresh_page.reload();fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/references')).json().then(x=>x.some(r=>r.title==='로컬 자료'))")
    assert fresh_page.evaluate("async(id)=>[...(new Uint8Array(await(await fetch('/production/api/ref-files/'+id)).arrayBuffer()))].join(',')",local['id'])=='1,2,3,4'
+   fresh_page.locator('[data-main-space=home]').click()
+   fresh_page.locator('[data-production-id=workspace-project]').click()
+   fresh_page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes("워크스페이스 프로젝트")')
+   assert fresh_page.locator('.breadcrumbs button').all_text_contents()[:2]==['홈','워크스페이스 프로젝트']
+   assert fresh_page.evaluate('window.activeWorkspace')=='home'
    fresh_page.goto('https://pages.test:9443/production/nas.test:9444/')
    fresh_page.locator('#account-form').wait_for()
    fresh_page.goto('https://pages.test:9443/production/')
@@ -197,7 +232,7 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    fresh.close()
-   print('PASS: NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, Wordcraft WASM startup, text editing, DOCX download and reopen, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow/mobile, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, Wordcraft WASM startup, text editing, DOCX download and reopen, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow/mobile, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

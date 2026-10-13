@@ -1,3 +1,4 @@
+import * as hub from '../production/module-hub.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -40,17 +41,17 @@ assert.equal(adminHomeData(w,{today:'2026-10-13',productionId:'solo'}).active[0]
 // Exercise the real add action on a project with no work groups.
 const require=createRequire(import.meta.url),esbuild=require('esbuild');
 const jsx=(type,props,key)=>({type,props,key}),nodes=n=>[n,...[n?.props?.children].flat(Infinity).filter(v=>v&&typeof v==='object').flatMap(nodes)];
-let tab={id:'content',name:'내용',modules:[]},cursor=0,values=[true];
+let tab={id:'content',name:'내용',modules:[]},cursor=0,values=['',null,true];
 const ctx={module:{exports:{}},exports:{},crypto:{randomUUID:()=> 'new-content'},window:{},require(name){
  if(name==='../ui/item-menu.js')return menus;if(name==='react')return {useRef:v=>({current:v}),useEffect(){},useState(initial){const i=cursor++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return [values[i],v=>values[i]=v]}};
  if(name==='react/jsx-runtime')return {jsx,jsxs:jsx};
- if(name==='./shared-modules.js')return shared;
+ if(name==='./shared-modules.js')return shared;if(name==='./module-hub.js')return hub;
  if(name==='./timetable-model.js')return timetable;
  return new Proxy({},{get:(_,key)=>key});
 }};
 vm.runInNewContext(esbuild.transformSync(readFileSync('production/ModuleTab.tsx','utf8'),{loader:'tsx',format:'cjs',jsx:'automatic'}).code,ctx);
 function render(){cursor=0;return ctx.module.exports.ModuleTab({tab,workspace:{members:[],projects:[],productions:[w.productions[0]]},defaultIds:[],productionId:'event',parentScope:true,onTabChange:fn=>tab=fn(tab),onChange(){},onOpen(){},onAddMember(){}})}
-let tree=render();nodes(tree).find(n=>n.type==='button'&&n.props.children?.[1]?.props?.children==='할 일').props.onClick();
+let tree=render();nodes(tree).find(n=>n.type==='HubSidebar').props.onAddModule('tasks');
 assert.equal(tab.modules[0].kind,'tasks');assert.equal(tab.modules[0].projectId,'');
 tree=render();const canvas=nodes(tree).find(n=>n.type==='SnapCanvas');
 const item=canvas.props.renderItem(tab.modules[0],0,{onPointerDown(){},onPointerMove(){},onPointerUp(){},onPointerCancel(){}});
@@ -60,7 +61,7 @@ assert.ok(nodes(item).some(n=>n.type==='ProductionTasks'&&n.props.productionId==
 const worker=readFileSync('worker/index.js','utf8'),start=worker.indexOf('const sidebarFixedTop='),end=worker.indexOf('\nconst sidebarFixedBottom',start),elements=[],calls=[];
 function element(){const el={className:'',hidden:false,innerHTML:'',setAttribute(){},append(){},prepend(){}};elements.push(el);return el}
 const nav={window:{appAccount:{role:'admin'}},document:{createElement:element},$:element,spacePicker:{},adminHomeButton:{},packIcon:n=>'<i>'+n+'</i>',closeSpaceMenu(){},openProduction:(...a)=>calls.push(['home',...a]),openRefs:()=>calls.push(['references']),openDatabase:()=>calls.push(['database'])};
-vm.runInNewContext(worker.slice(start,end),nav);
+nav.closeHub=()=>{};vm.runInNewContext(worker.slice(worker.indexOf('const workspaceDefinitions='),worker.indexOf("let refTagFilter="))+worker.slice(start,end),nav);
 assert.ok(nav.window.sidebarMainNav.innerHTML.indexOf('data-main-space="home"')<nav.window.sidebarMainNav.innerHTML.indexOf('data-main-space="references"'));
 for(const mainSpace of ['home','references','database'])nav.window.sidebarMainNav.onclick({target:{closest:()=>({dataset:{mainSpace}})}});
 assert.deepEqual(calls,[['home',undefined,'dashboard'],['references'],['database']]);

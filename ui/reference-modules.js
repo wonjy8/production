@@ -18,7 +18,7 @@ window.referenceBridge={
 };
 let referenceEditorCleanup=null,referenceOpenRequest=0;
 const referenceModuleHost=document.createElement('div');referenceModuleHost.id='reference-module-host';referenceModuleHost.hidden=true;$('#refpanel').append(referenceModuleHost);
-function closeReferenceModules(){referenceOpenRequest++;referenceEditorCleanup?.();referenceEditorCleanup=null;referenceModuleHost.hidden=true;$('#refpanel').classList.remove('reference-open');window.activeReferenceId='';}
+function closeReferenceModules(){window.sourceGalleryVisible=false;referenceOpenRequest++;referenceEditorCleanup?.();referenceEditorCleanup=null;referenceModuleHost.hidden=true;$('#refpanel').classList.remove('reference-open');window.activeReferenceId='';}
 // Navigation wrappers keep the content area and editor lifecycle in sync.
 const referenceHome=openRefs;openRefs=async function(...args){closeReferenceModules();if(sourceSection==='gallery')return openSourceGallery();return referenceHome(...args)};
 $('#references').onclick=()=>openRefs();
@@ -33,7 +33,7 @@ async function openReferenceModules(existing){
   const r=existing||await window.referenceBridge.create({title:sourceSection==='portfolios'?'새 포트폴리오':sourceSection==='sources'?'새 소스':'새 레퍼런스',recordType:sourceSection==='portfolios'?'portfolio':sourceSection==='sources'?'source':'reference',modules:[]});
   if(request!==referenceOpenRequest)return;
   referenceEditorCleanup?.();referenceEditorCleanup=null;
-  leaveProduction();if(typeof closeSettings==='function')closeSettings();refPage=true;$('#paper').hidden=true;$('#refpanel').hidden=false;$('#refpanel').classList.add('reference-open');referenceModuleHost.hidden=false;window.activeReferenceId=r.id;setTopTitle(r.title);syncSidebar();
+  leaveProduction();if(typeof closeSettings==='function')closeSettings();refPage=true;$('#paper').hidden=true;$('#refpanel').hidden=false;$('#refpanel').classList.add('reference-open');referenceModuleHost.hidden=false;window.sourceGalleryVisible=false;window.activeReferenceId=r.id;setTopTitle(r.title);syncSidebar();
   const close=()=>{closeReferenceModules();if(refPage){setTopTitle(sourceSection==='portfolios'?'포트폴리오':sourceSection==='sources'?'소스':'레퍼런스');drawRefs()}};
   referenceEditorCleanup=window.mountReferenceEditor(referenceModuleHost,productionAssets,r,close);
  }catch(e){toast(e.message||'레퍼런스 불러오기 실패')}
