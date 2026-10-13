@@ -11,3 +11,5 @@ Media-Production.zip의 ProjectWorkspace, ProductionTasks, 담당자 선택, 인
 ## 프로젝트 중심 탐색
 
 사이드바는 홈·레퍼런스·데이터베이스의 고정 순서 버튼, 프로젝트 목록, 하단 설정으로 구성합니다. 기존 productions 레코드는 최상위 프로젝트, productionId로 연결된 projects 레코드는 업무 그룹으로 표시합니다. ID와 서버 권한 범위, 파일·공유 원본 연결을 유지하기 위해 기존 저장 필드는 보존합니다. 새 프로젝트의 기본 내용은 defaultBoard가 지정된 customTabs 레코드로 저장하지만 별도 탭으로 표시하지 않습니다. 자료 불러오기와 레퍼런스의 프로젝트 선택·필터도 같은 최상위 목록을 사용합니다.
+
+Hub 템플릿은 `module-hub.js`의 데이터 정의로 관리합니다. 모듈 템플릿은 종류·초기값·분류를, 탭 템플릿은 모듈 템플릿 ID 목록을 참조합니다. `createHubModule`과 `createHubTab`은 매번 새 ID와 독립된 데이터를 만들므로 향후 프로젝트 템플릿에서도 같은 정의를 조합할 수 있습니다.

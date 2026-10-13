@@ -1,7 +1,7 @@
 """Isolated HTTPS integration test: requires Playwright, Chromium, openssl and NAS dependencies.
 Only the generated local certificate is trusted using its exact SPKI fingerprint.
 """
-import base64, hashlib, http.server, os, pathlib, socket, ssl, subprocess, tempfile, threading, time
+import base64, hashlib, http.server, os, pathlib, re, socket, ssl, subprocess, tempfile, threading, time
 from playwright.sync_api import sync_playwright
 root=pathlib.Path(__file__).resolve().parent.parent
 nas_python=os.environ.get('NAS_PYTHON', __import__('sys').executable)
@@ -38,10 +38,25 @@ with tempfile.TemporaryDirectory() as td:
    page.locator('#account-form button').click()
    page.wait_for_function('window.appAccount?.role === "superadmin"')
    page.wait_for_function('typeof window.mountProduction === "function"')
+   assert page.locator('[data-main-space="references"]').get_attribute('aria-label')=='자료'
    result=page.evaluate('''async()=>{const r=await fetch('/production/api/data');return {status:r.status,data:await r.json()}}''')
    assert result['status']==200,result
    cookies=context.cookies('https://nas.test:9444')
    assert any(c['name']=='__Host-pn-pages' and c['httpOnly'] and c['secure'] and c.get('partitionKey') for c in cookies), 'Missing partitioned session cookie'
+   page.locator('[data-main-space=references]').click()
+   page.locator('#refadd').click()
+   page.get_by_role('button',name='Hub 둘러보기').click()
+   page.get_by_role('button',name='학교',exact=True).click()
+   page.get_by_role('button',name=re.compile('출석부')).click()
+   page.get_by_role('button',name='항목 추가').wait_for()
+   page.get_by_role('button',name='Hub 둘러보기').click()
+   page.get_by_role('button',name='학교',exact=True).click()
+   page.get_by_role('button',name=re.compile('과제 현황')).drag_to(page.locator('.snap-canvas'),target_position={'x':20,'y':20})
+   assert page.locator('.workspace-module').count()==2
+   page.get_by_role('button',name='화면 나누기').click()
+   page.get_by_role('button',name='학교',exact=True).click()
+   page.get_by_role('button',name=re.compile('수업 관리')).click()
+   assert page.locator('.workspace-module').count()==3
    media=page.evaluate('''async()=>{const id=crypto.randomUUID(),url='/production/api/ref-files/'+id;const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='),c=>c.charCodeAt(0));const r=await fetch(url,{method:'PUT',headers:{'Content-Type':'image/png'},body:bytes});if(!r.ok)throw Error(await r.text());const image=new Image();image.src=url;await image.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=1;canvas.getContext('2d').drawImage(image,0,0);return canvas.toDataURL().startsWith('data:image/png');}''')
    assert media
    cdp=context.new_cdp_session(page);cdp.send('ServiceWorker.enable');cdp.send('ServiceWorker.stopAllWorkers')

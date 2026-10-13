@@ -1,4 +1,4 @@
-export const moduleKinds=[['schedule-list','일정 목록','calendar'],['text','텍스트','file'],['image','사진','reference'],['video','영상','video'],['file','파일','file'],['link','링크','link'],['embed','임베드','video'],['divider','구분선','list'],['accounting','회계','table'],['materials','자료','folder'],['tasks','할 일','tasks'],['schedule','일정','calendar'],['timetable','타임테이블','calendar']];
+export const moduleKinds=[['schedule-list','일정 목록','calendar'],['text','텍스트','file'],['image','사진','reference'],['video','영상','video'],['file','파일','file'],['link','링크','link'],['embed','임베드','video'],['divider','구분선','list'],['accounting','회계','table'],['checklist','체크리스트','tasks'],['tracker','현황표','table'],['materials','자료','folder'],['tasks','할 일','tasks'],['schedule','일정','calendar'],['timetable','타임테이블','calendar']];
 export function referenceModules(r){
  if(Array.isArray(r.tabs))return r.tabs.flatMap(t=>t.modules||[]);
  if(Array.isArray(r.modules))return r.modules;
