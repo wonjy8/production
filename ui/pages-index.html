@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Production</title>
+<style>
+body{font:16px/1.6 system-ui,sans-serif;background:#f5f5f5;color:#222;margin:0;padding:8vh 20px}main{max-width:440px;margin:auto;background:white;padding:28px;border-radius:12px}h1{font-size:22px}label,input,button{display:block;box-sizing:border-box;width:100%}input,button{font:inherit;padding:12px;border-radius:8px;border:1px solid #bbb;margin:12px 0}button{background:#222;color:white;cursor:pointer}button:disabled{opacity:.5}small{color:#666}#status{overflow-wrap:anywhere}
+</style>
+</head>
+<body><main><h1>Production</h1>
+<form id="connection-form" hidden>
+<label>연결할 서버 주소<input name="endpoint" type="url" required placeholder="https://…" autocomplete="off" spellcheck="false"></label>
+<small>관리자가 안내한 HTTPS 주소를 입력하세요. 주소는 이 브라우저에만 저장됩니다. 토큰이나 비밀번호는 입력하지 마세요.</small>
+<button>연결하고 시작</button>
+</form>
+<p id="status" role="status">앱을 불러오는 중…</p>
+</main><script type="module" src="./pages-loader.js"></script></body>
+</html>

@@ -1,0 +1,56 @@
+"""Isolated HTTPS integration test: requires Playwright, Chromium, openssl and NAS dependencies.
+Only the generated local certificate is trusted using its exact SPKI fingerprint.
+"""
+import base64, hashlib, http.server, os, pathlib, socket, ssl, subprocess, tempfile, threading, time
+from playwright.sync_api import sync_playwright
+root=pathlib.Path(__file__).resolve().parent.parent
+nas_python=os.environ.get('NAS_PYTHON', __import__('sys').executable)
+with tempfile.TemporaryDirectory() as td:
+ t=pathlib.Path(td)
+ cert=t/'cert.pem';key=t/'key.pem'
+ subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-keyout',str(key),'-out',str(cert),'-days','1','-subj','/CN=pages.test','-addext','subjectAltName=DNS:pages.test,DNS:nas.test'],check=True,capture_output=True)
+ pub=subprocess.run(['openssl','x509','-in',str(cert),'-pubkey','-noout'],check=True,capture_output=True).stdout
+ der=subprocess.run(['openssl','pkey','-pubin','-outform','DER'],input=pub,check=True,capture_output=True).stdout
+ spki=base64.b64encode(hashlib.sha256(der).digest()).decode()
+ env={**os.environ,'ADMIN_EMAIL':'admin@example.com','ADMIN_NAME':'Example Administrator','DATA_DIR':str(t/'data'),'NAS_API_TOKEN':'test-'+ 'x'*40,'PAGES_ORIGINS':'https://pages.test:9443'}
+ subprocess.run([nas_python,'-c',"import server; from local_auth import bootstrap_admin; bootstrap_admin(server.database,server.write_lock,server.save_workspace,server.now,'StrongPassword2026!')"],cwd=root/'nas',env=env,check=True)
+ subprocess.run(['npm','run','build:pages'],cwd=root,env=env,check=True)
+ (t/'production').symlink_to(root/'dist/pages',target_is_directory=True)
+ class Handler(http.server.SimpleHTTPRequestHandler):
+  def __init__(self,*args,**kwargs):super().__init__(*args,directory=td,**kwargs)
+  def log_message(self,*args):pass
+ httpd=http.server.ThreadingHTTPServer(('127.0.0.1',9443),Handler)
+ ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);ctx.load_cert_chain(cert,key);httpd.socket=ctx.wrap_socket(httpd.socket,server_side=True)
+ threading.Thread(target=httpd.serve_forever,daemon=True).start()
+ nas=subprocess.Popen([nas_python,'-m','uvicorn','server:app','--host','127.0.0.1','--port','9444','--ssl-keyfile',str(key),'--ssl-certfile',str(cert),'--no-access-log'],cwd=root/'nas',env=env,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+ try:
+  with sync_playwright() as p:
+   browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH'),headless=True,args=['--no-sandbox','--no-proxy-server','--host-resolver-rules=MAP pages.test 127.0.0.1, MAP nas.test 127.0.0.1','--ignore-certificate-errors-spki-list='+spki])
+   context=browser.new_context();page=context.new_page();errors=[];page.on('pageerror',lambda e: errors.append(e.stack))
+   page.goto('https://pages.test:9443/production/')
+   page.locator('#connection-form [name=endpoint]').fill('http://nas.test:9444')
+   page.locator('#connection-form button').click()
+   page.wait_for_function('document.querySelector("#status").textContent.includes("HTTPS")')
+   page.locator('#connection-form [name=endpoint]').fill('https://nas.test:9444')
+   page.locator('#connection-form button').click()
+   page.locator('#account-form [name=email]').fill('admin@example.com')
+   page.locator('#account-form [name=password]').fill('StrongPassword2026!')
+   page.locator('#account-form button').click()
+   page.wait_for_function('window.appAccount?.role === "superadmin"')
+   page.wait_for_function('typeof window.mountProduction === "function"')
+   result=page.evaluate('''async()=>{const r=await fetch('/production/api/data');return {status:r.status,data:await r.json()}}''')
+   assert result['status']==200,result
+   cookies=context.cookies('https://nas.test:9444')
+   assert any(c['name']=='__Host-pn-pages' and c['httpOnly'] and c['secure'] and c.get('partitionKey') for c in cookies), 'Missing partitioned session cookie'
+   media=page.evaluate('''async()=>{const id=crypto.randomUUID(),url='/production/api/ref-files/'+id;const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='),c=>c.charCodeAt(0));const r=await fetch(url,{method:'PUT',headers:{'Content-Type':'image/png'},body:bytes});if(!r.ok)throw Error(await r.text());const image=new Image();image.src=url;await image.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=1;canvas.getContext('2d').drawImage(image,0,0);return canvas.toDataURL().startsWith('data:image/png');}''')
+   assert media
+   cdp=context.new_cdp_session(page);cdp.send('ServiceWorker.enable');cdp.send('ServiceWorker.stopAllWorkers')
+   page.reload();page.wait_for_function('window.appAccount?.role === "superadmin"')
+   page.evaluate("async()=>{await fetch('/production/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}")
+   assert page.evaluate("async()=>(await fetch('/production/api/data')).status")==401
+   assert not errors,errors
+   fresh=browser.new_context();fresh_page=fresh.new_page();fresh_page.goto('https://pages.test:9443/production/');fresh_page.locator('#connection-form').wait_for(state='visible');assert fresh_page.locator('[name=endpoint]').input_value()=='';fresh.close()
+   print('PASS: private browser-only connection, HTTPS validation, new browser has no address, login, data, media/canvas, worker restart and logout')
+   browser.close()
+ finally:
+  nas.terminate();nas.wait(timeout=10);httpd.shutdown()

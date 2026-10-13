@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';import vm from 'node:vm';
+import {referenceModules,resolveSharedModule,sharedChoices,updateSharedOwner,moduleKinds,youtubeURL} from '../production/shared-modules.js';
+const legacy={id:'r',title:'자료',blocks:[{id:'txt',kind:'text',text:'hello'},{id:'img',kind:'image',fileId:'file-id',originalName:'photo.jpg'},{id:'url',kind:'link',url:'https://example.com'}]};
+const converted=referenceModules(legacy);assert.equal(converted[1].files[0].id,'file-id');assert.equal(converted[0].text,'hello');assert.equal(referenceModules(legacy)[0].id,converted[0].id);
+const schedule={id:'m',kind:'schedule',projectId:'p'},w={productions:[],projects:[{id:'p',name:'제작',customTabs:[{id:'t',name:'탭',modules:[schedule]}]}]};
+const source={kind:'project',ownerId:'p',moduleId:'m'};
+assert.equal(resolveSharedModule({source},w,[]),schedule);
+const updated=updateSharedOwner(w,source,m=>({...m,title:'변경'}));assert.equal(resolveSharedModule({source},updated,[]).title,'변경');assert.equal(w.projects[0].customTabs[0].modules[0].title,undefined);
+assert.equal(resolveSharedModule({source}, {projects:[],productions:[]},[]),null);
+assert.equal(resolveSharedModule({source:{kind:'reference',ownerId:'r',moduleId:'img'}},w,[legacy]).files[0].id,'file-id');
+assert.equal(resolveSharedModule({source:{kind:'reference',ownerId:'r',moduleId:'img'}},w,[{...legacy,deleted:true}]),null);
+const linked={id:'r2',title:'공유',modules:[{id:'linked',kind:'schedule',source}]};assert.deepEqual(sharedChoices(w,[linked])[0].source,source);
+assert.deepEqual(moduleKinds.map(k=>k[0]),['schedule-list','text','image','video','file','link','materials','tasks','schedule','timetable']);
+assert.match(youtubeURL('https://youtu.be/abcdefghijk'),/youtube-nocookie/);assert.equal(youtubeURL('javascript:alert(1)'),'');
+// Verify queued edits never restore stale data after the editor closes.
+const queueSource=fs.readFileSync('ui/reference-modules.js','utf8').split('let referenceEditorCleanup')[0];
+const writes=[],events=[];let release;
+const context={refs:[],refLoaded:true,refPage:false,window:{dispatchEvent:e=>events.push(e),referenceModuleList:referenceModules},Event:class{constructor(type){this.type=type}},CustomEvent:class{constructor(type,value){this.type=type;this.detail=value.detail}},refApi:async(path,options)=>{const data=JSON.parse(options.body);writes.push(data);if(writes.length===1)await new Promise(r=>release=r);return data},uid:()=> 'new',Map,Promise,Date};vm.createContext(context);vm.runInContext(queueSource,context);
+const bridge=context.window.referenceBridge,r={id:'r',title:'v1',modules:converted};const p1=bridge.save(r);await new Promise(r=>setImmediate(r));const p2=bridge.save({...r,title:'v2'}),p3=bridge.save({...r,title:'v3'});assert.equal(bridge.get('r').title,'v3');release();await Promise.all([p1,p2,p3]);assert.equal(bridge.get('r').title,'v3');assert.deepEqual(writes.map(v=>v.title),['v1','v3']);assert.equal(events.at(-1).detail.status,'저장됨');
+console.log('Shared modules: legacy migration, canonical two-way updates, inaccessible/deleted sources, unified catalog, YouTube validation and latest-edit background queue passed');
+const {referenceTabs,normalizeReferenceTabs,updateReferenceModule}=await import('../production/shared-modules.js');
+const migrated=normalizeReferenceTabs(legacy);assert.equal(migrated.tabs.length,1);assert.equal(migrated.tabs[0].name,'자료');assert.equal(migrated.tabs[0].modules[1].files[0].id,'file-id');
+const withTabs=normalizeReferenceTabs({...migrated,tabs:[...migrated.tabs,{id:'second',name:'일정표',modules:[schedule]}]});
+assert.equal(referenceModules(withTabs).length,4);assert.equal(resolveSharedModule({source:{kind:'reference',ownerId:'r',moduleId:'m'}},w,[withTabs]),schedule);
+const changedTab=updateReferenceModule(withTabs,'m',m=>({...m,title:'일정 수정'}));assert.equal(changedTab.tabs[1].modules[0].title,'일정 수정');assert.equal(changedTab.modules[3].title,'일정 수정');assert.equal(changedTab.tabs[0].modules[0].text,'hello');
+const removed=normalizeReferenceTabs({...changedTab,tabs:[changedTab.tabs[1]]});assert.equal(referenceModules(removed).length,1);assert.equal(resolveSharedModule({source:{kind:'reference',ownerId:'r',moduleId:'txt'}},w,[removed]),null);
+assert.equal(referenceTabs(normalizeReferenceTabs({...removed,tabs:[]})).length,0);
+console.log('Reference tabs: stable legacy migration, separate tab contents, cross-tab source lookup, shared updates and deletion without stale modules passed');
+
+const {instagramURL}=await import('../production/shared-modules.js');
+assert.equal(instagramURL('https://www.instagram.com/p/ABC_def-123/?igsh=tracking'),'https://www.instagram.com/p/ABC_def-123/embed/');
+assert.equal(instagramURL('https://instagram.com/reel/AB12/'),'https://www.instagram.com/reel/AB12/embed/');
+for(const url of ['https://instagram.com.evil.test/p/ABC/','https://evil.test/p/ABC/','javascript:alert(1)','https://www.instagram.com/stories/user/123/'])assert.equal(instagramURL(url),'');
+console.log('Instagram URL normalization: posts and reels, tracking removal, invalid hosts and unsupported stories rejected');
+const migration=normalizeReferenceTabs({id:'tag-migration',tags:['원래'],categories:['사진'],tabs:[{id:'one',name:'자료',modules:[]},{id:'two',name:'다른 탭',tags:['두번째'],modules:[]}]});assert.deepEqual(migration.tabs[0].tags,['원래']);assert.deepEqual(migration.tabs[1].tags,['두번째']);const changed=normalizeReferenceTabs({...migration,tabs:migration.tabs.map(t=>t.id==='one'?{...t,tags:[],categories:['디자인']}:t)});assert.deepEqual(changed.tabs[0].tags,[]);assert.deepEqual(changed.tabs[1].tags,['두번째']);assert.deepEqual(changed.categories,['디자인']);console.log('Tab metadata: one-time legacy migration, isolated updates and derived category index passed');

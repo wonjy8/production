@@ -1,0 +1,23 @@
+services:
+  database:
+    build: .
+    restart: unless-stopped
+    user: "${NAS_UID:?Set NAS_UID}:${NAS_GID:?Set NAS_GID}"
+    ports:
+      - "127.0.0.1:8788:8787"
+    environment:
+      NAS_API_TOKEN: ${NAS_API_TOKEN:?Set NAS_API_TOKEN}
+      PAGES_ORIGINS: ${PAGES_ORIGINS:-}
+      DATA_DIR: /data
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_NAME: ${ADMIN_NAME:-}
+      ADMIN_MEMBER_ID: ${ADMIN_MEMBER_ID:-}
+      ADMIN_SETUP_CODE: ${ADMIN_SETUP_CODE:-}
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ./data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

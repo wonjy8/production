@@ -1,0 +1,11 @@
+기존 .env 파일에 아래 항목을 추가하세요.
+메일 비밀번호는 NAS에만 입력하고 채팅에 보내지 마세요.
+
+SMTP_HOST=메일서버주소
+SMTP_PORT=465
+SMTP_FROM=발신이메일
+SMTP_USERNAME=메일로그인계정
+SMTP_PASSWORD=메일앱전용비밀번호
+
+465: TLS / 587: STARTTLS
+NAS_API_TOKEN, NAS_UID, NAS_GID는 기존 값을 그대로 유지합니다.

@@ -1,0 +1,17 @@
+/* Final control rules shared by the document and the production shadow root. */
+:root,:host{--button-padding-x:12px;--button-icon-padding:10px;--button-content-gap:8px}
+button.ui-icon-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;padding:var(--button-icon-padding)!important;gap:0!important;font-size:0!important;line-height:0!important;overflow:visible}
+button.ui-icon-button>:not(svg):not(.count){display:none!important}
+button.ui-icon-button>svg{width:18px!important;height:18px!important;min-width:18px!important;margin:0!important;flex:none}
+button.ui-icon-button::before{margin:0!important;width:18px!important;height:18px!important;min-width:18px!important}
+button.ui-icon-button:not(.has-pack-icon)::before{display:none!important;content:none!important}
+button.has-pack-icon:has(svg)::before{display:none!important;content:none!important}
+button.compact-nav{padding:0 var(--button-padding-x)!important;gap:var(--button-content-gap)!important;line-height:1.3!important}
+button.compact-nav>svg,button.compact-nav::before{width:18px!important;height:18px!important;min-width:18px!important;margin:0!important;flex:none}
+button.choice{padding:12px!important;gap:8px!important;text-align:left}
+button.choice b{margin:0!important;line-height:1.3}
+button.sidebar-project{padding:0 12px!important;gap:8px!important;min-height:40px!important;height:40px!important;align-items:center}
+button.sidebar-project>svg{width:18px;height:18px;margin:0;min-width:18px}
+.assignee-trigger{padding:0 12px!important;gap:8px!important;align-items:center!important}
+.assignee-popover button{padding:8px 12px!important;gap:8px!important}
+button.ui-icon-button .count{display:inline-flex;align-items:center;justify-content:center;line-height:1;min-width:16px;min-height:16px;margin:0}

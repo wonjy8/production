@@ -1,0 +1,13 @@
+import vm from 'node:vm';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+let ready,mode,html='',focused=false,joined=false;const calls=[];
+const button={disabled:false},err={textContent:''},confirm={focus(){focused=true}};
+const form={values:{email:'member@example.com',password:'Password1.',passwordConfirm:'different',invite:'test'},elements:{passwordConfirm:confirm},querySelector(){return button}};
+const gate={set innerHTML(value){html=value;mode={dataset:{accountMode:value.includes('<h1>로그인</h1>')?'signup':'login'}}},remove(){}};
+const document={readyState:'loading',body:{dataset:{},append(){}},addEventListener(type,cb){ready=cb},createElement(){return gate},querySelector(s){return s==='#account-gate'?gate:s==='#account-form'?form:s==='.account-error'?err:s==='#admin-setup-open'&&html.includes('admin-setup-open')?{}:null},querySelectorAll(){return [mode]}};
+const context={document,window:{},URLSearchParams,location:{search:'',hash:''},sessionStorage:{getItem(){return null},removeItem(){}},FormData:class{constructor(f){this.f=f}[Symbol.iterator](){return Object.entries(this.f.values)[Symbol.iterator]()}},fetch:async(url,options)=>{calls.push({url,options});if(url.endsWith('/me'))return {ok:joined,status:joined?200:401,json:async()=>joined?{role:'superadmin',mfaRequired:false}:{error:'로그인'}};if(url.endsWith('/signup')){joined=true;return {ok:true,json:async()=>({ok:true})}};throw Error('unexpected request')} };
+vm.runInNewContext(fs.readFileSync('ui/account.js','utf8'),context);await ready();mode.onclick();assert.match(html,/name="passwordConfirm"/);
+await form.onsubmit({preventDefault(){},currentTarget:form});assert.equal(calls.filter(c=>c.url.endsWith('/signup')).length,0);assert.equal(focused,true);assert.match(err.textContent,/일치/);assert.equal(button.disabled,false);
+form.values.passwordConfirm=form.values.password;await form.onsubmit({preventDefault(){},currentTarget:form});assert.equal(calls.filter(c=>c.url.endsWith('/signup')).length,1);assert.equal(JSON.parse(calls.at(-2).options.body).passwordConfirm,undefined);assert.equal(context.window.appAccount.role,'superadmin');assert.equal(calls.some(c=>c.url.includes('/mfa/')),false);
+console.log('Signup: mismatched confirmation blocks requests; matching confirmation signs in without MFA');

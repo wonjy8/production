@@ -1,0 +1,2 @@
+import {youtubeURL} from './shared-modules.js';
+export function YouTubePlayer({url}:any){const embed=youtubeURL(url);if(!embed)return null;const origin=typeof window!=='undefined'?window.location?.origin:'';return <div className="youtube-module-player"><iframe title="YouTube 동영상" src={embed+(origin?'&origin='+encodeURIComponent(origin):'')+'&playsinline=1'} referrerPolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen/><a href={url} target="_blank" rel="noreferrer">YouTube에서 열기 ↗</a></div>}

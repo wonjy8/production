@@ -1,0 +1,12 @@
+import {useState} from 'react';
+import {projectFolders} from './project-structure.js';
+import {Icon} from './Icon';
+import {moduleKinds,referenceTabs} from './shared-modules.js';
+export function moduleFolders(w:any,refs:any[]){
+ const folder=(owner:any,kind:string,label:string,tabs:any[])=>({id:kind+':'+owner.id,name:label,folders:tabs.map(t=>({id:kind+':'+owner.id+':'+t.id,name:t.name,items:t.modules.map((m:any)=>({id:m.id,name:m.title||moduleKinds.find(k=>k[0]===m.kind)?.[1]||'내용',kind:m.kind,source:m.source||{kind,ownerId:owner.id,moduleId:m.id}}))}))});
+ return [{id:'references',name:'레퍼런스',folders:refs.filter(r=>!r.deleted&&r.recordType!=='source').map(r=>folder(r,'reference',r.title,referenceTabs(r)))},{id:'sources',name:'소스',folders:refs.filter(r=>!r.deleted&&r.recordType==='source').map(r=>folder(r,'reference',r.title,referenceTabs(r)))},{id:'production',name:'프로젝트',folders:projectFolders(w,folder)}];
+}
+export function ModuleBrowser({workspace,references,onPick}:{workspace:any;references:any[];onPick:(item:any)=>void}){
+ const [path,setPath]=useState<string[]>([]),roots=moduleFolders(workspace,references);let current:any={name:'내용',folders:roots};const crumbs:any[]=[{name:'내용',index:0}];for(const id of path){const next=current.folders?.find((v:any)=>v.id===id);if(!next)break;current=next;crumbs.push({name:next.name,index:crumbs.length})}
+ return <div className="module-browser"><nav className="browser-path">{crumbs.map((c,i)=><span key={i}>{i>0&&<span className="browser-slash">/</span>}<button className="keep-label" onClick={()=>setPath(path.slice(0,c.index))}>{c.name}</button></span>)}</nav><div className="browser-grid">{(current.folders||[]).map((f:any)=><button className="browser-folder keep-label" key={f.id} onClick={()=>setPath([...path,f.id])}><Icon name="folder"/><strong>{f.name}</strong><span>{(f.folders||f.items||[]).length}개</span></button>)}{(current.items||[]).map((item:any)=><button className="browser-file keep-label" key={item.id} onClick={()=>onPick(item)}><Icon name={moduleKinds.find(k=>k[0]===item.kind)?.[2]||'file'}/><strong>{item.name}</strong><span>불러오기</span></button>)}{!current.folders?.length&&!current.items?.length&&<div className="group-empty">자료 없음</div>}</div></div>
+}
