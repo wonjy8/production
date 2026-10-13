@@ -31,16 +31,17 @@ export function assignReferenceProject(reference, key) {
   return {...reference,productionId:kind === 'production' ? id : '',projectId:kind === 'project' ? id : ''};
 }
 
-export function projectBoard(owner, kind) {
-  return (owner.customTabs || []).find(t => t.defaultBoard) ||
-    {id:kind+'-'+owner.id+'-content',name:'내용',defaultBoard:true,modules:[]};
+export function projectBoard(owner, kind, section='tasks') {
+  const tabs=owner.customTabs || [];
+  const found=tabs.find(t=>t.defaultBoard && (kind==='production' ? (t.boardSection||'overview')===section : (t.boardSection||'tasks')===section));
+  return found || {id:kind+'-'+owner.id+'-'+section+'-content',name:section==='schedule'?'일정 모듈':section==='tasks'?'할 일 모듈':'내용',defaultBoard:true,boardSection:section,modules:[]};
 }
 
-export function updateProjectBoard(workspace, ownerId, kind, update) {
+export function updateProjectBoard(workspace, ownerId, kind, update, section='tasks') {
   const key = kind === 'production' ? 'productions' : 'projects';
   return {...workspace,[key]:workspace[key].map(owner => {
     if (owner.id !== ownerId) return owner;
-    const board = projectBoard(owner,kind), next = {...update(board),defaultBoard:true};
+    const board = projectBoard(owner,kind,section), next = {...update(board),defaultBoard:true,boardSection:section};
     const tabs = owner.customTabs || [];
     return {...owner,customTabs:tabs.some(t => t.id === board.id)
       ? tabs.map(t => t.id === board.id ? next : t) : [next,...tabs]};

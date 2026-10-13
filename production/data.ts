@@ -1,4 +1,4 @@
-export const statuses = ["기획 중", "진행 중", "검토 중", "완료"] as const;
+export const statuses = ["기획 중", "진행 중", "상시", "검토 중", "완료"] as const;
 export type Status = (typeof statuses)[number];
 export const stages = ["기획", "프리프로덕션", "촬영", "편집", "납품"] as const;
 export const priorities = ["낮음", "보통", "높음"] as const;
@@ -49,10 +49,11 @@ export type Feedback = {
 };
 export type MaterialItem = {x?:number;y?:number;width?:number;height?:number;id:string;name:string;kind:'image'|'video'|'text'|'pdf'|'document'|'file'|'link';text?:string;url?:string;mime?:string;size?:number};
 export type MaterialGroup = {id:string;name:string;items:MaterialItem[]};
-export type WorkspaceModule = {frameHeight?:number;tags?:string[];x?:number;y?:number;width?:number;height?:number;span?:number;groups?:MaterialGroup[];legacyImported?:boolean;scheduleKeys?:string[];id:string;title?:string;kind:'schedule-list'|'timetable'|'tasks'|'schedule'|'materials'|'text'|'image'|'video'|'file'|'link';text?:string;url?:string;files?:MaterialItem[];source?:{kind:'reference'|'project'|'production';ownerId:string;moduleId:string};projectId?:string;config?:{slotHeight?:number;start?:string;end?:string;days?:number;projectIds?:string[]}};
-export type CustomTab = {defaultBoard?:boolean;categories?:string[];tags?:string[];id:string;name:string;modules:WorkspaceModule[]};
+export type WorkspaceModule = {frameHeight?:number;tags?:string[];x?:number;y?:number;width?:number;height?:number;span?:number;groups?:MaterialGroup[];legacyImported?:boolean;scheduleKeys?:string[];id:string;title?:string;kind:'schedule-list'|'timetable'|'tasks'|'schedule'|'materials'|'text'|'image'|'video'|'file'|'link'|'embed'|'divider'|'accounting';text?:string;url?:string;files?:MaterialItem[];rows?:{id:string;label:string;amount:number;type:'income'|'expense'}[];source?:{kind:'reference'|'project'|'production';ownerId:string;moduleId:string};projectId?:string;config?:{slotHeight?:number;start?:string;end?:string;days?:number;projectIds?:string[]}};
+export type CustomTab = {defaultBoard?:boolean;boardSection?:string;categories?:string[];tags?:string[];id:string;name:string;modules:WorkspaceModule[]};
 export type Project = {
   customTabs?: CustomTab[];
+  icon?: string;
   tabOrder?:string[];
   tabLabels?:Record<string,string>;
   tabTags?:Record<string,string[]>;
@@ -80,6 +81,7 @@ export type Production = {
   owner?:string;
   schedules?:Schedule[];
   customTabs?: CustomTab[];
+  icon?: string;
   tabOrder?:string[];
   tabLabels?:Record<string,string>;
   tabTags?:Record<string,string[]>;

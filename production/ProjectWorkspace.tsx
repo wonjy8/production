@@ -337,7 +337,7 @@ export function ProjectWorkspace({
               <span className="view-context-label">일정</span>
 
             </div>
-            <div className="calendar-create-actions"><button className="button primary" aria-label="할 일·일정 추가" onClick={()=>openCalendarDraft(today)}><Plus size={16}/></button></div>
+
           </div>
           <div className="calendar-heading">
             <h3>
@@ -422,39 +422,6 @@ export function ProjectWorkspace({
               })}
             </div>
           </div>
-          <h3 className="list-subheading">
-            등록된 일정{" "}
-            <span className="count">{project.schedules.length}</span>
-          </h3>
-          {!project.schedules.length && (
-            <p className="muted">아직 등록된 일정이 없습니다.</p>
-          )}
-          {[...project.schedules]
-            .sort((a, b) => a.date.localeCompare(b.date))
-            .map((s) => (
-              <div {...scheduleMenu(s)} className="schedule-row" key={s.id}>
-                <CalendarDays size={18} />
-                <button
-                  className="task-title"
-                  onClick={() => {setCalendarDraft(false);setScheduleEditor(s)}}
-                >
-                  <strong>{s.title}</strong>
-                  <small>
-                    {s.date} {s.endDate !== s.date ? `→ ${s.endDate}` : ""} ·{" "}
-                    {s.location || "장소 미정"}
-                  </small>
-                </button>
-                <DeleteButton
-                  label={s.title}
-                  onDelete={() =>
-                    onChange((p) => ({
-                      ...p,
-                      schedules: p.schedules.filter((item) => item.id !== s.id),
-                    }))
-                  }
-                />
-              </div>
-            ))}
         </section>
       )}
       {section === "assets" && (

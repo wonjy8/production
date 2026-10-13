@@ -11,7 +11,7 @@ assert.equal(resolveSharedModule({source}, {projects:[],productions:[]},[]),null
 assert.equal(resolveSharedModule({source:{kind:'reference',ownerId:'r',moduleId:'img'}},w,[legacy]).files[0].id,'file-id');
 assert.equal(resolveSharedModule({source:{kind:'reference',ownerId:'r',moduleId:'img'}},w,[{...legacy,deleted:true}]),null);
 const linked={id:'r2',title:'공유',modules:[{id:'linked',kind:'schedule',source}]};assert.deepEqual(sharedChoices(w,[linked])[0].source,source);
-assert.deepEqual(moduleKinds.map(k=>k[0]),['schedule-list','text','image','video','file','link','materials','tasks','schedule','timetable']);
+assert.deepEqual(moduleKinds.map(k=>k[0]),['schedule-list','text','image','video','file','link','embed','divider','accounting','materials','tasks','schedule','timetable']);
 assert.match(youtubeURL('https://youtu.be/abcdefghijk'),/youtube-nocookie/);assert.equal(youtubeURL('javascript:alert(1)'),'');
 // Verify queued edits never restore stale data after the editor closes.
 const queueSource=fs.readFileSync('ui/reference-modules.js','utf8').split('let referenceEditorCleanup')[0];
@@ -28,7 +28,8 @@ const removed=normalizeReferenceTabs({...changedTab,tabs:[changedTab.tabs[1]]});
 assert.equal(referenceTabs(normalizeReferenceTabs({...removed,tabs:[]})).length,0);
 console.log('Reference tabs: stable legacy migration, separate tab contents, cross-tab source lookup, shared updates and deletion without stale modules passed');
 
-const {instagramURL}=await import('../production/shared-modules.js');
+const {instagramURL,instagramProfileURL,embedURL}=await import('../production/shared-modules.js');
+assert.match(embedURL('https://www.figma.com/design/abc/Example'),/^https:\/\/www\.figma\.com\/embed\?/);assert.equal(embedURL('https://evil.test/design/abc'),'');assert.equal(instagramProfileURL('https://instagram.com/church.sample/'),'https://instagram.com/church.sample/');
 assert.equal(instagramURL('https://www.instagram.com/p/ABC_def-123/?igsh=tracking'),'https://www.instagram.com/p/ABC_def-123/embed/');
 assert.equal(instagramURL('https://instagram.com/reel/AB12/'),'https://www.instagram.com/reel/AB12/embed/');
 for(const url of ['https://instagram.com.evil.test/p/ABC/','https://evil.test/p/ABC/','javascript:alert(1)','https://www.instagram.com/stories/user/123/'])assert.equal(instagramURL(url),'');
