@@ -7,3 +7,14 @@ window.appAccount={id:'two'};assert.equal(savedFigmaFile(),'');window.appAccount
 for(const bad of ['http://www.figma.com/design/abc','https://figma.com.evil.test/design/abc','https://user:secret@figma.com/design/abc','https://figma.com/login','javascript:alert(1)']){assert.equal(figmaFileURL(bad),'');assert.throws(()=>saveFigmaFile(bad));}
 saveFigmaFile('');assert.equal(savedFigmaFile(),'');
 console.log('Figma connection: browser persistence, account isolation, URL validation and disconnect passed');
+const {figmaModuleURL,figmaDesignURL,figmaEmbedURL}=await import('../production/figma-connection.js');
+const embed='https://embed.figma.com/design/EmbedExample123/%EB%94%94%EC%9E%90%EC%9D%B8?embed-host=share';
+const code='<iframe style="border: 1px solid rgba(0, 0, 0, 0.1);" width="800" height="450" src="'+embed+'" allowfullscreen></iframe>';
+assert.equal(figmaModuleURL(code),embed);assert.equal(figmaEmbedURL(code),embed);
+assert.equal(figmaDesignURL(code),embed.replace('embed.figma.com','www.figma.com').replace('?embed-host=share',''));
+assert.equal(figmaModuleURL(code.replace('embed-host=share','embed-host=share&amp;node-id=1-2')),embed+'&node-id=1-2');
+const oldEmbed='https://www.figma.com/embed?embed_host=share&url='+encodeURIComponent(url);
+assert.equal(figmaModuleURL('<iframe src="'+oldEmbed+'"></iframe>'),oldEmbed);assert.equal(figmaDesignURL(oldEmbed),url);
+assert.ok(figmaEmbedURL(url).includes(encodeURIComponent(url)));
+for(const invalid of ['<iframe src="javascript:alert(1)"></iframe>','<iframe src="https://embed.figma.com.evil.test/design/abc"></iframe>','<iframe srcdoc="<script>bad()</script>"></iframe>','<iframe src="https://example.com/design/abc"></iframe>',code+code,'https://embed.figma.com:8443/design/abc','https://www.figma.com/embed?url=https%3A%2F%2Fexample.com'])assert.equal(figmaModuleURL(invalid),'');
+console.log('Figma module embeds: copied iframe structure, modern and legacy embed URLs, encoded names, HTML entities, file-link recovery and rejection of non-Figma sources passed');

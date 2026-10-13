@@ -122,14 +122,29 @@ with tempfile.TemporaryDirectory() as td:
    page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
    page.get_by_role('button',name='미디어',exact=True).click()
    page.get_by_role('button',name=re.compile('Figma 임베드')).click()
-   page.get_by_label('링크 주소',exact=True).fill('https://www.figma.com/design/Ab123/Example')
+   page.get_by_label('Figma 임베드 코드 또는 링크',exact=True).fill('https://www.figma.com/design/Ab123/Example')
+   page.get_by_label('이 주소를 다음 Figma 모듈에서도 사용',exact=True).check()
    page.locator('dialog[open]').get_by_role('button',name='추가',exact=True).click()
    assert page.locator('.embed-frame').count()==1
    page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
    page.get_by_role('button',name='미디어',exact=True).click()
    page.get_by_role('button',name=re.compile('Figma 임베드')).click()
-   assert page.get_by_label('링크 주소',exact=True).input_value()=='https://www.figma.com/design/Ab123/Example'
+   assert page.get_by_label('Figma 임베드 코드 또는 링크',exact=True).input_value()=='https://www.figma.com/design/Ab123/Example'
    page.keyboard.press('Escape')
+   figma_embed='https://embed.figma.com/design/EmbedExample123/%EB%94%94%EC%9E%90%EC%9D%B8?embed-host=share'
+   page.route('https://embed.figma.com/**',lambda route:route.fulfill(body='<p>Figma embed fixture</p>',content_type='text/html'))
+   page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
+   page.get_by_role('button',name='미디어',exact=True).click()
+   page.get_by_role('button',name=re.compile('Figma 임베드')).click()
+   page.get_by_label('Figma 임베드 코드 또는 링크',exact=True).fill('<iframe style="border: 1px solid rgba(0, 0, 0, 0.1);" width="800" height="450" src="'+figma_embed+'" allowfullscreen></iframe>')
+   page.locator('dialog').get_by_role('button',name='추가',exact=True).click()
+   figma_module=page.locator('.workspace-module').filter(has=page.locator('iframe.embed-frame')).last
+   figma_module.locator('iframe.embed-frame').wait_for()
+   assert figma_module.locator('iframe.embed-frame').get_attribute('src')==figma_embed
+   figma_module.get_by_role('button',name='임베드 수정',exact=True).click()
+   page.get_by_label('임베드 코드 또는 링크 수정',exact=True).fill('<iframe src="'+figma_embed+'&amp;node-id=1-2"></iframe>')
+   figma_module.get_by_role('button',name='저장',exact=True).click()
+   assert figma_module.locator('iframe.embed-frame').get_attribute('src')==figma_embed+'&node-id=1-2'
    page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
    page.get_by_role('button',name='기본',exact=True).click()
    assert page.get_by_role('button',name=re.compile('Wordcraft 문서')).count()==0
@@ -294,7 +309,7 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    assert not errors,errors
    fresh.close()
-   print('PASS: three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow, mobile bottom navigation/category landing/back, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()
