@@ -2,7 +2,7 @@
 (()=>{
  const version=document.querySelector('meta[name="pn-build"]')?.content;
  if(!version)return;
- const base=new URL('./',location.href);
+ const base=new URL(document.baseURI);
  const originalFetch=window.fetch.bind(window);
  let writes=0,checking=false,latest=version,reloading=false;
  window.fetch=async(input,options)=>{

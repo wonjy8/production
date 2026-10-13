@@ -19,6 +19,12 @@ with tempfile.TemporaryDirectory() as td:
  class Handler(http.server.SimpleHTTPRequestHandler):
   def __init__(self,*args,**kwargs):super().__init__(*args,directory=td,**kwargs)
   def log_message(self,*args):pass
+  def do_GET(self):
+   if self.path.startswith('/production/') and not pathlib.Path(self.translate_path(self.path)).exists():
+    body=(root/'dist/pages/404.html').read_bytes()
+    self.send_response(404);self.send_header('Content-Type','text/html');self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
+    return
+   super().do_GET()
  httpd=http.server.ThreadingHTTPServer(('127.0.0.1',9443),Handler)
  ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);ctx.load_cert_chain(cert,key);httpd.socket=ctx.wrap_socket(httpd.socket,server_side=True)
  threading.Thread(target=httpd.serve_forever,daemon=True).start()
@@ -27,12 +33,10 @@ with tempfile.TemporaryDirectory() as td:
   with sync_playwright() as p:
    browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH'),headless=True,args=['--no-sandbox','--no-proxy-server','--host-resolver-rules=MAP pages.test 127.0.0.1, MAP nas.test 127.0.0.1','--ignore-certificate-errors-spki-list='+spki])
    context=browser.new_context();page=context.new_page();errors=[];page.on('pageerror',lambda e: errors.append(e.stack))
-   page.goto('https://pages.test:9443/production/')
-   page.locator('#connection-form [name=endpoint]').fill('http://nas.test:9444')
-   page.locator('#connection-form button').click()
+   page.goto('https://pages.test:9443/production/http%3A%2F%2Fnas.test%3A9444')
    page.wait_for_function('document.querySelector("#status").textContent.includes("HTTPS")')
-   page.locator('#connection-form [name=endpoint]').fill('https://nas.test:9444')
-   page.locator('#connection-form button').click()
+   assert page.locator('#connection-form').count()==0
+   page.goto('https://pages.test:9443/production/nas.test:9444')
    page.locator('#account-form [name=email]').fill('admin@example.com')
    page.locator('#account-form [name=password]').fill('StrongPassword2026!')
    page.locator('#account-form button').click()
@@ -41,6 +45,12 @@ with tempfile.TemporaryDirectory() as td:
    assert page.locator('[data-main-space="references"]').get_attribute('aria-label')=='자료'
    result=page.evaluate('''async()=>{const r=await fetch('/production/api/data');return {status:r.status,data:await r.json()}}''')
    assert result['status']==200,result
+   local_tab=context.new_page();local_tab.goto('https://pages.test:9443/production/')
+   local_tab.wait_for_function('window.appAccount?.localMode === true')
+   assert local_tab.locator('#connection-form').count()==0
+   assert local_tab.evaluate("async()=>fetch('/production/api/storage').then(r=>r.json()).then(x=>x.mode)")=='browser'
+   assert page.evaluate("async()=>(await fetch('/production/api/data')).status")==200
+   local_tab.close()
    cookies=context.cookies('https://nas.test:9444')
    assert any(c['name']=='__Host-pn-pages' and c['httpOnly'] and c['secure'] and c.get('partitionKey') for c in cookies), 'Missing partitioned session cookie'
    page.locator('[data-main-space=references]').click()
@@ -130,8 +140,7 @@ with tempfile.TemporaryDirectory() as td:
    page.evaluate("async()=>{await fetch('/production/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}")
    assert page.evaluate("async()=>(await fetch('/production/api/data')).status")==401
    assert not errors,errors
-   fresh=browser.new_context();fresh_page=fresh.new_page();fresh_page.goto('https://pages.test:9443/production/');fresh_page.locator('#connection-form').wait_for(state='visible');assert fresh_page.locator('[name=endpoint]').input_value()==''
-   fresh_page.locator('#connection-form button').click()
+   fresh=browser.new_context();fresh_page=fresh.new_page();fresh_page.goto('https://pages.test:9443/production/')
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>fetch('/production/api/storage').then(r=>r.json()).then(x=>x.mode)")=='browser'
    local=fresh_page.evaluate('''async()=>{const url='/production/api/data',r=await fetch(url),data=await r.json();data.projects.push({id:crypto.randomUUID(),name:'로컬 프로젝트'});const saved=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json','If-Match':r.headers.get('ETag')},body:JSON.stringify(data)});if(!saved.ok)throw Error(await saved.text());const id=crypto.randomUUID(),bytes=new Uint8Array([1,2,3,4]);const file=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:bytes});if(!file.ok)throw Error(await file.text());const refId=crypto.randomUUID();const ref=await fetch('/production/api/references/'+refId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:refId,title:'로컬 자료',category:'',tags:[],description:'',blocks:[]})});if(!ref.ok)throw Error(await ref.text());return {id,refId}}''')
@@ -139,9 +148,10 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/references')).json().then(x=>x.some(r=>r.title==='로컬 자료'))")
    assert fresh_page.evaluate("async(id)=>[...(new Uint8Array(await(await fetch('/production/api/ref-files/'+id)).arrayBuffer()))].join(',')",local['id'])=='1,2,3,4'
-   fresh_page.goto('https://pages.test:9443/production/?connection=1');fresh_page.locator('#connection-form').wait_for(state='visible');assert fresh_page.locator('[name=endpoint]').input_value()==''
-   fresh_page.locator('[name=endpoint]').fill('https://nas.test:9444');fresh_page.locator('#connection-form button').click();fresh_page.locator('#account-form').wait_for()
-   fresh_page.goto('https://pages.test:9443/production/?connection=1');fresh_page.locator('#connection-form').wait_for(state='visible');fresh_page.locator('[name=endpoint]').fill('');fresh_page.locator('#connection-form button').click();fresh_page.wait_for_function('window.appAccount?.localMode === true')
+   fresh_page.goto('https://pages.test:9443/production/nas.test:9444/')
+   fresh_page.locator('#account-form').wait_for()
+   fresh_page.goto('https://pages.test:9443/production/')
+   fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    fresh_page.locator('.sidebar-settings').click()
    fresh_page.locator('[data-settings-category=connections]').click()
@@ -180,7 +190,7 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    fresh.close()
-   print('PASS: Wordcraft WASM startup, text editing, DOCX download and reopen, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow/mobile, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, Wordcraft WASM startup, text editing, DOCX download and reopen, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow/mobile, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()
