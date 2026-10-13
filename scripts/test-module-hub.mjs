@@ -8,9 +8,10 @@ assert.notEqual(classroom.modules[1].id,classroom.modules[2].id);
 assert.deepEqual(classroom.modules[1].states,['출석','지각','결석']);
 const next=createHubTab('classroom');assert.notEqual(next.id,classroom.id);assert.notEqual(next.modules[0].id,classroom.modules[0].id);
 assert.ok(tabTemplates.some(item=>item.category==='work'));
-const wordcraft=createHubModule('wordcraft');assert.equal(wordcraft.kind,'wordcraft');assert.equal(wordcraft.span,12);assert.notEqual(wordcraft.id,createHubModule('wordcraft').id);
 const checklist=createHubModule('service-plan');assert.equal(checklist.kind,'checklist');assert.deepEqual(checklist.items,[]);
 const old={id:'old',kind:'text',span:6},inserted=createHubModule('requests');
 const ordered=dropModule([old,inserted],{old:{left:0,top:0,width:400,height:200}},inserted.id,10,10);
 assert.equal(ordered[0].id,inserted.id);
 console.log('Module Hub: concrete category templates, isolated tab instances and drag placement passed');
+
+assert.ok(!moduleTemplates.some(t=>t.kind==='wordcraft'));

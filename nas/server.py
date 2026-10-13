@@ -239,17 +239,37 @@ async def put_reference(ident: str, request: Request):
     return data
 
 
+def can_edit_file(conn,actor,ident):
+    if is_admin(actor):return True
+    full=workspace_data(conn);visible=apply_tab_visibility(conn,scope(full,actor),actor)
+    referenced=ident in file_ids(full)
+    for key in ('projects','productions'):
+        for owner in visible.get(key,[]):
+            for field in ('modules','productionAssets'):
+                if ident in file_ids(owner.get(field,[])) and permitted(conn,actor,owner['id'],'materials','edit'):return True
+            for tab in owner.get('customTabs',[]):
+                if ident in file_ids(tab) and permitted(conn,actor,owner['id'],'tab:'+tab['id'],'edit'):return True
+    for row in conn.execute('SELECT payload FROM reference_records'):
+        item=json.loads(row[0])
+        if ident in file_ids(item):
+            referenced=True
+            if not item.get('deleted') and actor['role']!='viewer' and ref_visible(item,visible,actor):return True
+    return not referenced and actor['role']!='viewer' and bool(conn.execute('SELECT 1 FROM file_uploaders WHERE file_id=? AND user_id=?',(ident,actor['id'])).fetchone())
+
+
 @app.put('/api/ref-files/{ident}')
 async def put_file(ident: str, request: Request):
     if not ID.fullmatch(ident):
         raise HTTPException(400, 'Invalid file ID')
     with database() as conn:
         actor=actor_for(conn,request)
-        owner=request.headers.get('x-scope-owner','');tab=request.headers.get('x-scope-tab','materials')
-        if owner:
-            visible=scope(workspace_data(conn),actor)
-            if owner not in {v['id'] for key in ('projects','productions') for v in visible.get(key,[])} or not permitted(conn,actor,owner,tab,'add'):deny()
-        elif actor['role']=='viewer':deny()
+        existing=conn.execute('SELECT 1 FROM files WHERE id=?',(ident,)).fetchone()
+        if not existing:
+            owner=request.headers.get('x-scope-owner','');tab=request.headers.get('x-scope-tab','materials')
+            if owner:
+                visible=scope(workspace_data(conn),actor)
+                if owner not in {v['id'] for key in ('projects','productions') for v in visible.get(key,[])} or not permitted(conn,actor,owner,tab,'add'):deny()
+            elif actor['role']=='viewer':deny()
     target = DATA / 'files' / ident
     digest, size = hashlib.sha256(), 0
     temp = tempfile.NamedTemporaryFile(dir=DATA / 'files', delete=False)
@@ -268,10 +288,21 @@ async def put_file(ident: str, request: Request):
             if old:
                 if request.headers.get('X-Import-Only') == '1' and old[0] == digest.hexdigest():
                     return {'id': ident, 'sha256': old[0]}
-                raise HTTPException(409, 'File already exists')
-            os.replace(temp.name, target)
-            conn.execute('INSERT INTO file_uploaders VALUES(?,?)',(ident,actor['id']))
-            conn.execute('INSERT INTO files VALUES(?,?,?,?,?)', (ident, request.headers.get('content-type', 'application/octet-stream'), size, digest.hexdigest(), now()))
+                expected=request.headers.get('If-Match','').strip('"')
+                if not expected:
+                    raise HTTPException(409, 'File already exists')
+                if not can_edit_file(conn,actor,ident):deny()
+                if expected != old[0]:
+                    raise HTTPException(409, 'File changed in another editor')
+                os.replace(temp.name, target)
+                conn.execute('UPDATE files SET mime=?,size=?,sha256=?,created_at=? WHERE id=?',
+                             (request.headers.get('content-type','application/octet-stream'),size,digest.hexdigest(),now(),ident))
+            else:
+                if request.headers.get('If-Match'):
+                    raise HTTPException(409, 'Original file no longer exists')
+                os.replace(temp.name, target)
+                conn.execute('INSERT INTO file_uploaders VALUES(?,?)',(ident,actor['id']))
+                conn.execute('INSERT INTO files VALUES(?,?,?,?,?)', (ident, request.headers.get('content-type', 'application/octet-stream'), size, digest.hexdigest(), now()))
         return {'id': ident, 'sha256': digest.hexdigest()}
     finally:
         temp.close()
@@ -298,7 +329,7 @@ def get_file(ident: str, request: Request):
     filename = (request.query_params.get('name') or 'reference')[:250]
     return FileResponse(DATA / 'files' / ident, media_type=row['mime'] if safe else 'application/octet-stream', filename=filename,
                         content_disposition_type='attachment' if 'download' in request.query_params or not safe else 'inline',
-                        headers={'Content-Security-Policy': "default-src 'none'; sandbox", 'X-File-SHA256': row['sha256']})
+                        headers={'Content-Security-Policy': "default-src 'none'; sandbox", 'X-File-SHA256': row['sha256'], 'ETag': '"'+row['sha256']+'"', 'Cache-Control':'no-store'})
 
 
 @app.get('/api/database/{collection}')

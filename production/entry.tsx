@@ -1,3 +1,4 @@
+import './DocumentEditor';
 import {HubSidebar} from './HubSidebar';
 import {createHubTab} from './module-hub.js';
 import {AdminHome} from './AdminHome';

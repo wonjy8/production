@@ -48,13 +48,16 @@ async function localFile(request,id,url) {
   if(!localId.test(id))return localJson({error:'잘못된 파일 ID'},400);
   if(request.method==='PUT') {
     const blob=await request.blob();if(blob.size>25*1024*1024)return localJson({error:'파일당 25MB 이하여야 합니다'},413);
-    await localWrite('files',id,{blob,mime:request.headers.get('Content-Type')||blob.type||'application/octet-stream'});
-    return localJson({ok:true});
+    const sha256=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),v=>v.toString(16).padStart(2,'0')).join('');
+    const before=await localRead('files',id),expected=request.headers.get('If-Match');
+    const previousHash=before&&!before.sha256?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await before.blob.arrayBuffer())),v=>v.toString(16).padStart(2,'0')).join(''):before?.sha256;
+    const db=await localOpen();return new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite'),store=tx.objectStore('files'),read=store.get(id);let conflict=false;read.onsuccess=()=>{const row=read.result;if(expected&&(!row||expected!==localRevision(row.sha256||previousHash))){conflict=true;return}if(row&&!expected){conflict=true;return}store.put({blob,sha256,mime:request.headers.get('Content-Type')||blob.type||'application/octet-stream'},id)};tx.oncomplete=()=>{db.close();resolve(conflict?localJson({error:'원본 파일이 변경되었습니다.'},409):localJson({id,sha256},200,{'ETag':localRevision(sha256)}))};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error)}});
   }
   if(!['GET','HEAD'].includes(request.method))return localJson({error:'Method not allowed'},405);
   const row=await localRead('files',id);if(!row)return localJson({error:'파일 없음'},404);
+  const sha256=row.sha256||Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await row.blob.arrayBuffer())),v=>v.toString(16).padStart(2,'0')).join('');
   const safe=/^(image\/(png|jpeg|webp|gif)|video\/(mp4|webm)|audio\/(mpeg|mp4|wav|ogg)|application\/pdf)$/.test(row.mime);
-  const headers=new Headers({'Content-Type':safe?row.mime:'application/octet-stream','Cache-Control':'no-store','Accept-Ranges':'bytes','Content-Security-Policy':"default-src 'none'; sandbox"});
+  const headers=new Headers({'Content-Type':safe?row.mime:'application/octet-stream','Cache-Control':'no-store','Accept-Ranges':'bytes','ETag':localRevision(sha256),'X-File-SHA256':sha256,'Content-Security-Policy':"default-src 'none'; sandbox"});
   if(url.searchParams.has('download')||!safe){const name=(url.searchParams.get('name')||'file').replace(/[\r\n"\\]/g,'_').slice(0,250);headers.set('Content-Disposition','attachment; filename="'+name+'"')}
   let body=row.blob,status=200;const range=request.headers.get('Range');
   if(range){const match=/^bytes=(\d*)-(\d*)$/.exec(range);if(!match)return localJson({error:'잘못된 범위'},416);const start=match[1]?Number(match[1]):Math.max(0,body.size-Number(match[2])),end=match[1]?(match[2]?Number(match[2]):body.size-1):body.size-1;if(start>=body.size||end<start)return localJson({error:'잘못된 범위'},416);headers.set('Content-Range',`bytes ${start}-${Math.min(end,body.size-1)}/${body.size}`);body=body.slice(start,Math.min(end+1,body.size));status=206}

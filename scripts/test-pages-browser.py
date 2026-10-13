@@ -132,37 +132,61 @@ with tempfile.TemporaryDirectory() as td:
    page.keyboard.press('Escape')
    page.locator('.custom-module-tab .module-toolbar button[aria-label=추가]').click()
    page.get_by_role('button',name='기본',exact=True).click()
-   page.get_by_role('button',name=re.compile('Wordcraft 문서')).click()
-   wordcraft=page.locator('.wordcraft-module')
-   wordcraft.get_by_role('button',name='문서 편집 시작',exact=True).click()
-   editor=page.frame_locator('iframe.wordcraft-frame')
-   editor.locator('#wordcraft_canvas').wait_for(state='visible',timeout=90000)
-   editor.locator('#wordcraft_loading').wait_for(state='detached',timeout=90000)
-   assert page.evaluate('window.wordcraftOpenCount')==1
-   editor.locator('#wordcraft_canvas').click(position={'x':300,'y':160})
-   page.keyboard.type('Wordcraft integration smoke',delay=40)
-   editor.locator('#wordcraft_canvas').evaluate('()=>window.showSaveFilePicker=undefined')
-   with page.expect_download(timeout=20000) as exported:
-    page.keyboard.press('Control+s')
-   download=exported.value
-   assert download.suggested_filename.endswith('.docx')
-   download.save_as('/tmp/wordcraft-smoke.docx')
-   with __import__('zipfile').ZipFile('/tmp/wordcraft-smoke.docx') as document:
-    assert 'Wordcraft integration smoke' in document.read('word/document.xml').decode()
-   editor.locator('#wordcraft_canvas').click(position={'x':28,'y':54})
-   editor.locator('#wordcraft_canvas').click(position={'x':45,'y':167})
-   page.wait_for_timeout(200)
-   page.locator('iframe.wordcraft-frame').screenshot(path='/tmp/wordcraft-open.png')
-   with page.expect_file_chooser(timeout=15000) as chooser:
-    editor.locator('#wordcraft_canvas').click(position={'x':280,'y':90})
-   chooser.value.set_files('/tmp/wordcraft-smoke.docx')
-   page.wait_for_timeout(500)
-   with page.expect_download(timeout=20000) as reopened:
-    page.keyboard.press('Control+s')
-   reopened.value.save_as('/tmp/wordcraft-reopened.docx')
-   with __import__('zipfile').ZipFile('/tmp/wordcraft-reopened.docx') as document:
-    assert 'Wordcraft integration smoke' in document.read('word/document.xml').decode()
-   page.locator('iframe.wordcraft-frame').screenshot(path='/tmp/wordcraft-module.png')
+   assert page.get_by_role('button',name=re.compile('Wordcraft 문서')).count()==0
+   page.get_by_role('button',name=re.compile('^메모')).click()
+   text_module=page.locator('.workspace-module').filter(has=page.get_by_label('텍스트',exact=True)).last
+   text_module_id=text_module.get_attribute('data-module-id')
+   text_module.get_by_label('텍스트',exact=True).fill('문서 전환 원문\n두 번째 문단')
+   with page.expect_popup() as popup:
+    text_module.get_by_role('button',name='문서편집기로 열기 ↗',exact=True).click()
+   doc_page=popup.value;doc_page.on('pageerror',lambda e:errors.append(e.stack))
+   doc_page.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
+   assert '문서 전환 원문' in doc_page.get_by_role('textbox',name='문서 본문',exact=True).inner_text()
+   assert not doc_page.locator('.topbar').is_visible()
+   assert doc_page.locator('.document-toolbar').is_visible()
+   file_id=__import__('urllib.parse',fromlist=['urlparse']).parse_qs(__import__('urllib.parse',fromlist=['urlparse']).urlparse(doc_page.url).query)['document'][0]
+   records=page.evaluate("async()=>fetch('/production/api/references').then(r=>r.json())")
+   assert any(m.get('id')==text_module_id and m.get('kind')=='file' and any(f['id']==file_id for f in m.get('files',[])) and 'text' not in m for r in records for t in r.get('tabs',[]) for m in t.get('modules',[]))
+   body=doc_page.get_by_role('textbox',name='문서 본문',exact=True)
+   body.click();doc_page.keyboard.press('Control+End');doc_page.keyboard.press('Enter')
+   end_selection=body.evaluate('(el)=>el.editor.state.selection.from')
+   assert end_selection==body.evaluate('(el)=>el.editor.state.doc.content.size-1')
+   doc_page.get_by_role('button',name='굵게',exact=True).click()
+   assert body.evaluate('(el)=>el.editor.state.selection.from')==end_selection, 'Toolbar must preserve the writing cursor'
+   with doc_page.expect_response(lambda r:'/api/ref-files/'+file_id in r.url and r.request.method=='PUT') as saved:
+    doc_page.keyboard.type('Autosaved DOCX paragraph',delay=20)
+   assert saved.value.status==200
+   doc_page.wait_for_function("document.querySelector('.document-heading [role=status]').textContent === '모든 변경사항 저장됨'")
+   def document_bytes(tab,id):return base64.b64decode(tab.evaluate("async id=>btoa(String.fromCharCode(...new Uint8Array(await (await fetch('/production/api/ref-files/'+id)).arrayBuffer())))",id))
+   content=document_bytes(doc_page,file_id)
+   with __import__('zipfile').ZipFile(__import__('io').BytesIO(content)) as document:
+    document_xml=document.read('word/document.xml').decode()
+    assert '문서 전환 원문' in document_xml and 'Autosaved DOCX paragraph' in document_xml
+    assert '<w:b' in document_xml
+   doc_page.reload();doc_page.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
+   assert 'Autosaved DOCX paragraph' in doc_page.get_by_role('textbox',name='문서 본문',exact=True).inner_text()
+   conflict_page=context.new_page();conflict_page.goto(doc_page.url);conflict_page.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
+   doc_page.get_by_role('textbox',name='문서 본문',exact=True).click();doc_page.keyboard.press('Control+End')
+   with doc_page.expect_response(lambda r:'/api/ref-files/'+file_id in r.url and r.request.method=='PUT') as saved:
+    doc_page.keyboard.type(' Latest owner edit')
+   assert saved.value.status==200
+   conflict_page.get_by_role('textbox',name='문서 본문',exact=True).click();conflict_page.keyboard.press('Control+End')
+   conflict_page.keyboard.type(' Stale overwrite')
+   conflict_page.get_by_role('alert').wait_for()
+   assert '자동저장을 중단' in conflict_page.get_by_role('alert').inner_text()
+   with __import__('zipfile').ZipFile(__import__('io').BytesIO(document_bytes(doc_page,file_id))) as document:
+    document_xml=document.read('word/document.xml').decode()
+    assert 'Latest owner edit' in document_xml and 'Stale overwrite' not in document_xml
+   conflict_page.close()
+   doc_page.set_viewport_size({'width':390,'height':844})
+   assert doc_page.locator('.document-sheet').bounding_box()['width']<=390
+   doc_page.screenshot(path='/tmp/production-document-mobile.png')
+   doc_page.close()
+   with page.expect_popup() as reopened:
+    page.locator('.file-document-open').first.click()
+   reopened_doc=reopened.value;reopened_doc.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
+   assert 'Latest owner edit' in reopened_doc.get_by_role('textbox',name='문서 본문',exact=True).inner_text()
+   reopened_doc.close()
    media=page.evaluate('''async()=>{const id=crypto.randomUUID(),url='/production/api/ref-files/'+id;const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='),c=>c.charCodeAt(0));const r=await fetch(url,{method:'PUT',headers:{'Content-Type':'image/png'},body:bytes});if(!r.ok)throw Error(await r.text());const image=new Image();image.src=url;await image.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=1;canvas.getContext('2d').drawImage(image,0,0);return canvas.toDataURL().startsWith('data:image/png');}''')
    assert media
    cdp=context.new_cdp_session(page);cdp.send('ServiceWorker.enable');cdp.send('ServiceWorker.stopAllWorkers')
@@ -170,7 +194,7 @@ with tempfile.TemporaryDirectory() as td:
    page.evaluate("async()=>{await fetch('/production/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}")
    assert page.evaluate("async()=>(await fetch('/production/api/data')).status")==401
    assert not errors,errors
-   fresh=browser.new_context();fresh_page=fresh.new_page();fresh_page.goto('https://pages.test:9443/production/')
+   fresh=browser.new_context();fresh_page=fresh.new_page();fresh_page.on('pageerror',lambda e:errors.append(e.stack));fresh_page.goto('https://pages.test:9443/production/')
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>fetch('/production/api/storage').then(r=>r.json()).then(x=>x.mode)")=='browser'
    fresh_page.evaluate("()=>{const a=document.createElement('a');a.id='nas-install-download';a.href=new URL('production-nas-install.zip',document.baseURI).href;a.textContent='NAS 설치 파일';document.body.append(a)}")
@@ -206,6 +230,25 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.get_by_label('Figma 연결 주소').input_value()=='https://www.figma.com/design/Local123/Example'
    fresh_page.get_by_role('button',name='연결 해제',exact=True).click()
    assert fresh_page.get_by_label('Figma 연결 주소').input_value()==''
+   local_file_id=fresh_page.evaluate("""async()=>{const id=crypto.randomUUID();const r=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'text/plain'},body:'Local original text'});if(!r.ok)throw Error('Local upload failed');return id}""")
+   local_doc=fresh.new_page();local_doc.on('pageerror',lambda e:errors.append(e.stack))
+   local_doc.goto('https://pages.test:9443/production/?document='+local_file_id+'&name=Local.txt')
+   local_doc.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
+   offline_script="window.originalDocumentFetch=window.fetch;window.fetch=(input,init)=>String(input).includes('/api/ref-files/"+local_file_id+"')&&init?.method==='PUT'?Promise.resolve(new Response('offline',{status:503})):window.originalDocumentFetch(input,init)"
+   local_doc.add_init_script(offline_script);local_doc.evaluate(offline_script)
+   local_doc.get_by_role('textbox',name='문서 본문',exact=True).fill('Local unsaved recovery text')
+   local_doc.get_by_role('alert').wait_for()
+   assert local_doc.evaluate("async id=>(await fetch('/production/api/ref-files/'+id)).text()",local_file_id)=='Local original text'
+   local_doc.reload();local_doc.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
+   assert local_doc.get_by_role('textbox',name='문서 본문',exact=True).inner_text()=='Local unsaved recovery text'
+   local_doc.get_by_role('alert').wait_for()
+   local_doc.evaluate('window.fetch=window.originalDocumentFetch')
+   with local_doc.expect_response(lambda r:'/api/ref-files/'+local_file_id in r.url and r.request.method=='PUT') as saved:
+    local_doc.get_by_role('button',name='저장 다시 시도',exact=True).click()
+   assert saved.value.status==200
+   local_doc.wait_for_function("document.querySelector('.document-heading [role=status]').textContent === '모든 변경사항 저장됨'")
+   assert local_doc.evaluate("async id=>(await fetch('/production/api/ref-files/'+id)).text()",local_file_id)=='Local unsaved recovery text'
+   local_doc.close()
    fresh_page.set_viewport_size({'width':390,'height':844})
    assert fresh_page.locator('.mobile-bottom-nav').is_visible()
    fresh_page.wait_for_function('document.querySelectorAll(".mobile-bottom-nav [data-main-space]").length === 4')
@@ -249,8 +292,9 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.wait_for_function("document.querySelector('meta[name=pn-build]')?.content === "+repr(new_version))
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
+   assert not errors,errors
    fresh.close()
-   print('PASS: three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, Wordcraft WASM startup, text editing, DOCX download and reopen, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow, mobile bottom navigation/category landing/back, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, automatic deployed-version refresh with edit/save deferral and persisted local data, floating Hub reflow, mobile bottom navigation/category landing/back, grade calculator, Figma address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

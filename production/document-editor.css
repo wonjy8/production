@@ -1,0 +1,292 @@
+body.document-mode {
+  overflow: hidden;
+  background: #f6f6f6;
+}
+.document-mode > .topbar,
+.document-mode > .layout,
+.document-mode > .mobile-bottom-nav,
+.document-mode > .sidebar-scrim,
+.document-mode > #toast {
+  display: none !important;
+}
+#document-editor-root {
+  height: 100dvh;
+}
+.document-editor {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: #242424;
+  font:
+    13px "DM Sans",
+    "Noto Sans KR",
+    system-ui,
+    sans-serif;
+  background: #f5f5f5;
+}
+.document-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e9e9e9;
+}
+.document-logo {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  background: #f2f2f2;
+  border-radius: 10px;
+}
+.document-logo svg {
+  width: 22px;
+  height: 22px;
+}
+.document-heading {
+  min-width: 0;
+  flex: 1;
+}
+.document-heading h1 {
+  font-size: 17px;
+  line-height: 1.4;
+  letter-spacing: -0.4px;
+  margin: 0 0 3px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.document-heading [role="status"] {
+  font-size: 11px;
+  color: #777;
+}
+.document-autosave-label {
+  font-size: 11px;
+  color: #777;
+  background: #f4f4f4;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+.document-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 8px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e9e9e9;
+}
+.document-toolbar button.keep-label,
+.document-toolbar select.keep-label,
+.document-error button.keep-label {
+  height: 32px !important;
+  min-height: 32px !important;
+  width: auto !important;
+  min-width: 32px !important;
+  max-width: none !important;
+  padding: 0 9px !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  border: 0 !important;
+  border-radius: 7px !important;
+  background: transparent;
+  color: #242424;
+  box-shadow: none !important;
+}
+.document-toolbar .document-tool:hover,
+.document-toolbar .selected {
+  background: #e9e9e9 !important;
+}
+.document-toolbar button:disabled {
+  opacity: 0.4;
+}
+.document-tool-divider {
+  width: 1px;
+  height: 18px;
+  background: #ddd;
+  margin: 0 5px;
+}
+.document-color {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.document-color input {
+  width: 24px !important;
+  min-width: 24px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent;
+  padding: 0 !important;
+}
+.document-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 28px 16px;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+.document-sheet {
+  max-width: 794px;
+  min-height: 1123px;
+  margin: 0 auto;
+  padding: 72px 76px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 3px;
+  box-shadow: 0 2px 10px #00000006;
+  box-sizing: border-box;
+}
+.document-sheet .tiptap {
+  outline: none;
+  min-height: 970px;
+  line-height: 1.75;
+  font-size: 11pt;
+  color: #242424;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.document-sheet [contenteditable="true"],
+.document-sheet [contenteditable="true"]:hover,
+.document-sheet [contenteditable="true"]:focus {
+  background: transparent !important;
+  box-shadow: none !important;
+  cursor: text;
+}
+.document-sheet p {
+  margin: 0 0 12px;
+}
+.document-sheet h1,
+.document-sheet h2,
+.document-sheet h3 {
+  margin: 20px 0 12px;
+  line-height: 1.4;
+}
+.document-sheet ul,
+.document-sheet ol {
+  padding-left: 28px;
+}
+.document-sheet a {
+  color: inherit;
+  text-decoration: underline;
+}
+.document-sheet img {
+  max-width: 100%;
+  height: auto;
+}
+.document-sheet table {
+  table-layout: fixed;
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+}
+.document-sheet th,
+.document-sheet td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  min-width: 30px;
+  position: relative;
+  background: white;
+  color: #242424;
+  font-weight: 400;
+}
+.document-sheet td p,
+.document-sheet th p {
+  margin: 0;
+}
+.document-sheet .selectedCell:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #0000000a;
+  pointer-events: none;
+}
+.document-preserved {
+  background: #f7f7f7;
+  border: 1px dashed #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  font-size: 11px;
+  color: #777;
+}
+.document-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: #fff4f3;
+  color: #a6362c;
+  border-bottom: 1px solid #eedbd8;
+  font-size: 12px;
+}
+.document-error span {
+  flex: 1;
+  min-width: 200px;
+}
+.document-error button {
+  background: white !important;
+}
+.document-footer {
+  padding: 9px 24px;
+  color: #888;
+  font-size: 11px;
+  background: #fff;
+  border-top: 1px solid #e9e9e9;
+}
+.document-open-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 0;
+}
+.document-open-actions button {
+  font-size: 12px;
+}
+.file-document-open {
+  font-size: 12px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 4px 0;
+  color: #242424;
+}
+@media (max-width: 720px) {
+  .document-header {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .document-heading h1 {
+    font-size: 15px;
+  }
+  .document-toolbar {
+    padding: 8px 10px;
+    gap: 2px;
+  }
+  .document-scroll {
+    padding: 12px 8px;
+  }
+  .document-sheet {
+    padding: 28px 22px;
+    min-height: calc(100dvh - 200px);
+  }
+  .document-sheet .tiptap {
+    min-height: calc(100dvh - 260px);
+  }
+  .document-autosave-label {
+    display: none;
+  }
+  .document-footer {
+    padding: 8px 14px;
+  }
+  .document-error {
+    padding: 10px 14px;
+  }
+}

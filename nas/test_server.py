@@ -67,6 +67,31 @@ class StorageTest(unittest.TestCase):
             self.assertEqual(conn.execute('SELECT deleted FROM locations').fetchone()[0], 1)
             self.assertEqual(conn.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
 
+    def test_file_autosave_versions_and_access(self):
+        client,auth=self.client,self.auth
+        ident=str(uuid4());url='/api/ref-files/'+ident
+        original=client.put(url,headers={**auth,'Content-Type':'text/plain'},content=b'original')
+        self.assertEqual(original.status_code,200)
+        version=client.get(url,headers=auth).headers['etag']
+        self.assertEqual(version,'"'+original.json()['sha256']+'"')
+        self.assertEqual(client.put(url,headers=auth,content=b'unconditional').status_code,409)
+        self.assertEqual(client.put(url,headers={**auth,'If-Match':'"stale"'},content=b'stale').status_code,409)
+        changed=client.put(url,headers={**auth,'If-Match':version,'Content-Type':'text/plain'},content=b'edited')
+        self.assertEqual(changed.status_code,200)
+        self.assertEqual(client.get(url,headers=auth).content,b'edited')
+        self.assertEqual(client.put(url,headers={**auth,'If-Match':version},content=b'stale').status_code,409)
+        version=client.get(url,headers=auth).headers['etag']
+        reference={'id':str(uuid4()),'title':'private document','ownerUserId':'different-user','modules':[{'id':'module','kind':'file','files':[{'id':ident,'kind':'file'}]}],'blocks':[]}
+        self.assertEqual(client.put('/api/references/'+reference['id'],headers=auth,json=reference).status_code,200)
+        try:
+            with self.module.database() as conn:conn.execute("UPDATE app_users SET role='operator' WHERE id='test-user'")
+            self.assertEqual(client.put(url,headers={**auth,'If-Match':version},content=b'unauthorized').status_code,403)
+            self.assertEqual(client.get(url,headers=auth).content,b'edited') # uploader can still read
+            with self.module.database() as conn:conn.execute("UPDATE app_users SET role='viewer' WHERE id='test-user'")
+            self.assertEqual(client.put(url,headers={**auth,'If-Match':version},content=b'viewer').status_code,403)
+        finally:
+            with self.module.database() as conn:conn.execute("UPDATE app_users SET role='superadmin' WHERE id='test-user'")
+
 
 if __name__ == '__main__':
     unittest.main()

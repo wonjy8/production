@@ -1,3 +1,5 @@
+import {documentFormat} from './document-files';
+import {openDocument} from './document-launch';
 import {moduleItemBindings} from './module-item-menu.js';
 import {useState} from 'react';
 import {Photo} from './Photo';
@@ -6,7 +8,7 @@ import {PhotoEditor} from './PhotoEditor';
 import {FluidCanvas} from './FluidCanvas';
 import {Icon,IconButton} from './Icon';
 import {fileLabel,reorderItems} from './fluid-layout.js';
-export function FileCard({file,editable=false,onName}:{file:any;editable?:boolean;onName?:(name:string)=>void}){const href='/api/ref-files/'+file.id+'?download=1&name='+encodeURIComponent(file.name||'file'),size=file.size?file.size>=1048576?(file.size/1048576).toFixed(1)+' MB':Math.round(file.size/1024)+' KB':'';return <div className="source-file-card"><a className="file-card-preview" href={href} target="_blank" rel="noreferrer"><Icon name="file"/><span>{fileLabel(file)}</span></a><div className="file-card-info">{editable?<input aria-label="파일 이름" value={file.name} onChange={e=>onName?.(e.target.value)}/>:<strong>{file.name||'파일'}</strong>}<small>{[fileLabel(file),size].filter(Boolean).join(' · ')}</small><a href={href} target="_blank" rel="noreferrer">다운로드 ↗</a></div></div>}
+export function FileCard({file,editable=false,onName}:{file:any;editable?:boolean;onName?:(name:string)=>void}){const href='/api/ref-files/'+file.id+'?download=1&name='+encodeURIComponent(file.name||'file'),size=file.size?file.size>=1048576?(file.size/1048576).toFixed(1)+' MB':Math.round(file.size/1024)+' KB':'';return <div className="source-file-card"><a className="file-card-preview" href={href} target="_blank" rel="noreferrer"><Icon name="file"/><span>{fileLabel(file)}</span></a><div className="file-card-info">{editable?<input aria-label="파일 이름" value={file.name} onChange={e=>onName?.(e.target.value)}/>:<strong>{file.name||'파일'}</strong>}<small>{[fileLabel(file),size].filter(Boolean).join(' · ')}</small><a href={href} target="_blank" rel="noreferrer">다운로드 ↗</a>{documentFormat(file)&&<button className="keep-label file-document-open" onClick={()=>openDocument(file)}>문서편집기로 열기 ↗</button>}</div></div>}
 export function MediaItems({items,kind,onChange,layout='free'}:{items:any[];kind:string;layout?:string;onChange:(fn:(items:any[])=>any[])=>void}){
  const [editing,setEditing]=useState('');
  const defaultWidth=layout==='list'?100:kind==='image'?Math.min(100,100/Math.min(3,Math.max(1,Math.ceil(Math.sqrt(items.length)))))-1:100;
