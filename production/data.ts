@@ -123,7 +123,7 @@ const legacySeed = {
       name: "도시의 리듬",
       format: "Documentary",
       status: "진행 중",
-      owner: "김서연",
+      owner: "사용자A",
       due: "2026-10-09",
       description:
         "도시를 움직이는 사람들의 하루를 담는 다큐멘터리. 익숙한 풍경 속에서 새로운 리듬을 발견합니다.",
@@ -140,7 +140,7 @@ const legacySeed = {
       name: "Behind the Frame",
       format: "Series",
       status: "검토 중",
-      owner: "박지훈",
+      owner: "사용자B",
       due: "2026-10-06",
       description:
         "좋은 장면 뒤에 숨은 제작자의 이야기. 제작 과정과 선택의 순간을 기록합니다.",
@@ -155,7 +155,7 @@ const legacySeed = {
       name: "가을의 기록",
       format: "Short film",
       status: "기획 중",
-      owner: "이하은",
+      owner: "사용자C",
       due: "2026-10-16",
       description: "계절이 바뀌는 순간을 빛과 소리로 기록하는 짧은 영화.",
       tasks: [
@@ -169,7 +169,7 @@ const legacySeed = {
       name: "작은 작업실",
       format: "Interview",
       status: "완료",
-      owner: "김서연",
+      owner: "사용자A",
       due: "2026-09-28",
       description: "자신만의 공간에서 꾸준히 만드는 사람들과의 대화.",
       tasks: [
@@ -183,7 +183,7 @@ const legacySeed = {
       name: "Everyday, differently",
       format: "Brand film",
       status: "진행 중",
-      owner: "박지훈",
+      owner: "사용자B",
       due: "2026-10-12",
       description: "일상 속 새로운 가능성을 보여주는 브랜드 필름.",
       tasks: [
@@ -387,7 +387,7 @@ export const seed: Workspace = migrateWorkspace(legacySeed)!;
 seed.projects[0].tasks = seed.projects[0].tasks.map((t, i) => ({
   ...t,
   stage: stages[Math.min(i, 4)],
-  owner: "김서연",
+  owner: "사용자A",
   due: `2026-10-${String(5 + i).padStart(2, "0")}`,
 }));
 seed.projects[0].schedules = [
@@ -396,7 +396,7 @@ seed.projects[0].schedules = [
     title: "도심 로케이션 촬영",
     date: "2026-10-07",
     endDate: "2026-10-08",
-    location: "서울 성수동",
+    location: "예시 장소",
     note: "오전 9시 집결 · 장비 체크 후 인터뷰 촬영",
   },
 ];
@@ -404,7 +404,7 @@ seed.projects[0].feedback = [
   {
     id: "feedback-sample",
     body: "오프닝에서 도시의 현장음을 조금 더 살려주세요.",
-    author: "김서연",
+    author: "사용자A",
     timecode: "00:00:12",
     assetId: "",
     resolved: false,

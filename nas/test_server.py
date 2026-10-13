@@ -44,7 +44,7 @@ class StorageTest(unittest.TestCase):
         bad = {**ref, 'blocks': [{'id': 'bad', 'kind': 'image', 'fileId': str(uuid4())}]}
         self.assertEqual(client.put('/api/references/' + ref['id'], headers=auth, json=bad).status_code, 400)
         self.assertEqual(client.get('/api/references', headers=auth).json()[0]['blocks'], ref['blocks'])
-        member = {'id': str(uuid4()), 'name': '종유', 'contact': 'private'}
+        member = {'id': str(uuid4()), 'name': '사용자A', 'contact': 'private'}
         state = {'unknown': {'preserve': True}, 'productions': [{'id': 'g', 'name': '프로덕션', 'tasks': []}], 'members': [member], 'projects': [{'id': 'p', 'title': '촬영', 'productionId': 'g', 'modules': [{'id': 'm', 'type': 'text', 'note': '보존'}], 'tasks': [{'id': 't', 'title': '편집', 'done': False}], 'productionAssets': [{'id': ident, 'mime': 'video/mp4'}]}]}
         self.assertEqual(client.put('/api/data', headers=auth, json=state).status_code, 200)
         self.assertEqual(client.get('/api/data', headers=auth).json(), state)

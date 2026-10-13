@@ -8,5 +8,5 @@ binding.onPointerDown(event);binding.onPointerMove({...event,clientX:70});await 
 binding.onPointerDown(event);await delay(520);assert.equal(root.children.length,1);binding.onPointerUp(event);binding.onClickCapture(event);assert.equal(prevented,1);assert.equal(stopped,1);root.children[0].children[0].onclick();assert.equal(selected,1);assert.equal(root.children.length,0);
 binding.onContextMenu(event);assert.equal(root.children.length,1);assert.equal(root.children[0].attributes.role,'menu');closeItemMenu();assert.equal(root.children.length,0);
 const moved=moveInList([{id:'a'},{id:'b'},{id:'c'}],'b',-1);assert.deepEqual(moved.map(x=>x.id),['b','a','c']);assert.deepEqual(moveInList(moved,'b',-1),moved);
-const member={id:'m',name:'종유',nameSuffix:'감독 / Won'};assert.equal(memberLabel(member),'종유 · 감독 / Won');assert.equal(assigneeLabel([member],'종유','m'),'종유 · 감독 / Won');assert.equal(member.name,'종유');
+const member={id:'m',name:'사용자A',nameSuffix:'감독 / A'};assert.equal(memberLabel(member),'사용자A · 감독 / A');assert.equal(assigneeLabel([member],'사용자A','m'),'사용자A · 감독 / A');assert.equal(member.name,'사용자A');
 console.log('Context menus: right-click, touch hold, swipe/short-tap cancellation, click suppression, action execution and reorder passed; labels preserve canonical names');
