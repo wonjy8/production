@@ -416,6 +416,16 @@ with tempfile.TemporaryDirectory() as td:
    assert retention=={'present':False,'fileStatus':404},retention
 
    fresh_page.locator('[data-main-space=home]').click()
+   assert fresh_page.get_by_label('홈 프로젝트 필터',exact=True).count()==0
+   fresh_page.get_by_role('button',name='할 일 전체 보기',exact=True).click()
+   fresh_page.get_by_role('heading',name='모든 할 일',exact=True).wait_for()
+   fresh_page.wait_for_function('location.hash==="#/home/tasks"')
+   fresh_page.reload();fresh_page.get_by_role('heading',name='모든 할 일',exact=True).wait_for()
+   fresh_page.locator('[data-home-section=schedule]').click()
+   fresh_page.get_by_role('heading',name='모든 일정',exact=True).wait_for()
+   fresh_page.locator('#sidebar-project-list').click()
+   fresh_page.locator('[data-home-view=projects]').wait_for()
+   fresh_page.locator('[data-main-space=home]').click()
    fresh_page.locator('[data-production-id=workspace-project]').click()
    fresh_page.get_by_role('heading',name='오늘 할 일',exact=True).wait_for()
    assert fresh_page.locator('.project-page-heading .archive-access').count()==0
@@ -599,10 +609,10 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").teams[0].leaderId==="team-a"')
    assert fresh_page.locator('.team-member-row').first.inner_text().startswith('팀원A')
    fresh_page.get_by_label('팀원Z 역할',exact=True).select_option('__custom__')
-   role_dialog=fresh_page.get_by_role('dialog',name='역할 입력',exact=True)
-   role_dialog.get_by_label('역할 이름',exact=True).fill('촬영감독')
-   role_dialog.get_by_role('button',name='적용',exact=True).click()
-   role_dialog.wait_for(state='detached')
+   role_input=fresh_page.get_by_role('textbox',name='팀원Z 역할 직접 입력',exact=True)
+   assert fresh_page.get_by_role('dialog',name='역할 입력',exact=True).count()==0
+   role_input.fill('촬영감독')
+   role_input.press('Enter')
    assert fresh_page.get_by_label('팀원Z 역할',exact=True).input_value()=='촬영감독'
    fresh_page.get_by_role('button',name='팀 이름 변경',exact=True).click()
    team_name=fresh_page.get_by_role('dialog',name='팀 이름 변경',exact=True)
@@ -652,6 +662,45 @@ with tempfile.TemporaryDirectory() as td:
    assert timeline_slot.evaluate('(el)=>!el.classList.contains("ui-add-action")')
    assert timeline_slot.evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgba(0, 0, 0, 0)'
    assert timeline_slot.evaluate('(el)=>Math.abs(el.getBoundingClientRect().height-parseFloat(getComputedStyle(el.closest(".timetable-module")).getPropertyValue("--tt-slot-height")))<1')
+
+   fresh_page.evaluate("""()=>{const w=window.productionBridge.read();w.timetableSchedules.push({id:'resize-ui',moduleId:'timeline-ui',productionId:'workspace-project',title:'시간 조절 검증',date:'2026-02-03',endDate:'2026-02-03',startTime:'09:00',endTime:'10:00',note:'메모 유지'});window.productionBridge.write(w);window.productionRefresh()}""")
+   timed_event=fresh_page.locator('.tt-event').filter(has_text='시간 조절 검증')
+   timed_event.click()
+   timed_detail=fresh_page.get_by_role('dialog',name='시간 조절 검증',exact=True)
+   assert timed_detail.get_by_text('메모 유지',exact=True).is_visible()
+   fresh_page.get_by_role('button',name='시간 조절 검증 닫기',exact=True).click()
+   for edge,delta,target in [('end',36,'10:20'),('start',-18,'08:50')]:
+    handle=timed_event.locator('[data-tt-resize='+edge+']')
+    handle.scroll_into_view_if_needed()
+    b=handle.bounding_box();x=b['x']+b['width']/2;y=b['y']+b['height']/2
+    fresh_page.mouse.move(x,y);fresh_page.mouse.down();fresh_page.mouse.move(x,y+delta,steps=6);fresh_page.mouse.up()
+    field='endTime' if edge=='end' else 'startTime'
+    fresh_page.wait_for_function('(v)=>window.productionBridge.read().timetableSchedules.find(s=>s.id==="resize-ui")[v.field]===v.target',arg={'field':field,'target':target})
+   assert fresh_page.evaluate('window.productionBridge.read().timetableSchedules.find(s=>s.id==="resize-ui").note')=='메모 유지'
+   fresh_page.get_by_role('button',name='타임테이블 일정 추가',exact=True).click()
+   time_form=fresh_page.get_by_role('dialog',name='일정 추가',exact=True)
+   time_form.get_by_label('시작 시간',exact=True).fill('오전 9:00')
+   time_form.get_by_label('시작 시간',exact=True).press('Enter')
+   time_form.get_by_label('시작 시간',exact=True).press('ArrowUp')
+   assert time_form.locator('[name=startTime]').input_value()=='09:05'
+   time_form.get_by_label('종료 시간',exact=True).fill('오후 1:30')
+   time_form.get_by_label('종료 시간',exact=True).press('Tab')
+   assert time_form.locator('[name=endTime]').input_value()=='13:30'
+   old_start=time_form.get_by_label('시작일',exact=True).input_value();old_end=time_form.get_by_label('종료일',exact=True).input_value()
+   time_form.get_by_label('시작일',exact=True).fill('2026-02-04')
+   from datetime import date as calendar_date,timedelta
+   expected_end=calendar_date(2026,2,4)+(calendar_date.fromisoformat(old_end)-calendar_date.fromisoformat(old_start))
+   assert time_form.get_by_label('종료일',exact=True).input_value()==expected_end.isoformat()
+   saved_viewport=fresh_page.viewport_size;fresh_page.set_viewport_size({'width':390,'height':844})
+   time_form.get_by_label('시작 시간',exact=True).click()
+   picker=time_form.get_by_role('group',name='시작 시간 휠 선택',exact=True)
+   picker.get_by_role('option',name='오후',exact=True).click()
+   picker.get_by_role('listbox',name='시',exact=True).get_by_role('option',name='11',exact=True).click()
+   picker.get_by_role('listbox',name='분',exact=True).get_by_role('option',name='05',exact=True).click()
+   picker.get_by_role('button',name='완료',exact=True).click()
+   assert time_form.locator('[name=startTime]').input_value()=='23:05'
+   fresh_page.get_by_role('button',name='일정 추가 닫기',exact=True).click()
+   fresh_page.set_viewport_size(saved_viewport)
 
    fresh_page.locator('[data-tab-id=projects]').click()
    lifecycle_file=fresh_page.evaluate("""async()=>{const id=crypto.randomUUID(),r=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'text/plain'},body:'완료 당시 문서'});if(!r.ok)throw Error('fixture file');const w=window.productionBridge.read();w.productions.push({id:'film-flow',name:'단편영화 검증',status:'진행 중',description:'',tasks:[{id:'overdue-flow',title:'색보정 확인',done:false,stage:'편집',due:'2000-01-01'}],feedback:[{id:'feedback-flow',body:'최종 색상 수정',resolved:false}],schedules:[{id:'next-flow',title:'시사회',date:'2099-01-01'}],customTabs:[{id:'script-tab-flow',name:'시나리오',modules:[{id:'script-flow',kind:'text',title:'촬영 대본',text:'완료 당시 대본'},{id:'file-flow',kind:'file',title:'결과 문서',files:[{id,name:'결과.txt',kind:'file',mime:'text/plain'}]}]}],teams:[],memberIds:[]},{id:'brand-flow',name:'브랜드 영상 검증',status:'진행 중',description:'',tasks:[],customTabs:[],teams:[],memberIds:[]});window.productionBridge.write(w);window.productionRefresh();await window.flushDocumentModules();return id}""")
@@ -716,27 +765,35 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.locator('[data-production-id=brand-flow]').click()
    fresh_page.locator('[data-tab-id^="tab:"]').last.click()
    fresh_page.locator('.shared-source').first.wait_for()
-   assert fresh_page.locator('.shared-source').first.inner_text().find('단편영화 검증')>=0
-   fresh_page.locator('.shared-source').first.get_by_role('button',name='새 원본 연결').click()
-   reconnect=fresh_page.get_by_role('dialog',name='새 원본 연결',exact=True)
-   reconnect.get_by_role('button',name=re.compile('^프로젝트')).click()
-   reconnect.get_by_role('button',name=re.compile('^단편영화 검증')).click()
-   reconnect.get_by_role('button',name=re.compile('^시나리오')).click()
-   reconnect.get_by_role('button',name=re.compile('^결과 문서')).click()
-   reconnect.get_by_role('button',name='적용',exact=True).click()
-   reconnect.wait_for(state='detached')
-   assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="brand-flow").customTabs.at(-1).modules[0].source.moduleId')=='file-flow'
-   fresh_page.evaluate('''()=>{const w=window.productionBridge.read();w.productions.find(p=>p.id==="film-flow").customTabs[0].modules=w.productions.find(p=>p.id==="film-flow").customTabs[0].modules.filter(m=>m.id!=="file-flow");window.productionBridge.write(w);window.productionRefresh()}''')
-   fresh_page.get_by_text('원본이 삭제되었거나 접근 권한이 없습니다.',exact=True).first.wait_for()
-   fresh_page.locator('.shared-source').first.get_by_role('button',name='새 원본 연결').click()
+   fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="brand-flow").customTabs.at(-1).modules.every(m=>m.sourceCopy)')
+   assert fresh_page.locator('.source-breadcrumb').count()==0
+   assert fresh_page.locator('.shared-source').first.get_by_role('button',name='원본에 저장',exact=True).is_enabled()
+   first_import=fresh_page.locator('.workspace-module').first
+   first_import.locator('textarea').fill('사본에서 수정한 대본')
+   assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="film-flow").customTabs[0].modules.find(m=>m.id==="script-flow").text')=='완료 당시 대본'
+   first_import.get_by_role('button',name='원본에 저장',exact=True).click()
+   first_import.get_by_role('button',name='취소',exact=True).click()
+   assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="film-flow").customTabs[0].modules.find(m=>m.id==="script-flow").text')=='완료 당시 대본'
+   first_import.get_by_role('button',name='원본에 저장',exact=True).click()
+   confirmation=first_import.get_by_role('button',name='원본에 저장할까요?',exact=True)
+   assert confirmation.evaluate('(el)=>getComputedStyle(el).color')=='rgb(37, 99, 235)'
+   confirmation.click()
+   first_import.get_by_role('status').wait_for()
+   assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="film-flow").customTabs[0].modules.find(m=>m.id==="script-flow").text')=='사본에서 수정한 대본'
+   copied_file=fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="brand-flow").customTabs.at(-1).modules.find(m=>m.kind==="file").files[0].id')
+   assert copied_file!=lifecycle_file
+   fresh_page.evaluate("""()=>{const w=window.productionBridge.read();w.productions.find(p=>p.id==='film-flow').customTabs[0].modules=w.productions.find(p=>p.id==='film-flow').customTabs[0].modules.filter(m=>m.id!=='script-flow');window.productionBridge.write(w);window.productionRefresh()}""")
+   first_import.locator('textarea').wait_for()
+   assert first_import.locator('textarea').input_value()=='사본에서 수정한 대본'
+   assert first_import.get_by_role('button',name='원본에 저장',exact=True).is_disabled()
+   first_import.get_by_role('button',name='새 원본 연결',exact=True).click()
    reconnect=fresh_page.get_by_role('dialog',name='새 원본 연결',exact=True)
    reconnect.get_by_role('button',name=re.compile('^프로젝트')).click()
    reconnect.get_by_role('button',name=re.compile('^브랜드 영상 검증')).click()
    reconnect.get_by_role('button',name=re.compile('^단편영화 검증 재사용')).first.click()
-   reconnect.get_by_role('button',name=re.compile('^결과 문서')).click()
-   reconnect.get_by_role('button',name='적용',exact=True).click()
+   reconnect.get_by_role('button',name=re.compile('^촬영 대본')).click()
    reconnect.wait_for(state='detached')
-   assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="brand-flow").customTabs.at(-1).modules[0].source.ownerId')=='brand-flow'
+   assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="brand-flow").customTabs.at(-1).modules[0].importSource.ownerId')=='brand-flow'
    await_archive=fresh_page.evaluate('''async()=>{await window.flushDocumentModules();return window.productionBridge.read().productions.find(p=>p.id==="film-flow").archives.length}''')
    assert await_archive==1
    fresh_page.reload()
@@ -806,7 +863,7 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.get_by_role('heading',name='계정',exact=True).wait_for()
    fresh_page.locator('.mobile-bottom-nav [data-main-space=home]').click()
    fresh_page.wait_for_function('window.activeWorkspace === "home" && !window.mobileWorkspaceHome')
-   fresh_page.locator('.home-groups .merge-project').filter(has_text='워크스페이스 프로젝트').click()
+   fresh_page.locator('.admin-projects>button').filter(has_text='워크스페이스 프로젝트').click()
    fresh_page.locator('[data-module-add]').click()
    fresh_page.locator('.hub-sidebar').wait_for(state='visible')
    mobile_hub=fresh_page.locator('.hub-sidebar').bounding_box()

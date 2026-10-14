@@ -28,3 +28,14 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Move completion archive access to the materials sidebar.
 - Add multi-item trash selection, restore, permanent deletion, and 30-day retention.
 - NAS update: replace `server.py` and `access.py` and rebuild the existing container; `.env` changes are not required.
+
+## 0.0.2
+
+- Add responsive Home screens for all tasks, schedules and projects, with clickable summary cards and sidebar task/schedule navigation; remove the Home project filter.
+- Unify workspace/sidebar spacing, expand work-group layouts, and simplify the sidebar project add button.
+- Edit custom team roles inline with Enter/blur commit.
+- Resize timetable event endpoints by dragging; show details on click.
+- Add keyboard AM/PM time input, five-minute stepping, mobile time wheels, current-time defaults and date interval preservation; show schedule notes in list modules.
+- Import modules as independent snapshots, including file copies; save back to the origin only through a blue two-step confirmation. Convert legacy linked placements to snapshots when editable.
+- Use red for destructive actions and deletion confirmations.
+- NAS configuration and server files do not change in this release.

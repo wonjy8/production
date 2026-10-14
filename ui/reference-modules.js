@@ -11,7 +11,7 @@ function saveModuleReference(r){
  referenceWrites.set(item.id,pending);return pending;
 }
 window.referenceBridge={
- tags:r=>allReferenceTags(r,state,refs),cached:()=>refs.slice(),list:async()=>{if(!refLoaded){refs=await refApi('');refLoaded=true}return refs.slice()},get:id=>refs.find(r=>r.id===id),save:saveModuleReference,
+ refresh:async()=>{refs=await refApi('');refLoaded=true;return refs.slice()},tags:r=>allReferenceTags(r,state,refs),cached:()=>refs.slice(),list:async()=>{if(!refLoaded){refs=await refApi('');refLoaded=true}return refs.slice()},get:id=>refs.find(r=>r.id===id),save:saveModuleReference,
  create:async input=>{const r={id:uid(),title:input.title||'새 자료',category:'',tags:[],favorite:false,deleted:false,description:'',blocks:[],createdAt:new Date().toISOString(),recordType:typeof sourceSection!=='undefined'&&sourceSection==='portfolios'?'portfolio':sourceSection==='sources'?'source':'reference',...input};return saveModuleReference(r)},
  updateModule:async(id,moduleId,fn)=>{const r=refs.find(r=>r.id===id);if(!r)throw Error('레퍼런스를 찾을 수 없습니다');return saveModuleReference(window.updateReferenceModule(r,moduleId,fn))},
  openProject:(id,kind,entityId)=>{window.productionSearchTarget={projectId:id,kind,entityId};openProduction(id,kind==='task'?'tasks':kind==='schedule'?'schedule':'overview')}

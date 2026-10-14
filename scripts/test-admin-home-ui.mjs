@@ -7,11 +7,11 @@ vm.runInNewContext(esbuild.transformSync(fs.readFileSync('production/AdminHome.t
 function nodes(n){return [n,...[n?.props?.children].flat(Infinity).filter(v=>v&&typeof v==='object').flatMap(nodes)]}
 let w={members:[{id:'m',name:'사용자A'}],productions:[{id:'g',name:'제작',tasks:[]}],projects:[{id:'p',name:'프로젝트',productionId:'g',status:'진행 중',due:model.localDay(),updatedAt:'2026-10-13T00:00:00Z',tasks:[{id:'t',title:'편집',due:model.localDay(),owner:'m'}],schedules:[]}]},opened;
 const render=()=>{cursor=0;return ctx.module.exports.AdminHome({workspace:w,onChange:fn=>w=fn(w),onOpen:(...a)=>opened=a,onReferences(){}})};
-let tree=render();assert.equal(nodes(tree).filter(n=>n.type==='h1').length,0);const period=nodes(tree).find(n=>n.props?.className==='admin-home-heading');assert.equal(period.props.children[0].props.className,'admin-segment');const check=nodes(tree).find(n=>n.props?.['aria-label']==='편집 완료');assert.ok(check);nodes(tree).find(n=>n.props?.className==='admin-task-title').props.onClick();assert.equal(opened[0].projectId,'p');assert.equal(opened[1],'task');
-const select=nodes(tree).find(n=>n.props?.['aria-label']==='홈 프로젝트 필터');select.props.onChange({target:{value:'g'}});check.props.onClick();assert.equal(w.projects[0].tasks[0].done,true);tree=render();assert.equal(nodes(tree).filter(n=>n.props?.['aria-label']==='편집 완료').length,0);
+let tree=render();assert.equal(nodes(tree).filter(n=>n.type==='h1').length,0);const period=nodes(tree).find(n=>n.props?.className==='admin-home-heading');assert.equal(period.props.children.props.className,'admin-segment');const check=nodes(tree).find(n=>n.props?.['aria-label']==='편집 완료');assert.ok(check);nodes(tree).find(n=>n.props?.className==='admin-task-title').props.onClick();assert.equal(opened[0].projectId,'p');assert.equal(opened[1],'task');
+assert.equal(nodes(tree).find(n=>n.props?.['aria-label']==='홈 프로젝트 필터'),undefined);check.props.onClick();assert.equal(w.projects[0].tasks[0].done,true);tree=render();assert.equal(nodes(tree).filter(n=>n.props?.['aria-label']==='편집 완료').length,0);
 assert.match(fs.readFileSync('ui/decorate.js','utf8'),/\.admin-home button/);
-assert.match(fs.readFileSync('production/entry.tsx','utf8'),/section==='dashboard'&&\['superadmin','admin'\]/);
+assert.match(fs.readFileSync('production/entry.tsx','utf8'),/section==='dashboard'\|\|section==='overview'/);
 assert.match(fs.readFileSync('production/entry.tsx','utf8'),/await \(window as any\)\.openRefs/);
 console.log('Admin home UI: render, source navigation, completion updates, filter, administrator guard and preserved text buttons passed');
 
-const homeSource=fs.readFileSync('production/AdminHome.tsx','utf8');assert.ok(homeSource.indexOf('<h2>프로젝트</h2>')<homeSource.indexOf('<h2>할 일</h2>'));assert.ok(homeSource.includes("[['프로젝트',data.active.length]"));
+const homeSource=fs.readFileSync('production/AdminHome.tsx','utf8');assert.ok(homeSource.indexOf('<h2>프로젝트</h2>')<homeSource.indexOf('<h2>할 일</h2>'));assert.ok(homeSource.includes("[['프로젝트',data.active.length,'projects']"));

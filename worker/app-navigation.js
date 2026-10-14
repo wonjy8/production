@@ -13,7 +13,7 @@ export const appNavigationScript=String.raw`
   if(location.hash.startsWith('#/')){
    let parts;try{parts=location.hash.slice(2).split('/').map(decodeURIComponent)}catch{return null}
    const [view,scope,record,tabType,tab]=parts;
-   if(view==='home')return {view:'home',section:['superadmin','admin'].includes(window.appAccount?.role)?'dashboard':'overview'};
+   if(view==='home')return {view:'home',section:['tasks','schedule','projects'].includes(scope)?'home-'+scope:'dashboard'};
    if(view==='projects'||view==='work-groups'){
     const items=view==='projects'?state.productions||[]:state.projects||[],owner=find(items,scope),selectedTab=record==='tabs'?find(owner?.customTabs||[],tabType):null;
     return {view:'home',...(view==='projects'?{group:owner?.id}:{project:owner?.id}),section:selectedTab?'tab:'+selectedTab.id:record==='tabs'?'overview':record||'overview'};
@@ -32,13 +32,13 @@ export const appNavigationScript=String.raw`
   if(!databasePanel.hidden)return {view:'database',section:databaseCollection,record:databasePanel.classList.contains('owner-editor')?databasePanel.dataset.searchOwnerId:databaseRecord};
   if(refPage)return {view:'references',section:sourceSection,record:window.activeReferenceId||'',tab:window.activeReferenceId?window.activeReferenceTabId||'':'',...(window.sourceGalleryVisible?{section:'gallery'}:{})};
   const context=window.productionSearchContext||{};
-  return {view:'home',project:context.projectId||'',group:context.productionId||'',section:context.projectId||context.productionId?context.section:productionSection==='dashboard'?'dashboard':'overview'};
+  return {view:'home',project:context.projectId||'',group:context.productionId||'',section:context.projectId||context.productionId?context.section:productionSection==='dashboard'||productionSection.startsWith('home-')?productionSection:'overview'};
  }
  function url(value){
   const result=new URL(location.href);keys.forEach(key=>result.searchParams.delete(key));let parts;
   if(value.view==='home'){
    const owner=value.project?(state.projects||[]).find(item=>item.id===value.project):(state.productions||[]).find(item=>item.id===value.group);
-   parts=owner?[value.project?'work-groups':'projects',token(owner,value.project?state.projects:state.productions),...sectionPath(owner,value.section)]:['home'];
+   parts=owner?[value.project?'work-groups':'projects',token(owner,value.project?state.projects:state.productions),...sectionPath(owner,value.section)]:value.section?.startsWith('home-')?['home',value.section.slice(5)]:['home'];
   }else if(value.view==='references'){
    parts=['materials'];if(!value.landing){parts.push(value.section||'references');const record=refs.find(item=>item.id===value.record);if(record){parts.push(token(record,refs));const tabs=recordTabs(record),tab=tabs.find(item=>item.id===value.tab);if(tab)parts.push('tabs',token(tab,tabs))}}
   }else{

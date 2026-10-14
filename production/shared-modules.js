@@ -7,7 +7,7 @@ export function referenceModules(r){
  return blocks.map((b,i)=>{const id=b.id||r.id+'-'+i;if(['text','table','event','check'].includes(b.kind))return {id,kind:'text',text:b.text||'',title:b.title};if(b.kind==='link')return {id,kind:'link',url:b.url||'',title:b.title};return {id,kind:['image','video'].includes(b.kind)?b.kind:'file',files:[{id:b.fileId,name:b.originalName||b.title||'파일',kind:b.kind,mime:b.mime,size:b.size,tags:b.tags||[],galleryTags:b.galleryTags||[],galleryHiddenTags:b.galleryHiddenTags||[],photoEdit:b.photoEdit}]}});
 }
 export function resolveSharedModule(module,w,refs){
- const source=module.source;if(!source)return module;
+ const source=module.source;if(!source||module.sourceCopy)return module;
  const owner=source.kind==='reference'?refs.find(r=>r.id===source.ownerId&&!r.deleted):(source.kind==='project'?w.projects:w.productions).find(p=>p.id===source.ownerId&&!p.deleted);
  const modules=source.kind==='reference'?(owner?referenceModules(owner):[]):(owner?.customTabs||[]).flatMap(t=>t.modules);
  const found=modules.find(m=>m.id===source.moduleId);

@@ -1,3 +1,5 @@
+import {ScheduleDateTime,TimeInput} from './ScheduleDateTime';
+import {defaultScheduleTimes} from './schedule-time.js';
 import {CALENDAR_DRAG_TYPE,moveCalendarItem,setCalendarDragImage,clearCalendarDragImage} from './calendar-drag.js';
 import {delayedPointerDrag} from '../ui/touch-drag.js';
 import {itemMenuBindings} from '../ui/item-menu.js';
@@ -182,7 +184,7 @@ export function ProjectWorkspace({
       tasks: p.tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
     }));
   }
-  function openCalendarDraft(date:string){setCalendarDraft(true);setScheduleEditor({id:crypto.randomUUID(),title:'',date,endDate:date,location:'',note:''})}
+  function openCalendarDraft(date:string){setCalendarDraft(true);setScheduleEditor({id:crypto.randomUUID(),title:'',...defaultScheduleTimes(date),location:'',note:''})}
   function switchDraft(kind:string,event:any){if((kind==='schedule'&&scheduleEditor)||(kind==='task'&&taskEditor))return;const form=event.currentTarget.closest('dialog')?.querySelector('form'),data=form?new FormData(form):null;const title=data?field(data,'title'):scheduleEditor?.title||taskEditor?.title||'',date=data?(field(data,'date')||field(data,'due')):scheduleEditor?.date||taskEditor?.due||today;const startTime=data?field(data,'startTime'):'',endTime=data?field(data,'endTime'):'';if(kind==='task'){setScheduleEditor(null);setTaskEditor({...newTask(title),due:date,startTime,endTime,stage:stageOptions[0],description:data?field(data,'note'):''})}else{setTaskEditor(null);setScheduleEditor({id:crypto.randomUUID(),title,date,endDate:date,startTime,endTime,location:'',note:data?field(data,'description'):''})}}
   const draftPicker=calendarDraft&&<div className="calendar-kind-switch" role="group" aria-label="추가 항목"><button type="button" className="keep-label" aria-pressed={!!scheduleEditor} onClick={e=>switchDraft('schedule',e)}>일정</button><button type="button" className="keep-label" aria-pressed={!!taskEditor} onClick={e=>switchDraft('task',e)}>할 일</button></div>;
   function taskMenu(t:Task){return itemMenuBindings([{label:'이름 변경',icon:'edit',run:()=>setTaskEditor(t)},{label:'단계 이동',icon:'folder',run:()=>setTaskEditor(t)},{label:'삭제',icon:'trash',danger:true,run:()=>onChange(p=>({...p,tasks:p.tasks.filter(item=>item.id!==t.id),schedules:p.schedules.map(s=>s.taskId===t.id?{...s,taskId:''}:s)}))}])}
@@ -759,8 +761,9 @@ function ScheduleForm({
   onSave: (s: Schedule) => void;
 }) {
   const [error, setError] = useState("");
+  const [dates,setDates]=useState({...value,endDate:value.endDate||value.date});
   return (
-    <form
+    <form className="schedule-entry-form"
       onSubmit={(e) => {
         e.preventDefault();
         const d = new FormData(e.currentTarget);
@@ -787,6 +790,7 @@ function ScheduleForm({
         일정 이름
         <input
           name="title"
+          placeholder="일정 제목을 입력하세요"
           aria-label="일정 이름"
           defaultValue={value.title}
           required
@@ -794,22 +798,7 @@ function ScheduleForm({
           pattern=".*\S.*"
         />
       </label>
-      <div className="form-row">
-        <label>
-          시작일
-          <input name="date" type="date" defaultValue={value.date} required />
-        </label>
-        <label>
-          종료일
-          <input
-            name="endDate"
-            type="date"
-            defaultValue={value.endDate}
-            required
-          />
-        </label>
-      </div>
-      <TimeFields start={value.startTime} end={value.endTime}/>
+      <ScheduleDateTime value={dates} onChange={setDates}/>
       {error && (
         <p role="alert" className="form-error">
           {error}
@@ -817,12 +806,13 @@ function ScheduleForm({
       )}
       <label>
         장소
-        <input name="location" defaultValue={value.location} maxLength={160} />
+        <input placeholder="장소를 입력하세요" name="location" defaultValue={value.location} maxLength={160} />
       </label>
       <label>
         메모
         <textarea
           name="note"
+          placeholder="메모를 입력하세요"
           defaultValue={value.note}
           maxLength={2000}
           rows={3}
@@ -878,5 +868,5 @@ function LinkForm({ onSave }: { onSave: (name: string, url: string) => void }) {
 }
 
 
-function validTimes(start:string,end:string,multipleDays=false){const a=minutes(start),b=minutes(end);return a!==null&&b!==null&&a<1440&&a%10===0&&b%10===0&&(multipleDays||b>a)}
-function TimeFields({start='',end=''}:{start?:string;end?:string}){return <div className="form-row"><label>시작 시간<select name="startTime" defaultValue={start}><option value="">시간 없음</option>{Array.from({length:144},(_,i)=><option key={i} value={timeLabel(i*10)}>{timeLabel(i*10)}</option>)}</select></label><label>종료 시간<select name="endTime" defaultValue={end}><option value="">시간 없음</option>{Array.from({length:145},(_,i)=><option key={i} value={timeLabel(i*10)}>{timeLabel(i*10)}</option>)}</select></label></div>}
+function validTimes(start:string,end:string,multipleDays=false){const a=minutes(start),b=minutes(end);return a!==null&&b!==null&&a<1440&&(multipleDays||b>a)}
+function TimeFields({start='',end=''}:{start?:string;end?:string}){const [a,setA]=useState(start),[b,setB]=useState(end);return <div className="form-row"><label>시작 시간<TimeInput name="startTime" label="시작 시간" value={a} onChange={setA}/></label><label>종료 시간<TimeInput name="endTime" label="종료 시간" value={b} onChange={setB}/></label></div>}
