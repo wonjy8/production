@@ -1,0 +1,4 @@
+import {sortMembers} from './member-sort.js';
+export function teamRole(team,assignment){return team.leaderId===assignment.memberId?'팀장':assignment.role?.trim()||'멤버'}
+export function setTeamRole(team,memberId,value){const role=String(value).trim()||'멤버';if(role.length>80)throw Error('역할은 80자 이내로 입력하세요.');if(!team.members.some(a=>a.memberId===memberId))return team;return {...team,leaderId:role==='팀장'?memberId:team.leaderId===memberId?'':team.leaderId,members:team.members.map(a=>a.memberId===memberId?{...a,role}:role==='팀장'&&a.role==='팀장'?{...a,role:'멤버'}:a)}}
+export function teamMemberOrder(people,team,mode){return sortMembers(team.members.map(a=>people.find(m=>m.id===a.memberId)).filter(Boolean),mode,team.members.map(a=>a.memberId)).sort((a,b)=>Number(b.id===team.leaderId)-Number(a.id===team.leaderId))}

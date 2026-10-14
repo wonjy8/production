@@ -177,6 +177,11 @@ with tempfile.TemporaryDirectory() as td:
    remove.click();assert page.get_by_role('button',name='모듈 삭제 확인',exact=True).is_visible()
    assert page.locator('dialog[open]').count()==0
    assert page.get_by_role('button',name='모듈 삭제 확인',exact=True).bounding_box()['height']==24
+   confirmation=page.get_by_role('button',name='모듈 삭제 확인',exact=True)
+   assert confirmation.evaluate('(el)=>el.scrollWidth<=el.clientWidth')
+   assert confirmation.evaluate('(el)=>getComputedStyle(el.closest(".inline-remove")).overflow')=='visible'
+   assert confirmation.bounding_box()['x']>=0
+
    page.locator('.topbar').click(position={'x':5,'y':5});assert page.get_by_role('button',name='모듈 삭제 확인',exact=True).count()==0
    page.locator('.module-outside-title .inline-remove .compact-remove').first.click()
    page.evaluate('window.dispatchEvent(new Event("scroll"))')
@@ -371,6 +376,44 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes("워크스페이스 프로젝트")')
    assert fresh_page.locator('.breadcrumbs button').all_text_contents()[:2]==['홈','워크스페이스 프로젝트']
    assert fresh_page.evaluate('window.activeWorkspace')=='home'
+   fresh_page.evaluate('''()=>{const w=window.productionBridge.read();w.members.push({id:"team-z",name:"팀원Z",kind:"personal"},{id:"team-a",name:"팀원A",kind:"personal"});const p=w.productions.find(p=>p.id==="workspace-project");p.memberIds=["team-z","team-a"];p.teams=[{id:"people-team",name:"제작팀",leaderId:"team-z",members:[{memberId:"team-a",role:""},{memberId:"team-z",role:""}]}];window.productionBridge.write(w);window.productionRefresh()}''')
+   fresh_page.locator('[data-tab-id=people]').click()
+   fresh_page.locator('.team-detail').wait_for()
+   assert fresh_page.locator('.team-member-row').first.inner_text().startswith('팀원Z')
+   assert fresh_page.get_by_label('제작팀 팀장',exact=True).count()==0
+   assert fresh_page.get_by_label('팀원A 역할',exact=True).input_value()=='멤버'
+   fresh_page.get_by_label('팀원A 역할',exact=True).select_option('팀장')
+   fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").teams[0].leaderId==="team-a"')
+   assert fresh_page.locator('.team-member-row').first.inner_text().startswith('팀원A')
+   fresh_page.get_by_label('팀원Z 역할',exact=True).select_option('__custom__')
+   role_dialog=fresh_page.get_by_role('dialog',name='역할 입력',exact=True)
+   role_dialog.get_by_label('역할 이름',exact=True).fill('촬영감독')
+   role_dialog.get_by_role('button',name='적용',exact=True).click()
+   role_dialog.wait_for(state='detached')
+   assert fresh_page.get_by_label('팀원Z 역할',exact=True).input_value()=='촬영감독'
+   fresh_page.get_by_role('button',name='팀 이름 변경',exact=True).click()
+   team_name=fresh_page.get_by_role('dialog',name='팀 이름 변경',exact=True)
+   team_name.get_by_label('팀 이름',exact=True).fill('영상팀')
+   team_name.get_by_role('button',name='완료',exact=True).click()
+   team_name.wait_for(state='detached')
+   assert fresh_page.get_by_role('button',name='팀 이름 변경',exact=True).inner_text()=='영상팀'
+   assert fresh_page.locator('.team-head').get_by_label('멤버 정렬 기준').count()==1
+   delete_team=fresh_page.get_by_role('button',name='영상팀 팀 삭제',exact=True)
+   assert delete_team.bounding_box()['y']>=fresh_page.locator('.team-detail-members').bounding_box()['y']
+   delete_team.click()
+   fresh_page.get_by_role('button',name='팀 삭제 확인',exact=True).wait_for()
+   fresh_page.get_by_role('button',name='삭제 취소',exact=True).click()
+   assert fresh_page.locator('.team-detail').count()==1
+   delete_team.click()
+   fresh_page.get_by_role('button',name='팀 삭제 확인',exact=True).click()
+   fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").teams.length===0')
+   fresh_page.get_by_role('button',name='팀 추가',exact=True).click()
+   team_add=fresh_page.get_by_role('dialog',name='팀 추가',exact=True)
+   team_add.get_by_label('새 팀 이름',exact=True).fill('새 제작팀')
+   team_add.get_by_role('button',name='팀 추가',exact=True).click()
+   team_add.wait_for(state='detached')
+   assert fresh_page.get_by_role('button',name='팀 이름 변경',exact=True).inner_text()=='새 제작팀'
+   fresh_page.locator('[data-tab-id=projects]').click()
    lifecycle_file=fresh_page.evaluate("""async()=>{const id=crypto.randomUUID(),r=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'text/plain'},body:'완료 당시 문서'});if(!r.ok)throw Error('fixture file');const w=window.productionBridge.read();w.productions.push({id:'film-flow',name:'단편영화 검증',status:'진행 중',description:'',tasks:[{id:'overdue-flow',title:'색보정 확인',done:false,stage:'편집',due:'2000-01-01'}],feedback:[{id:'feedback-flow',body:'최종 색상 수정',resolved:false}],schedules:[{id:'next-flow',title:'시사회',date:'2099-01-01'}],customTabs:[{id:'script-tab-flow',name:'시나리오',modules:[{id:'script-flow',kind:'text',title:'촬영 대본',text:'완료 당시 대본'},{id:'file-flow',kind:'file',title:'결과 문서',files:[{id,name:'결과.txt',kind:'file',mime:'text/plain'}]}]}],teams:[],memberIds:[]},{id:'brand-flow',name:'브랜드 영상 검증',status:'진행 중',description:'',tasks:[],customTabs:[],teams:[],memberIds:[]});window.productionBridge.write(w);window.productionRefresh();await window.flushDocumentModules();return id}""")
    fresh_page.locator('[data-production-id=film-flow]').click()
    film_overview=fresh_page.locator('.production-overview')
