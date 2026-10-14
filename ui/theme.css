@@ -140,3 +140,9 @@ button.ui-add-action.ui-icon-button{width:var(--action-height)!important;min-wid
 .hub-sidebar .hub-categories{gap:4px!important;align-items:center;padding:0}
 .hub-sidebar .hub-categories>button.keep-label{height:32px!important;min-height:32px!important;padding:5px 10px!important;font-size:12px!important;line-height:20px!important;border:0!important;border-radius:999px!important}
 .hub-sidebar .hub-categories>button::after{display:none!important}
+
+/* Measure project-tab separators from the outside edge of each highlight. */
+:is(.merge-sections,.project-sections){column-gap:16px!important}
+:is(.merge-sections,.project-sections)>button{margin-inline:0!important;border:0!important;padding-inline:12px!important}
+:is(.merge-sections,.project-sections)>button::after{content:none}
+:is(.merge-sections,.project-sections)>button:not(:last-child)::after{content:"";position:absolute;left:auto;right:-8.5px;top:50%;transform:translateY(-50%);width:1px;height:22px;background:var(--border);pointer-events:none}
