@@ -424,11 +424,19 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.locator('.project-page-heading .project-icon-choice').bounding_box()['x']<fresh_page.locator('.project-page-heading h1').bounding_box()['x']
    assert overview.locator('.overview-health button').count()==3
    assert overview.get_by_text('기한 초과',exact=True).is_visible()
-   assert overview.get_by_text('현재 단계',exact=False).is_visible()
+   assert overview.locator('.overview-current-stage').count()==0
+   assert overview.locator('.overview-facts dt').filter(has_text='상태').count()==0
    fresh_page.get_by_role('button',name='프로젝트 아이콘 변경',exact=True).click()
    fresh_page.get_by_role('dialog',name='프로젝트 아이콘 선택',exact=True).get_by_role('button',name='십자가 아이콘',exact=True).click()
    overview.get_by_role('button',name='수정',exact=True).click()
    assert overview.get_by_label('프로젝트 아이콘 검색',exact=True).count()==0
+   assert overview.get_by_label('마감일 없음',exact=True).is_checked()
+   assert overview.get_by_label('프로젝트 상태',exact=True).input_value()=='상시'
+   overview.get_by_label('마감일 없음',exact=True).uncheck()
+   overview.get_by_label('프로젝트 마감일',exact=True).fill('2099-01-01')
+   assert overview.get_by_label('프로젝트 상태',exact=True).input_value()=='진행 중'
+   overview.get_by_label('마감일 없음',exact=True).check()
+   assert overview.locator('.overview-edit').evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='1px'
    overview.get_by_role('button',name='저장',exact=True).click()
    fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").icon==="cross"')
    fresh_page.get_by_role('button',name='프로젝트 아이콘 변경',exact=True).click()

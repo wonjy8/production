@@ -64,6 +64,7 @@ export type Project = {
   name: string;
   format: string;
   categoryId?: string;
+  categoryIds?: string[];
   teamIds?: string[];
   status: Status;
   owner: string;
