@@ -423,8 +423,11 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.wait_for_function('window.appUpdates.available === true')
    update_icon=fresh_page.locator('#app-update .app-update-icon')
    assert update_icon.locator('svg').count()==1
-   assert update_icon.evaluate('(el)=>getComputedStyle(el).borderRadius')=='50%'
-   assert update_icon.evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgb(124, 58, 237)'
+   assert update_icon.locator('svg').bounding_box()['width']==18
+   assert fresh_page.locator('#app-update').evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='0px'
+   assert update_icon.evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgba(0, 0, 0, 0)'
+   assert update_icon.evaluate('(el)=>getComputedStyle(el).color')=='rgb(124, 58, 237)'
+   assert fresh_page.locator('#app-update').evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgba(0, 0, 0, 0)'
 
    fresh_page.get_by_role('button',name='앱 업데이트',exact=True).click()
    fresh_page.wait_for_timeout(200)
