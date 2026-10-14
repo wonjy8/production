@@ -124,3 +124,8 @@ button.ui-add-action.ui-icon-button{width:var(--action-height)!important;min-wid
 .calendar-day-heading>button.calendar-add{width:24px!important;min-width:24px!important;height:24px!important;min-height:24px!important;padding:5px!important;border:0!important;background:transparent!important;box-shadow:none!important;border-radius:6px!important;color:var(--text-muted)!important}
 .calendar-day-heading>button.calendar-add svg{width:14px!important;height:14px!important;stroke-width:1.75!important}
 .calendar-day-heading>button.calendar-add:hover{color:var(--accent)!important}
+
+/* Navigation groups: fine vertical separators between independent choices. */
+:is(.hub-switch,.hub-categories,.merge-sections,.project-sections)>button{position:relative;overflow:visible!important}
+:is(.hub-switch,.hub-categories,.merge-sections,.project-sections)>button+button::after{content:"";position:absolute;left:-4px;top:50%;transform:translateY(-50%);width:1px;height:22px;background:var(--border);pointer-events:none}
+.hub-switch>button+button::after{left:-3px}
