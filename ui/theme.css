@@ -160,3 +160,8 @@ button.ui-add-action.ui-icon-button{width:var(--action-height)!important;min-wid
 .task-view-switch[data-view=board]::before{transform:translateX(calc(100% + 4px))}
 .task-view-switch>button.keep-label:is([aria-pressed=true],[aria-pressed=false]){position:relative;z-index:1;width:100%!important;min-width:0!important;height:32px!important;min-height:32px!important;padding:0 10px!important;background:transparent!important;border:0!important;border-radius:8px!important}
 @media(prefers-reduced-motion:reduce){.task-view-switch::before{transition:none}}body[data-motion=off] .task-view-switch::before{transition:none}
+
+/* Icon-only additions stay square; dialog focus is held without an outer ring. */
+button[data-control-icon=plus]:not(.keep-label):not(.calendar-add){width:36px!important;min-width:36px!important;max-width:36px!important;height:36px!important;min-height:36px!important;max-height:36px!important;padding:0!important;aspect-ratio:1;flex:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
+.editor-dialog,.editor-dialog:focus,.editor-dialog:focus-visible{border:0!important;outline:none!important}
+.task-view-switch{background:transparent!important}
