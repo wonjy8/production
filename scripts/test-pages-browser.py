@@ -315,7 +315,7 @@ with tempfile.TemporaryDirectory() as td:
    nas_overview=page.locator('.production-overview')
    nas_overview.get_by_role('button',name='수정',exact=True).click()
    nas_overview.get_by_label('프로젝트 상태',exact=True).select_option('완료')
-   nas_overview.get_by_role('button',name='저장',exact=True).click()
+   nas_overview.get_by_role('button',name='확인',exact=True).click()
    nas_review=page.get_by_role('dialog',name='프로젝트 완료 점검',exact=True)
    nas_review.get_by_label('결과물 링크',exact=True).fill('https://example.com/final')
    page.evaluate('''()=>{window.lifecycleRealFetch=window.fetch;window.fetch=(url,options)=>String(url).endsWith("/auth/connection")?Promise.resolve(new Response(JSON.stringify({nasReachable:true,authenticationInstalled:true}),{headers:{"Content-Type":"application/json"}})):window.lifecycleRealFetch(url,options)}''')
@@ -436,8 +436,13 @@ with tempfile.TemporaryDirectory() as td:
    overview.get_by_label('프로젝트 마감일',exact=True).fill('2099-01-01')
    assert overview.get_by_label('프로젝트 상태',exact=True).input_value()=='진행 중'
    overview.get_by_label('마감일 없음',exact=True).check()
-   assert overview.locator('.overview-edit').evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='1px'
-   overview.get_by_role('button',name='저장',exact=True).click()
+   assert overview.locator('.overview-edit').evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='0px'
+   assert overview.locator('.overview-top-actions').is_visible()
+   assert overview.locator('.production-heading-actions [data-control-icon=plus]').count()==0
+   assert overview.get_by_role('button',name='확인',exact=True).evaluate('(el)=>{const probe=document.createElement("i");probe.style.background="var(--accent)";el.append(probe);const ok=getComputedStyle(el).backgroundColor===getComputedStyle(probe).backgroundColor;probe.remove();return ok}')
+   assert overview.locator('.overview-edit input[type=text],.overview-edit input:not([type])').first.evaluate('(el)=>getComputedStyle(el).backgroundColor')==overview.locator('.overview-edit select').first.evaluate('(el)=>getComputedStyle(el).backgroundColor')
+   assert overview.evaluate('(el)=>getComputedStyle(el).backgroundImage').startswith('linear-gradient')
+   overview.get_by_role('button',name='확인',exact=True).click()
    fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").icon==="cross"')
    fresh_page.get_by_role('button',name='프로젝트 아이콘 변경',exact=True).click()
    icon_menu=fresh_page.get_by_role('dialog',name='프로젝트 아이콘 선택',exact=True)
@@ -524,6 +529,20 @@ with tempfile.TemporaryDirectory() as td:
    team_add.get_by_role('button',name='팀 추가',exact=True).click()
    team_add.wait_for(state='detached')
    assert fresh_page.get_by_role('button',name='팀 이름 변경',exact=True).inner_text()=='새 제작팀'
+   fresh_page.evaluate('()=>{const w=window.productionBridge.read(),p=w.productions.find(p=>p.id==="workspace-project");p.teams.push({id:"second-team",name:"두번째 팀",members:[]});window.productionBridge.write(w);window.productionRefresh()}')
+   team_directory=fresh_page.locator('.team-directory')
+   first_team=team_directory.locator('.team-directory-item').first
+   second_team=team_directory.locator('.team-directory-item').last
+   sort_team_transfer=fresh_page.evaluate_handle('new DataTransfer()')
+   first_team.dispatch_event('dragstart',{'dataTransfer':sort_team_transfer})
+   assert fresh_page.locator('.team-empty-insert').count()==0
+   second_team.dispatch_event('dragover',{'dataTransfer':sort_team_transfer,'clientY':second_team.bounding_box()['y']+1})
+   assert second_team.evaluate('(el)=>el.classList.contains("team-insert-before")')
+   assert fresh_page.locator('.team-detail.team-drop-target,.team-directory-group.team-drop-target').count()==0
+   assert fresh_page.locator('.team-directory-item.team-drop-target').count()==0
+   second_team.dispatch_event('drop',{'dataTransfer':sort_team_transfer,'clientY':second_team.bounding_box()['y']+1})
+   assert fresh_page.locator('.team-insert-before,.team-insert-after').count()==0
+
    fresh_page.evaluate('()=>{const w=window.productionBridge.read(),p=w.productions.find(p=>p.id==="workspace-project");p.customTabs.push({id:"timeline-regression",name:"타임라인 검사",modules:[{id:"timeline-ui",kind:"timetable",title:"타임라인",config:{start:"2026-02-03",end:"2026-02-05",days:3,projectIds:[]}}]});window.productionBridge.write(w);window.productionRefresh()}')
    fresh_page.locator('[data-tab-id="tab:timeline-regression"]').click()
    timeline_slot=fresh_page.locator('.tt-slot').first
@@ -540,7 +559,7 @@ with tempfile.TemporaryDirectory() as td:
    assert film_overview.get_by_text('시사회',exact=True).is_visible()
    film_overview.get_by_role('button',name='수정',exact=True).click()
    film_overview.get_by_label('프로젝트 상태',exact=True).select_option('완료')
-   film_overview.get_by_role('button',name='저장',exact=True).click()
+   film_overview.get_by_role('button',name='확인',exact=True).click()
    review=fresh_page.get_by_role('dialog',name='프로젝트 완료 점검',exact=True)
    review.wait_for()
    assert review.get_by_role('heading',name='미완료 업무 1').is_visible()

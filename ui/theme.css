@@ -113,7 +113,7 @@ button[data-control-icon=close]:hover,button[data-control-icon=trash]:hover,butt
 :root,:host{--action-height:36px;--action-padding:12px}
 select:not([multiple]):not(.team-role-select){border:1px solid var(--control-border)!important;background-color:transparent!important;box-shadow:none!important;border-radius:var(--control-radius)!important}
 .tt-toolbar-actions>.tt-day-select{border:1px solid var(--control-border)!important;background:transparent!important}
-:is(button.button,button.ui-icon-button,button.icon-button):not(.ui-add-action):not(.calendar-add):not(.compact-remove):not(.inline-remove-trigger):not(.inline-remove-cancel):not(.inline-remove-delete):not(.module-tab-empty):not([data-control-icon=close]):not([data-control-icon=trash]):not([data-control-icon=settings]):not([data-app-update]):not([aria-pressed]):not([aria-selected]):not(.active){border:1px solid var(--control-border)!important;background:transparent!important;box-shadow:none!important;border-radius:var(--control-radius)!important;color:var(--text)!important}
+:is(button.button,button.ui-icon-button,button.icon-button):not(.ui-add-action):not(.overview-confirm):not(.overview-cancel):not(.calendar-add):not(.compact-remove):not(.inline-remove-trigger):not(.inline-remove-cancel):not(.inline-remove-delete):not(.module-tab-empty):not([data-control-icon=close]):not([data-control-icon=trash]):not([data-control-icon=settings]):not([data-app-update]):not([aria-pressed]):not([aria-selected]):not(.active){border:1px solid var(--control-border)!important;background:transparent!important;box-shadow:none!important;border-radius:var(--control-radius)!important;color:var(--text)!important}
 .tt-toolbar-actions>button.button.keep-label{border:1px solid var(--control-border)!important;background:transparent!important}
 button.ui-add-action:is(.button,.keep-label,.ui-icon-button,.icon-button):not(.module-tab-empty){display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;height:var(--action-height)!important;min-height:var(--action-height)!important;padding:0 var(--action-padding)!important;border:0!important;border-radius:var(--control-radius)!important;background:var(--control-hover)!important;color:var(--text)!important;font-size:13px!important;line-height:20px!important;white-space:nowrap!important;box-shadow:none!important}
 button.ui-add-action svg{width:16px!important;height:16px!important;flex:none}
@@ -179,3 +179,22 @@ html{overflow-y:scroll;scrollbar-gutter:stable}
 .overview-edit .overview-fields{gap:18px}.overview-memo-field{display:grid;gap:8px;margin-top:12px}.overview-memo-field textarea{width:100%;min-height:120px}
 .overview-team-options,.overview-category-options{border:0;padding:0;margin:0;min-width:0}.overview-team-options>label{border:0!important;background:transparent!important}.overview-category-options{display:flex;gap:12px;flex-wrap:wrap}.overview-category-options legend{margin-bottom:8px}.overview-category-options label,.overview-no-due{display:inline-flex;align-items:center;gap:6px}
 .overview-due-field{display:grid;gap:8px}.overview-due-field>label:first-child{display:grid;gap:6px}.overview-due-field input[type=date]{width:100%}.overview-no-due{font-size:12px;color:var(--text-muted)}
+
+/* A faint animated wash identifies the entire overview being edited. */
+:is(.production-overview,.project-overview).overview-is-editing{padding:24px!important;border:1px solid color-mix(in srgb,var(--accent) 18%,var(--border))!important;border-radius:20px!important;background:linear-gradient(120deg,#fff 5%,color-mix(in srgb,var(--accent) 4%,#fff) 35%,#fff 65%,color-mix(in srgb,var(--accent) 2%,#fff) 95%)!important;background-size:220% 220%!important;animation:var(--overview-edit-animation,overview-edit-wash 16s ease-in-out infinite)}
+.overview-is-editing .overview-edit{padding:0!important;border:0!important;background:transparent!important;margin-top:20px!important}
+.overview-is-editing .overview-heading{justify-content:flex-end}.overview-top-actions{margin:0!important;gap:8px}.overview-is-editing .production-heading-actions{margin-left:auto}
+.overview-is-editing .overview-edit :is(input:not([type=checkbox]):not([type=hidden]),select,textarea),.overview-is-editing .overview-top-actions>button.overview-cancel{background-color:color-mix(in srgb,var(--accent) 2%,#ffffff80)!important;border-color:color-mix(in srgb,var(--accent) 8%,var(--control-border))!important}
+.overview-is-editing .overview-top-actions>button.overview-confirm{background:var(--accent)!important;border:1px solid var(--accent)!important;color:#fff!important}
+.team-directory-item.keep-label{transition:background-color 160ms ease,color 160ms ease}
+.team-directory-item.keep-label:not(.active):not([aria-current=true]):hover{background:color-mix(in srgb,var(--accent) 4%,#fff)!important;color:var(--text)!important}
+@keyframes overview-edit-wash{0%,100%{background-position:0% 40%}50%{background-position:100% 60%}}
+@media(prefers-reduced-motion:reduce){.overview-is-editing{animation:none!important}.team-directory-item.keep-label{transition:none}}body[data-motion=off] .overview-is-editing{animation:none!important}
+
+/* Team sorting marks only the boundary in the directory, never its detail panel. */
+.team-directory-item.keep-label:is(.team-insert-before,.team-insert-after){position:relative;overflow:visible!important}
+.team-directory-item.keep-label.team-insert-before::after,.team-directory-item.keep-label.team-insert-after::after{content:"";position:absolute;left:8px;right:8px;height:2px;background:var(--accent);border-radius:1px;pointer-events:none}
+.team-directory-item.keep-label.team-insert-before::after{top:-4px}.team-directory-item.keep-label.team-insert-after::after{bottom:-4px}
+.team-empty-insert{height:2px;margin:8px;background:var(--accent);border-radius:1px}
+
+body[data-motion=off]{--overview-edit-animation:none}
