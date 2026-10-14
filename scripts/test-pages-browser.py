@@ -422,6 +422,14 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.locator('.team-detail').wait_for()
    assert fresh_page.locator('.team-member-row').first.inner_text().startswith('팀원Z')
    assert fresh_page.locator('.teams-heading-actions').get_by_role('button').all_text_contents()==['그룹 관리','팀 추가']
+   add_team=fresh_page.locator('.teams-heading-actions').get_by_role('button',name='팀 추가',exact=True)
+   assert add_team.bounding_box()['height']==36
+   assert fresh_page.locator('.team-footer').get_by_role('button',name='멤버 추가',exact=True).bounding_box()['height']==36
+   assert add_team.evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='0px'
+   group_manage=fresh_page.locator('.teams-heading-actions').get_by_role('button',name='그룹 관리',exact=True)
+   assert group_manage.evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='1px'
+   assert group_manage.evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgba(0, 0, 0, 0)'
+
    assert fresh_page.locator('.team-directory-item.active').evaluate('(el)=>{const probe=document.createElement("i");probe.style.cssText="color:var(--accent);background:var(--accent-soft)";el.append(probe);const selected=getComputedStyle(el),accent=getComputedStyle(probe);const ok=selected.color===accent.color&&selected.backgroundColor===accent.backgroundColor&&getComputedStyle(el.querySelector("span")).color===accent.color;probe.remove();return ok}')
 
    assert fresh_page.locator('.team-head select').evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='1px'
