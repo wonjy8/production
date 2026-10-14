@@ -369,16 +369,21 @@ with tempfile.TemporaryDirectory() as td:
    calendar_event=fresh_page.locator('.calendar-event').filter(has_text='날짜 이동 일정').first
    calendar_event.wait_for()
    calendar_transfer=fresh_page.evaluate_handle('new DataTransfer()')
-   calendar_transfer.evaluate('(transfer)=>{const native=transfer.setDragImage.bind(transfer);transfer.setDragImage=(image,x,y)=>{window.calendarDragPreview={text:image.textContent,width:image.getBoundingClientRect().width};native(image,x,y)}}')
+   calendar_transfer.evaluate('(transfer)=>{const native=transfer.setDragImage.bind(transfer);transfer.setDragImage=(image,x,y)=>{window.calendarDragPreview={text:document.querySelector("[data-drag-preview]").textContent,width:document.querySelector("[data-drag-preview]").getBoundingClientRect().width};native(image,x,y)}}')
    calendar_plus=fresh_page.locator('.calendar-add').first
    assert calendar_plus.bounding_box()['height']==24
    assert calendar_plus.evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='0px'
    assert calendar_plus.evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgba(0, 0, 0, 0)'
    calendar_event.dispatch_event('dragstart',{'dataTransfer':calendar_transfer})
    assert fresh_page.evaluate('window.calendarDragPreview.text.includes("날짜 이동 일정")&&window.calendarDragPreview.width>0')
+   fresh_page.locator('body').dispatch_event('dragover',{'dataTransfer':calendar_transfer,'clientX':500,'clientY':400})
+   fresh_page.wait_for_function('document.querySelector("[data-drag-preview]").style.left==="500px"&&document.querySelector("[data-drag-preview]").style.top==="400px"')
+   assert fresh_page.evaluate('!document.elementFromPoint(510,410)?.closest("[data-drag-preview]")')
+
    target_day=fresh_page.locator('[data-calendar-date="'+calendar_dates['target']+'"]')
    target_day.dispatch_event('dragover',{'dataTransfer':calendar_transfer})
    target_day.dispatch_event('drop',{'dataTransfer':calendar_transfer})
+   assert fresh_page.locator('[data-drag-preview]').count()==0
    fresh_page.wait_for_function('(date)=>window.productionBridge.read().productions.find(p=>p.id==="workspace-project").schedules[0].date===date',arg=calendar_dates['target'])
    assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").schedules[0].endDate')==calendar_dates['end']
    calendar_task=fresh_page.locator('.calendar-task-row').filter(has_text='날짜 이동 할 일').first
