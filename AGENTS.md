@@ -1,0 +1,7 @@
+# Repository instructions
+
+Follow the user’s release and rollback rules in `RELEASES.md`. `VERSION` records the current release; increase only the patch number by default, and change the minor number only on the user’s explicit instruction.
+
+Keep changes on a separate work branch and preserve released commits with annotated version tags. Do not overwrite rollback references or force-push main.
+
+For any required NAS update, tell the user in chat exactly which files change and how to apply and verify the change, including any container rebuild requirements.
