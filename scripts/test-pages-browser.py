@@ -422,6 +422,8 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.locator('.team-detail').wait_for()
    assert fresh_page.locator('.team-member-row').first.inner_text().startswith('팀원Z')
    assert fresh_page.locator('.teams-heading-actions').get_by_role('button').all_text_contents()==['그룹 관리','팀 추가']
+   assert fresh_page.locator('.team-directory-item.active').evaluate('(el)=>{const probe=document.createElement("i");probe.style.cssText="color:var(--accent);background:var(--accent-soft)";el.append(probe);const selected=getComputedStyle(el),accent=getComputedStyle(probe);const ok=selected.color===accent.color&&selected.backgroundColor===accent.backgroundColor&&getComputedStyle(el.querySelector("span")).color===accent.color;probe.remove();return ok}')
+
    assert fresh_page.locator('.team-head select').evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='1px'
    assert int(fresh_page.locator('.team-member-row').first.locator('span').first.evaluate('(el)=>getComputedStyle(el).fontWeight'))>=600
    assert fresh_page.locator('.team-member-row').first.evaluate('(el)=>getComputedStyle(el.querySelector("span")).color===getComputedStyle(el.querySelector("select")).color')

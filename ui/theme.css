@@ -98,3 +98,13 @@ button[data-control-icon=close]:hover,button[data-control-icon=trash]:hover,butt
 .team-detail .team-role-chip>.team-role-select{position:absolute;inset:0;opacity:0;width:100%;height:100%;padding:0!important;cursor:pointer}
 .team-role-chip:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 .team-member-leader .team-role-chip{background:var(--accent-soft);color:var(--accent);font-weight:600}
+
+/* One selection treatment for date chips, views, Hub tabs and workspaces. */
+.task-view-switch,.calendar-kind-switch,.hub-switch{background:transparent!important;border:0!important;box-shadow:none!important;padding:4px;border-radius:12px;gap:4px}
+:is(.task-view-switch,.calendar-kind-switch,.hub-switch,.hub-categories,.sidebar-main-spaces) button,.tt-date-chip.keep-label{border:0!important;border-radius:10px!important;box-shadow:none!important;background:transparent!important;color:var(--text-muted)!important;transition:background-color 180ms ease,color 180ms ease}
+:is(.task-view-switch,.calendar-kind-switch,.hub-switch,.hub-categories,.sidebar-main-spaces) button:is([aria-pressed=true],[aria-selected=true]),.tt-date-chip.keep-label.active{background:var(--accent-soft)!important;color:var(--accent)!important;font-weight:600!important;box-shadow:none!important}
+.tt-date-chip.keep-label small,.tt-date-chip.keep-label strong{color:inherit!important}
+/* Open destinations use the same accent as selection controls. */
+.team-directory-item.keep-label,.merge-sections button,.project-sections button{background:transparent!important;border-color:transparent!important;box-shadow:none!important;border-radius:10px!important}
+.team-directory-item.keep-label:is(.active,[aria-current=true]),.merge-sections button:is(.active,[aria-selected=true]),.project-sections button.active,.sidebar-project.active,.sidebar-ref-link.active,.sidebar-settings.active,.space-option[aria-current=true],.homebar .ui-icon-button[aria-pressed=true],.merge-toolbar .button[aria-pressed=true],.control-dropdown .dropdown-option[aria-selected=true]{background:var(--accent-soft)!important;color:var(--accent)!important;border-color:transparent!important;box-shadow:none!important}
+.team-directory-item.keep-label:is(.active,[aria-current=true]) :is(strong,span),.sidebar-project.active svg{color:var(--accent)!important}
