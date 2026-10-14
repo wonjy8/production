@@ -380,6 +380,19 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.locator('[data-tab-id=people]').click()
    fresh_page.locator('.team-detail').wait_for()
    assert fresh_page.locator('.team-member-row').first.inner_text().startswith('팀원Z')
+   assert fresh_page.locator('.teams-heading-actions').get_by_role('button').all_text_contents()==['그룹 관리','팀 추가']
+   assert fresh_page.locator('.team-head select').evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='1px'
+   assert int(fresh_page.locator('.team-member-row').first.locator('span').evaluate('(el)=>getComputedStyle(el).fontWeight'))>=600
+   assert fresh_page.locator('.team-member-row').first.evaluate('(el)=>getComputedStyle(el.querySelector("span")).color===getComputedStyle(el.querySelector("select")).color')
+   fresh_page.get_by_label('멤버 정렬 기준',exact=True).first.select_option('custom')
+   team_drag=fresh_page.evaluate_handle('new DataTransfer()')
+   fresh_page.locator('.team-member-row').first.dispatch_event('dragstart',{'dataTransfer':team_drag})
+   fresh_page.locator('.team-member-row').last.dispatch_event('dragover',{'dataTransfer':team_drag})
+   assert fresh_page.locator('.production-member-list .member-drop-target').count()==0
+   fresh_page.locator('.production-member-list .production-member-row').first.dispatch_event('dragover',{'dataTransfer':team_drag})
+   assert fresh_page.locator('.production-member-list .member-drop-target').count()==0
+   fresh_page.locator('.team-member-row').first.dispatch_event('dragend',{'dataTransfer':team_drag})
+
    assert fresh_page.get_by_label('제작팀 팀장',exact=True).count()==0
    assert fresh_page.get_by_label('팀원A 역할',exact=True).input_value()=='멤버'
    fresh_page.get_by_label('팀원A 역할',exact=True).select_option('팀장')
@@ -400,8 +413,13 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.locator('.team-head').get_by_label('멤버 정렬 기준').count()==1
    delete_team=fresh_page.get_by_role('button',name='영상팀 팀 삭제',exact=True)
    assert delete_team.bounding_box()['y']>=fresh_page.locator('.team-detail-members').bounding_box()['y']
+   delete_height=delete_team.bounding_box()['height']
    delete_team.click()
    fresh_page.get_by_role('button',name='팀 삭제 확인',exact=True).wait_for()
+   delete_confirmation=fresh_page.get_by_role('button',name='팀 삭제 확인',exact=True)
+   assert delete_confirmation.bounding_box()['height']==delete_height
+   assert delete_confirmation.evaluate('(el)=>getComputedStyle(el).color')=='rgb(220, 38, 38)'
+
    fresh_page.get_by_role('button',name='삭제 취소',exact=True).click()
    assert fresh_page.locator('.team-detail').count()==1
    delete_team.click()
