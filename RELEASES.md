@@ -39,3 +39,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Import modules as independent snapshots, including file copies; save back to the origin only through a blue two-step confirmation. Convert legacy linked placements to snapshots when editable.
 - Use red for destructive actions and deletion confirmations.
 - NAS configuration and server files do not change in this release.
+
+## 0.0.3
+
+- Restore the complete pinned WordCraft editor as the default DOCX editor after the simpler editor replacement removed its full menus and tools.
+- Connect document opening and automatic DOCX saving to the existing file API, preserving version conflict protection and local recovery copies.
+- Keep the simpler editor as an explicit alternative and retain TXT/HTML editing.
+- Add a Documents section in Materials with project/reference folders, filename and folder search, and direct document-editor links.
+- NAS configuration and server files do not change in this release.

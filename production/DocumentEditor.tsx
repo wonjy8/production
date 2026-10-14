@@ -7,6 +7,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Image from "@tiptap/extension-image";
 import { TextStyleKit } from "@tiptap/extension-text-style";
 import { documentFormat, loadDocument, saveDocument } from "./document-files";
+import { FullDocumentEditor } from "./FullDocumentEditor";
 import { Icon } from "./Icon";
 import { downloadBlob } from "./files";
 const preserve = Extension.create({
@@ -422,6 +423,18 @@ function DocumentEditor({ file }: { file: any }) {
           </span>
         </div>
         <span className="document-autosave-label">자동저장</span>
+        {format === "docx" && (
+          <button
+            className="keep-label"
+            onClick={async () => {
+              if (!(await session.current?.flush())) return;
+              localStorage.setItem("production-document-editor", "full");
+              location.reload();
+            }}
+          >
+            전체 기능
+          </button>
+        )}
       </header>
       <div className="document-toolbar" role="toolbar" aria-label="문서 서식">
         {command("실행 취소", (ed) => ed.chain().focus().undo().run())}
@@ -597,13 +610,17 @@ function DocumentEditor({ file }: { file: any }) {
   host.dataset.permissionOwner = params.get("owner") || "";
   host.dataset.permissionTab = params.get("tab") || "materials";
   document.body.append(host);
+  const file = {
+    id,
+    name: params.get("name") || "문서.docx",
+    mime: params.get("mime"),
+  };
+  const basic = localStorage.getItem("production-document-editor") === "basic";
   createRoot(host).render(
-    <DocumentEditor
-      file={{
-        id,
-        name: params.get("name") || "문서.docx",
-        mime: params.get("mime"),
-      }}
-    />,
+    documentFormat(file) === "docx" && !basic ? (
+      <FullDocumentEditor file={file} />
+    ) : (
+      <DocumentEditor file={file} />
+    ),
   );
 };

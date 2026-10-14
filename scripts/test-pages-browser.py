@@ -32,7 +32,7 @@ with tempfile.TemporaryDirectory() as td:
  try:
   with sync_playwright() as p:
    browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH'),headless=True,args=['--no-sandbox','--no-proxy-server','--host-resolver-rules=MAP pages.test 127.0.0.1, MAP nas.test 127.0.0.1','--ignore-certificate-errors-spki-list='+spki])
-   context=browser.new_context();page=context.new_page();errors=[];page.on('pageerror',lambda e: errors.append(e.stack))
+   context=browser.new_context();context.add_init_script("try{if(window===window.top)localStorage.setItem('production-document-editor','basic')}catch{}");page=context.new_page();errors=[];page.on('pageerror',lambda e: errors.append(e.stack))
    page.goto('https://pages.test:9443/production/http%3A%2F%2Fnas.test%3A9444')
    page.wait_for_function('document.body.textContent.includes("HTTPS")')
    assert page.locator('#connection-form').count()==0
@@ -108,7 +108,7 @@ with tempfile.TemporaryDirectory() as td:
    page.keyboard.press('Control+k');page.locator('#app-search').wait_for(state='hidden')
    page.locator('[data-main-space=references]').click()
    page.wait_for_function('window.activeWorkspace === "references"')
-   assert page.locator('.sidebar-source-sections button[data-source-section]').count()==3
+   assert page.locator('.sidebar-source-sections button[data-source-section]').all_text_contents()==['레퍼런스','소스','포트폴리오','문서']
    for ident,label in [('references','레퍼런스'),('sources','소스'),('portfolios','포트폴리오')]:
     page.locator('.sidebar-source-sections button[data-source-section='+ident+']').click()
     page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes('+repr(label)+')')
@@ -374,7 +374,7 @@ with tempfile.TemporaryDirectory() as td:
    page.evaluate("async()=>{await fetch('/production/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}")
    assert page.evaluate("async()=>(await fetch('/production/api/data')).status")==401
    assert not errors,errors
-   fresh=browser.new_context();fresh_page=fresh.new_page();fresh_page.on('pageerror',lambda e:errors.append(e.stack));fresh_page.goto('https://pages.test:9443/production/')
+   fresh=browser.new_context();fresh.add_init_script("try{if(window===window.top)localStorage.setItem('production-document-editor','basic')}catch{}");fresh_page=fresh.new_page();fresh_page.on('pageerror',lambda e:errors.append(e.stack));fresh_page.goto('https://pages.test:9443/production/')
    fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("async()=>fetch('/production/api/storage').then(r=>r.json()).then(x=>x.mode)")=='browser'
    fresh_page.evaluate("()=>{const a=document.createElement('a');a.id='nas-install-download';a.href=new URL('production-nas-install.zip',document.baseURI).href;a.textContent='NAS 설치 파일';document.body.append(a)}")
@@ -840,7 +840,7 @@ with tempfile.TemporaryDirectory() as td:
    assert not fresh_page.locator('#sidebar').is_visible()
    fresh_page.locator('.mobile-bottom-nav [data-main-space=references]').click()
    fresh_page.locator('.workspace-landing-card[data-workspace-section=sources]').wait_for()
-   assert fresh_page.locator('.workspace-landing-card').all_text_contents()==['레퍼런스','소스','포트폴리오','아카이브','휴지통']
+   assert fresh_page.locator('.workspace-landing-card').all_text_contents()==['레퍼런스','소스','포트폴리오','문서','아카이브','휴지통']
    fresh_page.locator('.workspace-landing-card[data-workspace-section=archive]').click()
    fresh_page.get_by_role('dialog',name='완료 아카이브',exact=True).wait_for()
    fresh_page.get_by_role('button',name='완료 아카이브 닫기',exact=True).click()

@@ -157,7 +157,7 @@ $('#menu').addEventListener('click',()=>sidebarScrim.classList.toggle('active',i
 document.addEventListener('click',e=>{const b=e.target.closest('[data-production-section]');if(b)openProduction(project().id,b.dataset.productionSection)});
 const workspaceDefinitions=[
  {id:'home',label:'홈',icon:'home',sections:[['projects','프로젝트','projects']]},
- {id:'references',label:'자료',icon:'reference',sections:[['references','레퍼런스','reference'],['sources','소스','file'],['portfolios','포트폴리오','star']]},
+ {id:'references',label:'자료',icon:'reference',sections:[['references','레퍼런스','reference'],['sources','소스','file'],['portfolios','포트폴리오','star'],['documents','문서','file']]},
  {id:'database',label:'DB',icon:'database',sections:[['members','멤버·장비','users'],['rental-shops','대여처','folder'],['locations','장소','projects']]},
  {id:'settings',label:'설정',icon:'settings',sections:[]},
 ];
@@ -203,7 +203,7 @@ window.openReferencesArchive=async()=>{try{if(sourceSection==='gallery'){sourceS
 const referenceModuleHost=document.createElement('div');referenceModuleHost.id='reference-module-host';referenceModuleHost.hidden=true;$('#refpanel').append(referenceModuleHost);
 function closeReferenceModules(){archiveCleanup?.();archiveCleanup=null;archiveHost.hidden=true;window.sourceGalleryVisible=false;referenceOpenRequest++;referenceEditorCleanup?.();referenceEditorCleanup=null;referenceModuleHost.hidden=true;$('#refpanel').classList.remove('reference-open');window.activeReferenceId='';}
 // Navigation wrappers keep the content area and editor lifecycle in sync.
-const referenceHome=openRefs;openRefs=async function(...args){closeReferenceModules();if(sourceSection==='gallery')return openSourceGallery();if(refLoaded){refs=await refApi('')}return referenceHome(...args)};
+const referenceHome=openRefs;openRefs=async function(...args){closeReferenceModules();if(sourceSection==='gallery')return openSourceGallery();if(sourceSection==='documents')return openDocumentLibrary();if(refLoaded){refs=await refApi('')}return referenceHome(...args)};
 $('#references').onclick=()=>openRefs();
 const referenceProduction=openProduction;openProduction=async function(...args){closeReferenceModules();return referenceProduction(...args)};
 const referenceDatabase=openDatabase;openDatabase=async function(...args){closeReferenceModules();return referenceDatabase(...args)};
@@ -231,6 +231,8 @@ window.sourceGalleryBridge={
  open:async origin=>{if(origin.ownerKind==='reference'){const r=refs.find(r=>r.id===origin.ownerId);if(r){sourceSection=r.recordType==='portfolio'?'portfolios':r.recordType==='source'?'sources':'references';localStorage.setItem('pn-source-section',sourceSection);window.productionSearchTarget={referenceId:r.id,tabId:origin.tabId};await openReferenceModules(r)}}else{window.productionSearchTarget={projectId:origin.ownerKind==='project'?origin.ownerId:undefined,productionId:origin.ownerKind==='production'?origin.ownerId:undefined,kind:'tab',section:origin.tabId?'tab:'+origin.tabId:'assets',moduleId:origin.moduleId};await openProduction(origin.ownerKind==='project'?origin.ownerId:undefined,origin.tabId?'tab:'+origin.tabId:'assets',false,origin.ownerKind==='production'?origin.ownerId:undefined)}}
 };
 async function openSourceGallery(){closeReferenceModules();const request=++referenceOpenRequest;try{await referenceHome();if(request!==referenceOpenRequest||!refPage)return;if(!productionAssets){const res=await fetch('/production-style');if(!res.ok)throw Error('불러오기 실패');productionAssets=await res.text()}if(!window.mountSourceGallery){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='/production-app';s.onload=resolve;s.onerror=reject;document.head.append(s)})}if(request!==referenceOpenRequest)return;referenceEditorCleanup?.();referenceEditorCleanup=null;$('#refpanel').classList.add('reference-open');referenceModuleHost.hidden=false;window.sourceGalleryVisible=true;setTopTitle('갤러리');syncSidebar();referenceEditorCleanup=window.mountSourceGallery(referenceModuleHost,productionAssets)}catch(e){toast(e.message||'갤러리 불러오기 실패')}}
+
+async function openDocumentLibrary(){closeReferenceModules();const request=++referenceOpenRequest;try{if(refLoaded)refs=await refApi('');await referenceHome();if(request!==referenceOpenRequest||!refPage)return;if(!productionAssets){const res=await fetch('/production-style');if(!res.ok)throw Error('불러오기 실패');productionAssets=await res.text()}if(!window.mountDocumentLibrary){await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/production-app';script.onload=resolve;script.onerror=reject;document.head.append(script)})}if(request!==referenceOpenRequest||!refPage)return;$('#refpanel').classList.add('reference-open');referenceModuleHost.hidden=false;setTopTitle('문서');syncSidebar();referenceEditorCleanup=window.mountDocumentLibrary(referenceModuleHost,productionAssets)}catch(e){toast(e.message||'문서 목록을 불러오지 못했습니다')}}
 
 const referenceHomebar=document.createElement('div');referenceHomebar.className='homebar reference-homebar';
 const referenceProjectFilter=document.createElement('select');referenceProjectFilter.id='ref-project-filter';referenceProjectFilter.setAttribute('aria-label','레퍼런스 프로젝트 필터');referenceProjectFilter.onchange=e=>{refProjectFilter=e.target.value;drawRefs()};referenceHomebar.append(referenceProjectFilter);

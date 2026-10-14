@@ -1,6 +1,6 @@
 const workspaceDefinitions=[
  {id:'home',label:'홈',icon:'home',sections:[['projects','프로젝트','projects']]},
- {id:'references',label:'자료',icon:'reference',sections:[['references','레퍼런스','reference'],['sources','소스','file'],['portfolios','포트폴리오','star']]},
+ {id:'references',label:'자료',icon:'reference',sections:[['references','레퍼런스','reference'],['sources','소스','file'],['portfolios','포트폴리오','star'],['documents','문서','file']]},
  {id:'database',label:'DB',icon:'database',sections:[['members','멤버·장비','users'],['rental-shops','대여처','folder'],['locations','장소','projects']]},
  {id:'settings',label:'설정',icon:'settings',sections:[]},
 ];

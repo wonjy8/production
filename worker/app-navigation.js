@@ -61,7 +61,7 @@ export const appNavigationScript=String.raw`
    await openDatabase(['members','rental-shops','locations'].includes(value.section)?value.section:'members');
    const record=value.recordToken?find(databaseRows,value.recordToken):databaseRows.find(r=>r.id===value.record&&!r.deleted);if(record)await databaseForm(record);
   }else{
-   sourceSection=['references','sources','portfolios','gallery'].includes(value.section)?value.section:'references';localStorage.setItem('pn-source-section',sourceSection);
+   sourceSection=['references','sources','portfolios','gallery','documents'].includes(value.section)?value.section:'references';localStorage.setItem('pn-source-section',sourceSection);
    await openRefs();const record=value.recordToken?find(refs,value.recordToken):refs.find(r=>r.id===value.record&&!r.deleted);
    if(record){window.productionSearchTarget={referenceId:record.id,tabId:value.tabToken?find(recordTabs(record),value.tabToken)?.id:value.tab};await openReferenceModules(record)}
   }

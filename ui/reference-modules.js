@@ -22,7 +22,7 @@ window.openReferencesArchive=async()=>{try{if(sourceSection==='gallery'){sourceS
 const referenceModuleHost=document.createElement('div');referenceModuleHost.id='reference-module-host';referenceModuleHost.hidden=true;$('#refpanel').append(referenceModuleHost);
 function closeReferenceModules(){archiveCleanup?.();archiveCleanup=null;archiveHost.hidden=true;window.sourceGalleryVisible=false;referenceOpenRequest++;referenceEditorCleanup?.();referenceEditorCleanup=null;referenceModuleHost.hidden=true;$('#refpanel').classList.remove('reference-open');window.activeReferenceId='';}
 // Navigation wrappers keep the content area and editor lifecycle in sync.
-const referenceHome=openRefs;openRefs=async function(...args){closeReferenceModules();if(sourceSection==='gallery')return openSourceGallery();if(refLoaded){refs=await refApi('')}return referenceHome(...args)};
+const referenceHome=openRefs;openRefs=async function(...args){closeReferenceModules();if(sourceSection==='gallery')return openSourceGallery();if(sourceSection==='documents')return openDocumentLibrary();if(refLoaded){refs=await refApi('')}return referenceHome(...args)};
 $('#references').onclick=()=>openRefs();
 const referenceProduction=openProduction;openProduction=async function(...args){closeReferenceModules();return referenceProduction(...args)};
 const referenceDatabase=openDatabase;openDatabase=async function(...args){closeReferenceModules();return referenceDatabase(...args)};

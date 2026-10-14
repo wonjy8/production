@@ -1,15 +1,23 @@
 import { documentFormat, DOCX_MIME, saveDocument } from "./document-files";
 import { storeFile } from "./files";
-export function documentURL(file: any) {
+export function documentURL(
+  file: any,
+  scope?: { ownerId: string; tabId?: string } | null,
+) {
   const url = new URL(location.href);
   url.search = "";
   url.hash = "";
   url.searchParams.set("document", file.id);
   url.searchParams.set("name", file.name || "문서.docx");
   if (file.mime) url.searchParams.set("mime", file.mime);
-  const context = (window as any).referenceEditorOpen
-    ? null
-    : window.productionSearchContext;
+  const context =
+    scope !== undefined
+      ? scope
+        ? { projectId: scope.ownerId, section: scope.tabId || "assets" }
+        : null
+      : (window as any).referenceEditorOpen
+        ? null
+        : window.productionSearchContext;
   if (context?.projectId || context?.productionId) {
     url.searchParams.set(
       "owner",

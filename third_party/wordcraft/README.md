@@ -8,17 +8,20 @@ Pages output. The downloaded archive is an ignored local cache, not a tracked bi
 No Rust toolchain or third-party hosted runtime is required. Do not silently update
 this release or checksum; verify the official replacement and run the browser test.
 
-The original editor runs inside an on-demand, same-origin iframe, as supported by
-its HOSTING.md. Document contents stay inside the editor and are opened from/saved
-to user-selected local files. They are not automatically saved to NAS or module data.
-Project/reference module metadata uses the existing app storage. Closing a module
-or switching app screens destroys its running editor: save documents first.
-Automatic Pages reload is deferred while an embedded editor is running.
+DOCX files open the full editor in a same-origin iframe. The upstream package is
+unchanged; `production/wordcraft-bridge.ts` adapts its file-open/save commands to the
+app's existing file API. Edits autosave with version checks, and failed saves keep
+an IndexedDB recovery copy. A conflicting original is never silently overwritten.
+Opening another local document inside WordCraft detaches it from the app original;
+use the editor's File menu to download that document. A simpler editor remains an
+explicit alternative, and continues to handle TXT/HTML files.
+Automatic Pages reload is deferred while a document editor is running.
 
 MIT/Apache license texts, required notices and bundled-font licenses are copied
 into the deployed folder. Font attribution additionally comes from storytold/craft-fonts.
 Original branding assets are not modified or extracted for use elsewhere in the app.
 
-Browser regression: `CHROMIUM_PATH=/usr/bin/chromium .venv/bin/python scripts/test-pages-browser.py`.
-It verifies startup, creating a document, typing, DOCX download and reopen in an
-isolated local HTTPS app. Wordcraft requires WebGPU or WebGL2.
+Browser regression: `CHROMIUM_PATH=/usr/bin/chromium .venv/bin/python scripts/test-full-document-browser.py`.
+This verifies the restored full editor, DOCX formatting and autosave, reopening,
+conflict protection and edited-copy download. The general Pages suite also covers
+the simpler alternative and TXT recovery. WordCraft requires WebGPU or WebGL2.

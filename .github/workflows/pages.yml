@@ -20,7 +20,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run validate
-      - run: node scripts/test-production.mjs && node scripts/test-auth-gateway.mjs && node scripts/test-grade-calculator.mjs && node scripts/test-figma-connection.mjs && node scripts/test-pages-route.mjs
+      - run: node scripts/test-production.mjs && node scripts/test-auth-gateway.mjs && node scripts/test-grade-calculator.mjs && node scripts/test-figma-connection.mjs && node scripts/test-pages-route.mjs && node scripts/test-document-library.mjs
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
