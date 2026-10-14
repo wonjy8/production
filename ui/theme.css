@@ -129,3 +129,14 @@ button.ui-add-action.ui-icon-button{width:var(--action-height)!important;min-wid
 :is(.hub-switch,.hub-categories,.merge-sections,.project-sections){gap:12px!important}
 :is(.hub-switch,.hub-categories,.merge-sections,.project-sections)>button{position:relative;overflow:visible!important}
 :is(.hub-switch,.hub-categories,.merge-sections,.project-sections)>button+button::after{content:"";position:absolute;left:-6.5px;top:50%;transform:translateY(-50%);width:1px;height:22px;background:var(--border);pointer-events:none}
+
+/* Hub: underline tabs switch screens; compact chips filter their contents. */
+.hub-sidebar .hub-switch{gap:8px!important;padding:0!important;border-radius:0!important;border-bottom:1px solid var(--border)!important}
+.hub-sidebar .hub-switch>button.keep-label{min-height:44px!important;padding:10px 8px 12px!important;background:transparent!important;border-radius:0!important;border:0!important;color:var(--text-muted)!important;box-shadow:none!important}
+.hub-sidebar .hub-switch>button.keep-label[aria-selected=true]{background:transparent!important;color:var(--accent)!important;font-weight:600!important}
+.hub-sidebar .hub-switch>button::after{content:"";position:absolute;left:12px;right:12px;top:auto;bottom:-1px;width:auto;height:3px;transform:none;background:transparent;border-radius:2px;pointer-events:none}
+.hub-sidebar .hub-switch>button[aria-selected=true]::after{background:var(--accent)}
+.hub-sidebar .hub-filter-bar{margin-top:18px}
+.hub-sidebar .hub-categories{gap:4px!important;align-items:center;padding:0}
+.hub-sidebar .hub-categories>button.keep-label{height:32px!important;min-height:32px!important;padding:5px 10px!important;font-size:12px!important;line-height:20px!important;border:0!important;border-radius:999px!important}
+.hub-sidebar .hub-categories>button::after{display:none!important}
