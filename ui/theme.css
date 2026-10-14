@@ -165,3 +165,7 @@ button.ui-add-action.ui-icon-button{width:var(--action-height)!important;min-wid
 button[data-control-icon=plus]:not(.keep-label):not(.calendar-add){width:36px!important;min-width:36px!important;max-width:36px!important;height:36px!important;min-height:36px!important;max-height:36px!important;padding:0!important;aspect-ratio:1;flex:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
 .editor-dialog,.editor-dialog:focus,.editor-dialog:focus-visible{border:0!important;outline:none!important}
 .task-view-switch{background:transparent!important}
+
+/* Reserve the page scrollbar width before changing between short lists and tall boards. */
+html{overflow-y:scroll;scrollbar-gutter:stable}
+#sidebar-project-add.sidebar-add{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 36px!important;width:36px!important;min-width:36px!important;max-width:36px!important;height:36px!important;min-height:36px!important;max-height:36px!important;padding:0!important;border:0!important;border-radius:10px!important;background:var(--control-hover)!important;font-size:16px!important;line-height:1!important;aspect-ratio:1;box-sizing:border-box}
