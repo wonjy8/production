@@ -93,6 +93,28 @@ def install(app,database,lock,save_workspace,now):
                     member[key]=value
             save_workspace(conn,data);record(conn,actor,'profile',member['id'])
         return {'ok':True}
+    @app.delete('/api/auth/account')
+    async def withdraw(request:Request):
+        from local_auth import verify_password
+        from starlette.concurrency import run_in_threadpool
+        body=await request.json()
+        with database() as conn:
+            actor=actor_for(conn,request)
+            if actor['role']=='superadmin':deny('최고관리자는 탈퇴할 수 없습니다')
+            credential=conn.execute('SELECT password_hash FROM local_credentials WHERE user_id=?',(actor['id'],)).fetchone()
+        if not credential or not await run_in_threadpool(verify_password,credential[0],str(body.get('currentPassword',''))):deny('현재 비밀번호를 확인하세요')
+        with lock,database() as conn:
+            conn.execute('BEGIN IMMEDIATE');actor=actor_for(conn,request)
+            if actor['role']=='superadmin':deny('최고관리자는 탈퇴할 수 없습니다')
+            current=conn.execute('SELECT password_hash FROM local_credentials WHERE user_id=?',(actor['id'],)).fetchone()
+            if not current or current[0]!=credential[0]:deny('다시 로그인해주세요')
+            for table in ('local_sessions','local_recovery_codes','local_credentials'):
+                conn.execute('DELETE FROM '+table+' WHERE user_id=?',(actor['id'],))
+            conn.execute('DELETE FROM local_pending WHERE email=?',(actor['email'],))
+            conn.execute('DELETE FROM app_invites WHERE email=?',(actor['email'],))
+            conn.execute('DELETE FROM app_users WHERE id=?',(actor['id'],))
+            record(conn,actor,'account-withdrawal',actor['id'])
+        return {'ok':True,'loggedOut':True}
     @app.get('/api/auth/tab-permissions')
     def permissions(request:Request):
         with database() as conn:

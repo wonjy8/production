@@ -137,6 +137,24 @@ class AccessTest(unittest.TestCase):
    local_auth.password_valid(value)
   for value in ['abcde1.','abcdefgh','abcdefg1','abcdefg.','abcdef1 ','x'*129+'1.']:
    with self.assertRaises(HTTPException):local_auth.password_valid(value)
+ def test_self_withdrawal_revokes_sessions_and_protects_superadmin(self):
+  top=self.session('top-withdraw','superadmin',self.mid,email='top@example.com')
+  self.assertEqual(self.c.request('DELETE','/api/auth/account',headers=top,json={'currentPassword':'Password2026!'}).status_code,403)
+  person=self.session('withdraw-user','viewer',self.other,email='withdraw@example.com')
+  with self.s.database() as db:
+   db.execute('INSERT INTO local_credentials VALUES(?,?,NULL,NULL,-1)',('withdraw-user',local_auth.hash_password('Password2026!')))
+   db.execute('INSERT INTO local_recovery_codes VALUES(?,?,0)',('withdraw-user','code'))
+   token=local_auth.digest(person['X-Auth-Session']);db.execute('INSERT INTO local_session_preferences VALUES(?,1)',(token,))
+  self.assertEqual(self.c.request('DELETE','/api/auth/account',headers=person,json={'currentPassword':'wrong'}).status_code,403)
+  self.assertEqual(self.c.get('/api/auth/me',headers=person).status_code,200)
+  self.assertEqual(self.c.request('DELETE','/api/auth/account',headers=person,json={'currentPassword':'Password2026!'}).status_code,200)
+  self.assertEqual(self.c.get('/api/auth/me',headers=person).status_code,401)
+  with self.s.database() as db:
+   for table in ('app_users','local_sessions','local_credentials','local_recovery_codes'):
+    key='id' if table=='app_users' else 'user_id'
+    self.assertEqual(db.execute('SELECT COUNT(*) FROM '+table+' WHERE '+key+'=?',('withdraw-user',)).fetchone()[0],0)
+   self.assertEqual(db.execute('SELECT COUNT(*) FROM local_session_preferences WHERE token_hash=?',(token,)).fetchone()[0],0)
+   self.assertTrue(any(m['id']==self.other for m in __import__('access').workspace_data(db)['members']))
  def test_anonymous_and_rate_limits(self):
   self.assertEqual(self.c.get('/api/data',headers=self.service).status_code,401)
   self.assertEqual(self.c.get('/api/data',headers={**self.service,'X-Auth-User-Id':'top','X-Auth-Verified':'1','X-Auth-User-Email':'admin@example.com'}).status_code,401)

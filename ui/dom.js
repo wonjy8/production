@@ -1,3 +1,7 @@
+import {openAddMenu} from './action-menu.js';
+window.openAddMenu=openAddMenu;
+import {decorateReferenceFilters} from './reference-filters.js';
+window.decorateReferenceFilters=decorateReferenceFilters;
 import {installSidebarOrdering} from './sidebar-order.js';
 window.installSidebarOrdering=installSidebarOrdering;
 import './accent.js';

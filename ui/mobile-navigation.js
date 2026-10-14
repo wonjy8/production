@@ -23,7 +23,7 @@ window.syncMobileWorkspaceChrome=space=>{mobileWorkspaceBack.hidden=!isMobileVie
 function syncMobileNavigation(){
  const mobile=isMobileViewport();
  if(mobile){mobileBottomNav.append(sidebarMainNav);sidebarMainNav.append(sidebarSettingsButton);sidebarSettingsButton.dataset.mainSpace='settings';sidebarSettingsButton.setAttribute('aria-label','설정');sidebarSettingsButton.classList.add('keep-label')}
- else{sidebarFixedTop.append(sidebarMainNav);sidebarFixedBottom.append(sidebarSettingsButton);if(mobileLandingSpace){const space=mobileLandingSpace;dismissMobileWorkspaceHome();if(space==='settings')openSettings();else if(space==='database')openDatabase();else openRefs()}}
+ else{sidebarFixedTop.append(sidebarMainNav);sidebarMainNav.append(sidebarSettingsButton);if(mobileLandingSpace){const space=mobileLandingSpace;dismissMobileWorkspaceHome();if(space==='settings')openSettings();else if(space==='database')openDatabase();else openRefs()}}
  if(loaded)syncSpaceChrome();
 }
 window.matchMedia('(max-width:720px)').addEventListener('change',syncMobileNavigation);syncMobileNavigation();

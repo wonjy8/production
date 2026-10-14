@@ -9,7 +9,7 @@ from starlette.responses import JSONResponse, Response
 
 COOKIE = '__Host-pn-pages'
 PUBLIC = {'login', 'signup', 'logout', 'recovery-verify'}
-AUTH = PUBLIC | {'me', 'member-status', 'users', 'invites', 'profile', 'password',
+AUTH = PUBLIC | {'me', 'member-status', 'users', 'invites', 'profile', 'password', 'account',
                  'tab-permissions', 'reset-tokens', 'mfa/enroll', 'mfa/verify'}
 HEADERS = {'content-type', 'range', 'if-range', 'if-match', 'x-scope-owner', 'x-scope-tab'}
 

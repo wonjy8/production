@@ -44,19 +44,28 @@ with tempfile.TemporaryDirectory() as td:
    page.wait_for_function('typeof window.mountProduction === "function"')
    assert page.locator('[data-main-space="references"]').get_attribute('aria-label')=='자료'
    page.wait_for_function('window.activeWorkspace === "home"')
-   assert page.evaluate('window.appWorkspaces.map(w=>w.label)')==['홈','자료','데이터베이스']
-   assert page.locator('.sidebar-main-spaces [data-main-space]').count()==3
+   assert page.evaluate('window.appWorkspaces.map(w=>w.label)')==['홈','자료','DB','설정']
+   assert page.locator('.sidebar-main-spaces [data-main-space]').count()==4
    assert page.locator('.breadcrumbs [data-location=home]').inner_text()=='홈'
    assert page.locator('.topbar').evaluate('(el)=>getComputedStyle(el).borderBottomWidth')=='0px'
    page.locator('.sidebar-settings').click()
-   page.locator('[data-settings-category=connections]').click()
-   page.get_by_label('NAS 주소 별칭',exact=True).fill('studio')
-   page.get_by_role('button',name='별칭 적용',exact=True).click()
-   page.wait_for_function('location.pathname==="/production/@studio"')
+   assert page.locator('[data-settings-category=connections]').count()==0
+   page.locator('[data-settings-category=account]').click()
+   assert page.get_by_role('heading',name='계정',exact=True).is_visible()
+   assert page.locator('#settings-logout').count()==0
+   assert page.get_by_role('button',name='회원탈퇴',exact=True).is_disabled()
+   page.get_by_role('button',name='비밀번호 변경',exact=True).click()
+   assert page.get_by_label('현재 비밀번호',exact=True).is_visible()
+   page.get_by_role('button',name='계정으로',exact=True).click()
+   page.get_by_role('button',name='연락처 변경',exact=True).click()
+   page.get_by_label('연락처',exact=True).fill('010-0000-0000')
+   page.locator('.account-profile').get_by_role('button',name='변경',exact=True).click()
+   page.locator('.account-menu').wait_for()
+   assert '010-0000-0000' in page.locator('.account-menu').inner_text()
+   page.evaluate('async()=>{await new Promise((resolve,reject)=>{const channel=new MessageChannel();channel.port1.onmessage=({data})=>data.error?reject(Error(data.error)):resolve(data.value);navigator.serviceWorker.controller.postMessage({type:"alias:set",alias:"studio"},[channel.port2])});const u=new URL(location.href);u.pathname="/production/@studio";history.replaceState(null,"",u)}')
    assert 'nas.test' not in page.url
    page.reload()
    page.wait_for_function('window.appAccount?.role==="superadmin"')
-   page.get_by_label('NAS 주소 별칭',exact=True).wait_for()
    assert page.evaluate("async()=>(await fetch('/production/api/data')).status")==200
    page.locator('[data-main-space=home]').click()
    page.wait_for_function('location.hash==="#/home"')
@@ -87,10 +96,16 @@ with tempfile.TemporaryDirectory() as td:
 
    page.locator('#share').click();fresh_drawer=page.get_by_role('dialog',name='공유',exact=True)
    fresh_drawer.wait_for();assert fresh_drawer.bounding_box()['x']>700
-   page.get_by_role('button',name='공유 닫기',exact=True).click();fresh_drawer.wait_for(state='hidden')
+   assert fresh_drawer.get_by_role('button',name='링크 복사',exact=True).is_visible()
+   assert fresh_drawer.get_by_role('button',name='링크 복사',exact=True).evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='0px'
+   assert fresh_drawer.get_by_role('button',name='공유 닫기',exact=True).evaluate('(el)=>getComputedStyle(el).outlineStyle')=='none'
+   page.get_by_role('button',name='공유 ↗',exact=True).click();fresh_drawer.wait_for(state='hidden')
    page.get_by_role('button',name='검색',exact=True).click();page.locator('#app-search').wait_for(state='visible')
    assert page.locator('#app-search').bounding_box()['x']>700
-   page.get_by_role('button',name='검색 닫기',exact=True).click();page.locator('#app-search').wait_for(state='hidden')
+   page.get_by_role('button',name='검색',exact=True).click();page.locator('#app-search').wait_for(state='hidden')
+   page.keyboard.press('Control+k');page.locator('#app-search').wait_for(state='visible')
+   assert page.get_by_role('button',name='검색',exact=True).evaluate('(el)=>getComputedStyle(el).outlineStyle')=='none'
+   page.keyboard.press('Control+k');page.locator('#app-search').wait_for(state='hidden')
    page.locator('[data-main-space=references]').click()
    page.wait_for_function('window.activeWorkspace === "references"')
    assert page.locator('.sidebar-source-sections button[data-source-section]').count()==3
@@ -106,10 +121,32 @@ with tempfile.TemporaryDirectory() as td:
    page.locator('[data-main-space=database]').click()
    page.wait_for_function('window.activeWorkspace === "database"')
    assert page.locator('[data-db-scope]').count()==3
+   page.locator('.member-select-row').first.wait_for()
+   assert page.locator('#member-import').count()==0
+   page.locator('#db-add').click()
+   page.get_by_role('menuitem',name='일괄 추가',exact=True).wait_for()
+   page.keyboard.press('Escape')
+   sort_select=page.get_by_label('멤버 정렬',exact=True)
+   sort_select.click()
+   page.locator('.control-dropdown [role=option][aria-selected=true]').click()
+   assert sort_select.get_attribute('data-sort-direction')=='desc'
+   sort_select.click()
+   assert page.locator('.dropdown-sort-direction').inner_text()=='Z→A'
+   page.locator('.control-dropdown [role=option][aria-selected=true]').click()
+   assert sort_select.get_attribute('data-sort-direction')=='asc'
+   row_before=page.locator('.member-select-row').first.bounding_box()
+   page.locator('#member-select-toggle').click()
+   row_after=page.locator('.member-select-row').first.bounding_box()
+   assert abs(row_before['x']-row_after['x'])<1 and abs(row_before['y']-row_after['y'])<1
+   assert page.locator('[data-member-select]').count()==0
+   page.locator('.member-select-row').first.locator('[data-db-id]').click()
+   assert page.locator('.member-select-row.selected').count()==1
+   page.locator('#member-select-clear').click()
+
    for ident,label in [('members','멤버·장비'),('rental-shops','대여처'),('locations','장소')]:
     page.locator('[data-db-scope='+ident+']').click()
     page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes('+repr(label)+')')
-    assert page.locator('.breadcrumbs button').all_text_contents()==['데이터베이스',label]
+    assert page.locator('.breadcrumbs button').all_text_contents()==['DB',label]
    page.locator('[data-main-space=home]').click()
    page.wait_for_function('window.activeWorkspace === "home"')
    assert page.locator('.breadcrumbs button').all_text_contents()==['홈']
@@ -498,7 +535,7 @@ with tempfile.TemporaryDirectory() as td:
    assert group_manage.evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgba(0, 0, 0, 0)'
    assert group_manage.bounding_box()['height']==36
    assert fresh_page.locator('.team-head select').bounding_box()['height']==36, fresh_page.locator('.team-head select').evaluate('(el)=>({height:getComputedStyle(el).height,minHeight:getComputedStyle(el).minHeight,padding:getComputedStyle(el).padding,box:el.getBoundingClientRect().height})')
-   assert fresh_page.locator('.team-head .sort-direction button').bounding_box()['height']==36
+   assert fresh_page.locator('.team-head .sort-direction button').count()==0
 
    assert fresh_page.locator('.team-directory-item.active').evaluate('(el)=>{const probe=document.createElement("i");probe.style.cssText="color:var(--accent);background:var(--accent-soft)";el.append(probe);const selected=getComputedStyle(el),accent=getComputedStyle(probe);const ok=selected.color===accent.color&&selected.backgroundColor===accent.backgroundColor&&getComputedStyle(el.querySelector("span")).color===accent.color;probe.remove();return ok}')
 
@@ -678,16 +715,7 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.reload();fresh_page.wait_for_function('window.appAccount?.localMode === true')
    assert fresh_page.evaluate("localStorage.getItem('pn-accent')")=='purple'
    fresh_page.locator('.sidebar-settings').click()
-   fresh_page.locator('[data-settings-category=connections]').click()
-   fresh_page.get_by_label('Figma 연결 주소').fill('https://www.figma.com/design/Local123/Example')
-   fresh_page.get_by_role('button',name='연결 저장',exact=True).click()
-   assert '저장했습니다' in fresh_page.locator('.figma-settings [data-status]').inner_text()
-   fresh_page.reload();fresh_page.wait_for_function('window.appAccount?.localMode === true')
-   fresh_page.locator('.sidebar-settings').click()
-   fresh_page.locator('[data-settings-category=connections]').click()
-   assert fresh_page.get_by_label('Figma 연결 주소').input_value()=='https://www.figma.com/design/Local123/Example'
-   fresh_page.get_by_role('button',name='연결 해제',exact=True).click()
-   assert fresh_page.get_by_label('Figma 연결 주소').input_value()==''
+   assert fresh_page.locator('[data-settings-category=connections]').count()==0
    local_file_id=fresh_page.evaluate("""async()=>{const id=crypto.randomUUID();const r=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'text/plain'},body:'Local original text'});if(!r.ok)throw Error('Local upload failed');return id}""")
    local_doc=fresh.new_page();local_doc.on('pageerror',lambda e:errors.append(e.stack))
    local_doc.goto('https://pages.test:9443/production/?document='+local_file_id+'&name=Local.txt')
@@ -724,9 +752,9 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.locator('.workspace-landing-card[data-workspace-section=locations]').click()
    fresh_page.locator('#database-panel').wait_for(state='visible')
    fresh_page.locator('.mobile-bottom-nav [data-main-space=settings]').click()
-   fresh_page.locator('.workspace-landing-card[data-workspace-section=connections]').wait_for()
-   fresh_page.locator('.workspace-landing-card[data-workspace-section=connections]').click()
-   fresh_page.get_by_label('Figma 연결 주소').wait_for()
+   fresh_page.locator('.workspace-landing-card[data-workspace-section=account]').wait_for()
+   fresh_page.locator('.workspace-landing-card[data-workspace-section=account]').click()
+   fresh_page.get_by_role('heading',name='계정',exact=True).wait_for()
    fresh_page.locator('.mobile-bottom-nav [data-main-space=home]').click()
    fresh_page.wait_for_function('window.activeWorkspace === "home" && !window.mobileWorkspaceHome')
    fresh_page.locator('.home-groups .merge-project').filter(has_text='워크스페이스 프로젝트').click()
@@ -738,8 +766,8 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.set_viewport_size({'width':1280,'height':900})
    fresh_page.wait_for_function('document.querySelector("#sidebar .sidebar-settings") !== null')
    fresh_page.locator('.sidebar-settings').click()
-   fresh_page.locator('[data-settings-category=connections]').click()
-   fresh_page.get_by_label('Figma 연결 주소').wait_for()
+   fresh_page.locator('[data-settings-category=account]').click()
+   fresh_page.get_by_role('heading',name='계정',exact=True).wait_for()
    old_version=fresh_page.locator('meta[name=pn-build]').get_attribute('content')
    new_version='f'*64 if old_version!='f'*64 else 'a'*64
    fresh_page.route('**/version.json?*',lambda route:route.fulfill(status=200,content_type='application/json',body=__import__('json').dumps({'version':new_version})))
@@ -761,8 +789,9 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.wait_for_timeout(200)
    assert fresh_page.locator('meta[name=pn-build]').get_attribute('content')==old_version
    fresh_page.evaluate('window.prepareAppUpdate=async()=>true')
-   fresh_page.get_by_label('Figma 연결 주소').focus()
-   fresh_page.get_by_label('Figma 연결 주소').evaluate('(el)=>el.blur()')
+   fresh_page.get_by_role('button',name='연락처 변경',exact=True).click()
+   fresh_page.get_by_label('연락처',exact=True).focus()
+   fresh_page.get_by_label('연락처',exact=True).evaluate('(el)=>el.blur()')
    fresh_page.wait_for_timeout(200)
    assert fresh_page.locator('meta[name=pn-build]').get_attribute('content')==old_version
    fresh_page.get_by_role('button',name='앱 업데이트',exact=True).click()
