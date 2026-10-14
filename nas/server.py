@@ -1,6 +1,8 @@
 """Scoped storage API behind authenticated Worker gateway."""
 from access import actor_for,is_admin,scope,apply_tab_visibility,merge_workspace,workspace_data,ref_visible,file_ids,deny,permitted
 from accounts import install
+import asyncio
+import logging
 import hashlib
 import hmac
 import json
@@ -10,7 +12,7 @@ import sqlite3
 import tempfile
 import threading
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -64,6 +66,67 @@ def authenticate(request: Request):
 
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, dependencies=[Depends(authenticate)])
+
+
+def reference_deleted_at(item, fallback):
+    raw=item.get('deletedAt') or fallback
+    try:
+        stamp=datetime.fromisoformat(str(raw).replace('Z','+00:00'))
+        return stamp.replace(tzinfo=timezone.utc) if stamp.tzinfo is None else stamp
+    except (ValueError,TypeError):
+        return datetime.now(timezone.utc)
+
+
+def delete_reference_record(conn, ident):
+    old=conn.execute('SELECT payload FROM reference_records WHERE id=?',(ident,)).fetchone()
+    if not old:return
+    candidates=file_ids(json.loads(old[0]))
+    conn.execute('DELETE FROM reference_project_links WHERE reference_id=?',(ident,))
+    conn.execute('DELETE FROM reference_records WHERE id=?',(ident,))
+    workspace=workspace_data(conn)
+    remaining=[json.loads(row[0]) for row in conn.execute('SELECT payload FROM reference_records')]
+    retained=packed([workspace,remaining])
+    used={file_id for file_id in candidates if file_id in retained}
+    for file_id in candidates-used:
+        if not ID.fullmatch(file_id):continue
+        conn.execute('DELETE FROM file_uploaders WHERE file_id=?',(file_id,))
+        conn.execute('DELETE FROM files WHERE id=?',(file_id,))
+        (DATA/'files'/file_id).unlink(missing_ok=True)
+
+
+def purge_reference_trash():
+    with write_lock,database() as conn:
+        cutoff=datetime.now(timezone.utc)-timedelta(days=30)
+        for row in list(conn.execute('SELECT id,payload,updated_at FROM reference_records WHERE deleted=1')):
+            item=json.loads(row['payload'])
+            if reference_deleted_at(item,row['updated_at'])<=cutoff:
+                delete_reference_record(conn,row['id'])
+
+
+async def reference_trash_loop():
+    while True:
+        try:
+            await asyncio.to_thread(purge_reference_trash)
+        except Exception:
+            logging.exception('Reference trash cleanup failed')
+        await asyncio.sleep(3600)
+
+
+reference_trash_task=None
+
+@app.on_event('startup')
+async def start_reference_trash_cleanup():
+    global reference_trash_task
+    reference_trash_task=asyncio.create_task(reference_trash_loop())
+
+
+@app.on_event('shutdown')
+async def stop_reference_trash_cleanup():
+    task=reference_trash_task
+    if task:
+        task.cancel()
+        try:await task
+        except asyncio.CancelledError:pass
 
 
 @app.middleware('http')
@@ -188,6 +251,8 @@ async def put_workspace(request: Request):
 
 @app.get('/api/references')
 def references(request: Request):
+    with database() as auth_conn:actor_for(auth_conn,request)
+    purge_reference_trash()
     with database() as conn:
         actor=actor_for(conn,request);visible=apply_tab_visibility(conn,scope(workspace_data(conn),actor),actor)
         return [item for row in conn.execute('SELECT payload FROM reference_records ORDER BY updated_at DESC') if ref_visible(item:=json.loads(row[0]),visible,actor)]
@@ -215,6 +280,11 @@ async def put_reference(ident: str, request: Request):
             if json.loads(old[0]) == data:
                 return data
             raise HTTPException(409, 'Reference already exists')
+        previous=json.loads(old[0]) if old else {}
+        if data.get('deleted'):
+            data['deletedAt']=previous.get('deletedAt') or (previous.get('updatedAt') if previous.get('deleted') else now()) or now()
+        else:
+            data.pop('deletedAt',None)
         if request.headers.get('X-Import-Only') != '1':
             data['updatedAt'] = now()
         data.setdefault('updatedAt', now())
@@ -237,6 +307,21 @@ async def put_reference(ident: str, request: Request):
             conn.execute('INSERT INTO reference_blocks VALUES(?,?,?,?,?,?)',
                          (ident, block.get('id', str(position)), position, block.get('kind', 'file'), file_id, packed(block)))
     return data
+
+
+@app.delete('/api/references/{ident}')
+def delete_reference(ident: str, request: Request):
+    if not ID.fullmatch(ident):raise HTTPException(400,'Invalid id')
+    with write_lock,database() as conn:
+        actor=actor_for(conn,request)
+        visible=apply_tab_visibility(conn,scope(workspace_data(conn),actor),actor)
+        row=conn.execute('SELECT payload FROM reference_records WHERE id=?',(ident,)).fetchone()
+        if not row:raise HTTPException(404,'Reference not found')
+        item=json.loads(row[0])
+        if actor['role']=='viewer' or not ref_visible(item,visible,actor):deny()
+        if not item.get('deleted'):raise HTTPException(409,'Move the reference to trash first')
+        delete_reference_record(conn,ident)
+    return {'ok':True}
 
 
 def can_edit_file(conn,actor,ident):

@@ -26,6 +26,11 @@ async function localWrite(store,key,value) {
     tx.oncomplete=()=>{db.close();resolve(value)};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error)};
   });
 }
+function localReferenceFileIds(item){const ids=new Set();const walk=v=>{if(!v||typeof v!=='object')return;if(v.fileId)ids.add(v.fileId);if(['image','video','audio','pdf','file','document'].includes(v.kind)&&v.id)ids.add(v.id);if(Array.isArray(v))v.forEach(walk);else Object.values(v).forEach(walk)};walk(item);return ids}
+async function localDeleteReferences(ids){
+ const db=await localOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(['references','workspace','files'],'readwrite'),records=tx.objectStore('references'),refsRequest=records.getAll(),workspaceRequest=tx.objectStore('workspace').get('current');let refs,workspace;const finish=()=>{if(!refs||workspace===undefined)return;const removed=refs.filter(r=>ids.includes(r.id)),remaining=refs.filter(r=>!ids.includes(r.id)),used=JSON.stringify([workspace,remaining]),files=tx.objectStore('files');removed.forEach(r=>{records.delete(r.id);localReferenceFileIds(r).forEach(id=>{if(localId.test(id)&&!used.includes(id))files.delete(id)})})};refsRequest.onsuccess=()=>{refs=refsRequest.result;finish()};workspaceRequest.onsuccess=()=>{workspace=workspaceRequest.result||null;finish()};tx.oncomplete=()=>{db.close();resolve()};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error)}})
+}
+async function localPurgeReferenceTrash(){const rows=await localRead('references'),cutoff=Date.now()-30*86400000,expired=rows.filter(r=>r.deleted&&Date.parse(r.deletedAt||r.updatedAt||r.createdAt)<=cutoff);if(expired.length)await localDeleteReferences(expired.map(r=>r.id));return rows.filter(r=>!expired.some(v=>v.id===r.id))}
 function localJson(value,status=200,headers={}) {return Response.json(value,{status,headers:{'Cache-Control':'no-store',...headers}})}
 function localRevision(value) {return '"'+value+'"'}
 async function localWorkspace(request) {
@@ -86,8 +91,9 @@ self.handleLocalRequest=async request=>{
   try {
     const url=new URL(request.url),base=new URL('api/',self.registration.scope).pathname,part=url.pathname.slice(base.length);
     if(part==='data')return localWorkspace(request);
-    if(part==='references'&&request.method==='GET'){const rows=await localRead('references');return localJson(rows.sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))))}
-    if(part.startsWith('references/')&&request.method==='PUT'){const id=part.slice(11),item=await request.json();if(!localId.test(id)||item?.id!==id||!String(item?.title||'').trim())return localJson({error:'잘못된 자료'},400);item.updatedAt=new Date().toISOString();await localWrite('references',id,item);return localJson(item)}
+    if(part==='references'&&request.method==='GET'){const rows=await localPurgeReferenceTrash();return localJson(rows.sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))))}
+    if(part.startsWith('references/')&&request.method==='PUT'){const id=part.slice(11),item=await request.json();if(!localId.test(id)||item?.id!==id||!String(item?.title||'').trim())return localJson({error:'잘못된 자료'},400);const old=await localRead('references',id);item.updatedAt=new Date().toISOString();item.createdAt=item.createdAt||old?.createdAt||item.updatedAt;if(item.deleted)item.deletedAt=old?.deletedAt||(old?.deleted?old.updatedAt:null)||item.updatedAt;else delete item.deletedAt;await localWrite('references',id,item);return localJson(item)}
+    if(part.startsWith('references/')&&request.method==='DELETE'){const id=part.slice(11);if(!localId.test(id))return localJson({error:'잘못된 자료'},400);const item=await localRead('references',id);if(!item)return localJson({error:'자료 없음'},404);if(!item.deleted)return localJson({error:'휴지통으로 먼저 이동하세요'},409);await localDeleteReferences([id]);return localJson({ok:true})}
     if(part.startsWith('ref-files/'))return localFile(request,part.slice(10),url);
     if(part.startsWith('database/'))return localDatabase(request,part.slice(9),url);
     if(part.startsWith('auth/'))return localAuth(request,part.slice(5));

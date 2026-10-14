@@ -3,7 +3,7 @@ const referenceWrites=new Map();
 function referenceSaveState(id,status,error=''){window.dispatchEvent(new CustomEvent('reference-save-state',{detail:{id,status,error}}))}
 function cacheReference(r){const index=refs.findIndex(v=>v.id===r.id);if(index<0)refs.push(r);else refs[index]=r;refLoaded=true;window.dispatchEvent(new Event('references-changed'))}
 function saveModuleReference(r){
- const item={...r,title:r.title,description:(r.modules||[]).filter(m=>m.kind==='text').map(m=>m.text||'').join('\n'),blocks:[],updatedAt:new Date().toISOString()};
+ const previousItem=refs.find(v=>v.id===r.id);const item={...r,deletedAt:r.deleted?(previousItem?.deletedAt||new Date().toISOString()):undefined,title:r.title,description:(r.modules||[]).filter(m=>m.kind==='text').map(m=>m.text||'').join('\n'),blocks:[],updatedAt:new Date().toISOString()};
  window.appHistory?.record('reference:'+item.id,refs.find(v=>v.id===item.id)||{...item,deleted:true},item,async(patches,direction)=>{const latest=(await refApi('')).find(v=>v.id===item.id)||refs.find(v=>v.id===item.id);if(!latest)throw Error('레퍼런스를 찾을 수 없습니다');await saveModuleReference(window.applyHistoryPatch(latest,patches,direction))},{mergeKey:window.appHistory?.editKey});
  cacheReference(item);referenceSaveState(item.id,'저장 중');
  const previous=referenceWrites.get(item.id)||Promise.resolve();
@@ -16,11 +16,13 @@ window.referenceBridge={
  updateModule:async(id,moduleId,fn)=>{const r=refs.find(r=>r.id===id);if(!r)throw Error('레퍼런스를 찾을 수 없습니다');return saveModuleReference(window.updateReferenceModule(r,moduleId,fn))},
  openProject:(id,kind,entityId)=>{window.productionSearchTarget={projectId:id,kind,entityId};openProduction(id,kind==='task'?'tasks':kind==='schedule'?'schedule':'overview')}
 };
-let referenceEditorCleanup=null,referenceOpenRequest=0;
+let referenceEditorCleanup=null,referenceOpenRequest=0,archiveCleanup=null;
+const archiveHost=document.createElement('div');archiveHost.id='reference-archive-host';archiveHost.hidden=true;$('#refpanel').append(archiveHost);
+window.openReferencesArchive=async()=>{try{if(sourceSection==='gallery'){sourceSection='references';localStorage.setItem('pn-source-section',sourceSection)}await openRefs();if(!productionAssets){const response=await fetch('/production-style');productionAssets=await response.text()}if(!window.mountArchiveLibrary)await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/production-app';script.onload=resolve;script.onerror=reject;document.head.append(script)});archiveHost.hidden=false;archiveCleanup=window.mountArchiveLibrary(archiveHost,productionAssets,()=>{archiveCleanup?.();archiveCleanup=null;archiveHost.hidden=true})}catch(e){toast(e.message||'아카이브를 열지 못했습니다')}};
 const referenceModuleHost=document.createElement('div');referenceModuleHost.id='reference-module-host';referenceModuleHost.hidden=true;$('#refpanel').append(referenceModuleHost);
-function closeReferenceModules(){window.sourceGalleryVisible=false;referenceOpenRequest++;referenceEditorCleanup?.();referenceEditorCleanup=null;referenceModuleHost.hidden=true;$('#refpanel').classList.remove('reference-open');window.activeReferenceId='';}
+function closeReferenceModules(){archiveCleanup?.();archiveCleanup=null;archiveHost.hidden=true;window.sourceGalleryVisible=false;referenceOpenRequest++;referenceEditorCleanup?.();referenceEditorCleanup=null;referenceModuleHost.hidden=true;$('#refpanel').classList.remove('reference-open');window.activeReferenceId='';}
 // Navigation wrappers keep the content area and editor lifecycle in sync.
-const referenceHome=openRefs;openRefs=async function(...args){closeReferenceModules();if(sourceSection==='gallery')return openSourceGallery();return referenceHome(...args)};
+const referenceHome=openRefs;openRefs=async function(...args){closeReferenceModules();if(sourceSection==='gallery')return openSourceGallery();if(refLoaded){refs=await refApi('')}return referenceHome(...args)};
 $('#references').onclick=()=>openRefs();
 const referenceProduction=openProduction;openProduction=async function(...args){closeReferenceModules();return referenceProduction(...args)};
 const referenceDatabase=openDatabase;openDatabase=async function(...args){closeReferenceModules();return referenceDatabase(...args)};

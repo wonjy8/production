@@ -20,3 +20,11 @@ Current baseline: **version 0 (`0.0.0`)**, commit `b2fafdd`.
 ## NAS changes
 
 Whenever NAS changes are needed, describe the exact files and paths, changes or replacement package, commands or Container Manager steps, rebuild/restart requirements, and verification in the chat. Do not merely say to update NAS.
+
+## 0.0.1
+
+- Refine catalog, account, sidebar, overview width, and reference heading layouts.
+- Remove red from selectable accents; use red for account logout/withdrawal actions.
+- Move completion archive access to the materials sidebar.
+- Add multi-item trash selection, restore, permanent deletion, and 30-day retention.
+- NAS update: replace `server.py` and `access.py` and rebuild the existing container; `.env` changes are not required.

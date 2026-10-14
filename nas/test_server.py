@@ -93,5 +93,46 @@ class StorageTest(unittest.TestCase):
             with self.module.database() as conn:conn.execute("UPDATE app_users SET role='superadmin' WHERE id='test-user'")
 
 
+    def test_reference_trash_retention_restore_permissions_and_shared_files(self):
+        from datetime import datetime, timezone, timedelta
+        client,auth,module=self.client,self.auth,self.module
+        sole,shared=str(uuid4()),str(uuid4())
+        for ident in (sole,shared):
+            self.assertEqual(client.put('/api/ref-files/'+ident,headers={**auth,'Content-Type':'text/plain'},content=b'trash test').status_code,200)
+        records=[]
+        for ident in (sole,shared):
+            item={'id':str(uuid4()),'title':'trash retention','blocks':[{'id':'block','kind':'file','fileId':ident}],'deleted':False}
+            self.assertEqual(client.put('/api/references/'+item['id'],headers=auth,json=item).status_code,200)
+            self.assertEqual(client.delete('/api/references/'+item['id'],headers=auth).status_code,409)
+            item['deleted']=True
+            saved=client.put('/api/references/'+item['id'],headers=auth,json=item).json()
+            self.assertIn('deletedAt',saved)
+            records.append(saved)
+        # A second active reference owns the same physical file.
+        other={'id':str(uuid4()),'title':'shared active','blocks':[{'id':'block','kind':'file','fileId':shared}]}
+        self.assertEqual(client.put('/api/references/'+other['id'],headers=auth,json=other).status_code,200)
+        before=records[0]['deletedAt']
+        renamed=client.put('/api/references/'+records[0]['id'],headers=auth,json={**records[0],'title':'renamed in trash'}).json()
+        self.assertEqual(renamed['deletedAt'],before)
+        restored=client.put('/api/references/'+records[0]['id'],headers=auth,json={**records[0],'deleted':False}).json()
+        self.assertNotIn('deletedAt',restored)
+        trashed=client.put('/api/references/'+records[0]['id'],headers=auth,json={**restored,'deleted':True}).json()
+        with module.database() as conn:
+            stamp=(datetime.now(timezone.utc)-timedelta(days=31)).isoformat()
+            trashed['deletedAt']=stamp
+            conn.execute('UPDATE reference_records SET payload=? WHERE id=?',(json.dumps(trashed),trashed['id']))
+        module.purge_reference_trash()
+        self.assertEqual(client.delete('/api/references/'+trashed['id'],headers=auth).status_code,404)
+        self.assertFalse((module.DATA/'files'/sole).exists())
+        try:
+            with module.database() as conn:conn.execute("UPDATE app_users SET role='viewer' WHERE id='test-user'")
+            self.assertEqual(client.delete('/api/references/'+records[1]['id'],headers=auth).status_code,403)
+        finally:
+            with module.database() as conn:conn.execute("UPDATE app_users SET role='superadmin' WHERE id='test-user'")
+        self.assertEqual(client.delete('/api/references/'+records[1]['id'],headers=auth).status_code,200)
+        self.assertTrue((module.DATA/'files'/shared).exists())
+        self.assertEqual(client.get('/api/ref-files/'+shared,headers=auth).status_code,200)
+
+
 if __name__ == '__main__':
     unittest.main()

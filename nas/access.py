@@ -152,7 +152,7 @@ def file_ids(value):
     ids=set()
     if isinstance(value,dict):
         if value.get('fileId'):ids.add(value['fileId'])
-        if value.get('kind') in ('image','video','pdf','file','document') and value.get('id'):ids.add(value['id'])
+        if value.get('kind') in ('image','video','audio','pdf','file','document') and value.get('id'):ids.add(value['id'])
         ids.update(i for v in value.values() for i in file_ids(v))
     elif isinstance(value,str) and value.startswith('/api/ref-files/'):
         ids.add(value.split('/api/ref-files/')[-1].split('?')[0])

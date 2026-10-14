@@ -175,6 +175,11 @@ with tempfile.TemporaryDirectory() as td:
    page.reload()
    page.wait_for_function('!!window.activeReferenceId && !!window.activeReferenceTabId')
    assert page.url==reference_url
+   title_rect=page.get_by_label('레퍼런스 제목',exact=True).bounding_box()
+   delete_rect=page.get_by_role('button',name='레퍼런스 삭제',exact=True).bounding_box()
+   assert abs(title_rect['y']+title_rect['height']/2-delete_rect['y']-delete_rect['height']/2)<2
+   assert page.get_by_role('button',name='레퍼런스 삭제',exact=True).evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='0px'
+
 
    canvas_width=page.locator('.canvas').bounding_box()['width']
    page.locator('.custom-module-tab [data-module-add]').click()
@@ -384,9 +389,44 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/references')).json().then(x=>x.some(r=>r.title==='로컬 자료'))")
    assert fresh_page.evaluate("async(id)=>[...(new Uint8Array(await(await fetch('/production/api/ref-files/'+id)).arrayBuffer()))].join(',')",local['id'])=='1,2,3,4'
+   trash_ids=fresh_page.evaluate("""async()=>{const ids=[crypto.randomUUID(),crypto.randomUUID()];for(const [index,id]of ids.entries()){const r=await fetch('/production/api/references/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,title:'Trash selection '+index,category:'',tags:[],description:'',blocks:[],deleted:true})});if(!r.ok)throw Error('Trash seed failed')}return ids}""")
+   fresh_page.locator('[data-main-space=references]').click()
+   fresh_page.locator('button[data-source-section=references]').click()
+   fresh_page.wait_for_function('(ids)=>refPage&&sourceSection==="references"&&ids.every(id=>refs.some(r=>r.id===id))',arg=trash_ids)
+   assert fresh_page.locator('[data-ref-scope=all]').count()==0
+   assert fresh_page.locator('[data-reference-archive]').count()==1
+   fresh_page.locator('.sidebar-footer [data-ref-scope=trash]').click()
+   first_card=fresh_page.locator('[data-ref="'+trash_ids[0]+'"]').locator('..')
+   before_card=first_card.bounding_box()
+   fresh_page.locator('[data-trash-select]').click()
+   fresh_page.locator('[data-ref="'+trash_ids[0]+'"]').click()
+   fresh_page.locator('[data-ref="'+trash_ids[1]+'"]').click()
+   assert fresh_page.locator('#refgrid .refcard.selected').count()==2
+   assert fresh_page.locator('#refgrid input[type=checkbox]').count()==0
+   after_card=first_card.bounding_box()
+   assert abs(before_card['x']-after_card['x'])<1 and abs(before_card['y']-after_card['y'])<1
+   fresh_page.once('dialog',lambda d:d.accept())
+   fresh_page.locator('[data-trash-delete]').click()
+   fresh_page.wait_for_function('async(ids)=>{const rows=await fetch("/production/api/references").then(r=>r.json());return ids.every(id=>!rows.some(r=>r.id===id))}',arg=trash_ids)
+   restore_id=fresh_page.evaluate("""async()=>{const id=crypto.randomUUID();await fetch('/production/api/references/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,title:'Restore test',category:'',tags:[],description:'',blocks:[],deleted:true})});await window.openRefs();return id}""")
+   fresh_page.locator('[data-ref="'+restore_id+'"]').click()
+   fresh_page.locator('[data-trash-restore]').click()
+   fresh_page.wait_for_function('async(id)=>{const rows=await fetch("/production/api/references").then(r=>r.json());return rows.some(r=>r.id===id&&!r.deleted&&!r.deletedAt)}',arg=restore_id)
+   retention=fresh_page.evaluate("""async()=>{const id=crypto.randomUUID(),fileId=crypto.randomUUID();await fetch('/production/api/ref-files/'+fileId,{method:'PUT',headers:{'Content-Type':'text/plain'},body:'expired original'});const item={id,title:'Expired trash fixture',deleted:true,deletedAt:new Date(Date.now()-31*86400000).toISOString(),updatedAt:new Date().toISOString(),createdAt:new Date().toISOString(),blocks:[{id:'block',kind:'file',fileId}]};await new Promise((resolve,reject)=>{const request=indexedDB.open('production-local:'+new URL(document.baseURI).href);request.onsuccess=()=>{const db=request.result,tx=db.transaction('references','readwrite');tx.objectStore('references').put(item,id);tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>reject(tx.error)}});const rows=await fetch('/production/api/references').then(r=>r.json());return {present:rows.some(r=>r.id===id),fileStatus:(await fetch('/production/api/ref-files/'+fileId)).status}}""")
+   assert retention=={'present':False,'fileStatus':404},retention
+
    fresh_page.locator('[data-main-space=home]').click()
    fresh_page.locator('[data-production-id=workspace-project]').click()
    fresh_page.get_by_role('heading',name='오늘 할 일',exact=True).wait_for()
+   assert fresh_page.locator('.project-page-heading .archive-access').count()==0
+   original_viewport=fresh_page.viewport_size
+   for width in [1280,1920,2560]:
+    fresh_page.set_viewport_size({'width':width,'height':900})
+    overview_rect=fresh_page.locator('.overview-activity').bounding_box()
+    workbench_rect=fresh_page.locator('.merged-workspace.project-page').bounding_box()
+    assert abs(overview_rect['width']-workbench_rect['width'])<2,(width,overview_rect,workbench_rect)
+   fresh_page.set_viewport_size(original_viewport)
+
    fresh_page.wait_for_function('location.hash.startsWith("#/projects/") && location.hash.endsWith("/overview") && window.productionSearchContext?.productionId==="workspace-project"')
    fresh_page.locator('[data-tab-id=schedule]').click()
    fresh_page.wait_for_function('location.hash.endsWith("/schedule")')
@@ -654,7 +694,8 @@ with tempfile.TemporaryDirectory() as td:
    assert archive_info['file']!=lifecycle_file
    assert archive_info['checks']['pending']==1 and archive_info['text']=='완료 당시 대본'
    assert fresh_page.evaluate("async(id)=>(await fetch('/production/api/ref-files/'+id)).text()",archive_info['file'])=='완료 당시 문서'
-   fresh_page.get_by_role('button',name=re.compile('^완료 아카이브')).click()
+   fresh_page.locator('[data-main-space=references]').click()
+   fresh_page.locator('[data-reference-archive]').click()
    library=fresh_page.get_by_role('dialog',name='완료 아카이브',exact=True)
    library.get_by_role('button',name=re.compile('^단편영화 검증')).click()
    assert library.get_by_text('촬영 준비를 앞당기자',exact=True).is_visible()
@@ -671,6 +712,7 @@ with tempfile.TemporaryDirectory() as td:
    library.get_by_role('button',name='가져오기',exact=True).click()
    fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="brand-flow").customTabs.length===2')
    fresh_page.get_by_role('button',name='완료 아카이브 닫기',exact=True).click()
+   fresh_page.locator('[data-main-space=home]').click()
    fresh_page.locator('[data-production-id=brand-flow]').click()
    fresh_page.locator('[data-tab-id^="tab:"]').last.click()
    fresh_page.locator('.shared-source').first.wait_for()
@@ -709,7 +751,7 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    fresh_page.locator('.sidebar-settings').click()
    fresh_page.locator('[data-settings-category=general]').click()
-   assert fresh_page.locator('[data-accent]').count()==5
+   assert fresh_page.locator('[data-accent]').count()==4
    fresh_page.locator('[data-accent=purple]').click()
    assert fresh_page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()")=='#7c3aed'
    fresh_page.reload();fresh_page.wait_for_function('window.appAccount?.localMode === true')
@@ -741,7 +783,14 @@ with tempfile.TemporaryDirectory() as td:
    assert not fresh_page.locator('#sidebar').is_visible()
    fresh_page.locator('.mobile-bottom-nav [data-main-space=references]').click()
    fresh_page.locator('.workspace-landing-card[data-workspace-section=sources]').wait_for()
-   assert fresh_page.locator('.workspace-landing-card').all_text_contents()==['레퍼런스','소스','포트폴리오']
+   assert fresh_page.locator('.workspace-landing-card').all_text_contents()==['레퍼런스','소스','포트폴리오','아카이브','휴지통']
+   fresh_page.locator('.workspace-landing-card[data-workspace-section=archive]').click()
+   fresh_page.get_by_role('dialog',name='완료 아카이브',exact=True).wait_for()
+   fresh_page.get_by_role('button',name='완료 아카이브 닫기',exact=True).click()
+   fresh_page.locator('.mobile-bottom-nav [data-main-space=references]').click()
+   fresh_page.locator('.workspace-landing-card[data-workspace-section=trash]').click()
+   fresh_page.locator('[data-trash-select]').wait_for()
+   fresh_page.locator('.mobile-bottom-nav [data-main-space=references]').click()
    fresh_page.locator('.workspace-landing-card[data-workspace-section=sources]').click()
    fresh_page.locator('#refpanel').wait_for(state='visible')
    fresh_page.get_by_role('button',name='워크스페이스 첫 화면으로 돌아가기').click()
@@ -811,7 +860,7 @@ with tempfile.TemporaryDirectory() as td:
    failure.get_by_role('button',name='연결 확인',exact=True).click()
    assert '인터넷' in failure.locator('#boot-reason').inner_text()
    failure.close()
-   print('PASS: schedule/task date drag in tabs and modules, emoji selection and sidebar sync, compact named Figma bookmark, completion checks and frozen archive files, independent/link reuse, missing source reconnection, NAS archive capability/persistence, loading failure alternatives, browser-local NAS aliases/reload and unknown alias isolation, legacy URL migration, readable word routes, transparent left-aligned overview and editable project icon, URL screen history/back/forward, reference detail/tab reload, project schedule tab reload, preserved NAS path, three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, manual update icon with save deferral and persisted local data, aligned floating panels, Hub search motion and removed previews, inline deletion, full-width divider, five accent colors and overview activity, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: schedule/task date drag in tabs and modules, emoji selection and sidebar sync, compact named Figma bookmark, completion checks and frozen archive files, independent/link reuse, missing source reconnection, NAS archive capability/persistence, loading failure alternatives, browser-local NAS aliases/reload and unknown alias isolation, legacy URL migration, readable word routes, transparent left-aligned overview and editable project icon, URL screen history/back/forward, reference detail/tab reload, project schedule tab reload, preserved NAS path, three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, manual update icon with save deferral and persisted local data, aligned floating panels, Hub search motion and removed previews, inline deletion, full-width divider, four accent colors, sidebar archive and multi-select reference trash with retention and overview activity, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

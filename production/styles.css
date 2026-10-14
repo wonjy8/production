@@ -2230,3 +2230,6 @@ select:focus-visible {
   color: #666;
 }
 
+/* Let overview sections use the full available workbench width. */
+.project-page,.overview-activity{width:100%;max-width:none!important;min-width:0;box-sizing:border-box}.overview-activity{margin-left:0!important;margin-right:0!important}
+.reference-editor-heading{display:flex;align-items:center;gap:10px}.reference-heading-title{flex:1;min-width:0;display:grid;gap:8px}.reference-heading-title>span{font-size:12px;color:var(--text-muted)}.reference-heading-title .reference-title{width:100%;min-width:0;margin:0!important}.reference-editor-heading button{border:0!important;box-shadow:none!important;background:transparent!important}.reference-editor-heading button:hover{background:var(--accent-soft)!important}
