@@ -1,0 +1,9 @@
+function message(type,data={}){return new Promise((resolve,reject)=>{const channel=new MessageChannel(),timer=setTimeout(()=>reject(Error('연결 설정 응답이 없습니다.')),10000);channel.port1.onmessage=({data})=>{clearTimeout(timer);channel.port1.close();data.error?reject(Error(data.error)):resolve(data.value)};navigator.serviceWorker.controller.postMessage({type,...data},[channel.port2])})}
+export async function renderNASAliasSettings(host){
+ if(!navigator.serviceWorker?.controller)return;
+ let origin;try{origin=await message('connection:get')}catch{return}if(origin==='local')return;
+ const group=document.createElement('section');group.className='nas-alias-settings';group.innerHTML='<h2>NAS 주소 별칭</h2><p>이 브라우저에서 NAS 주소 대신 별칭을 표시합니다. 다른 기기에서는 원래 NAS 연결 주소로 먼저 접속하세요.</p><form><label>별칭<input name="alias" aria-label="NAS 주소 별칭" pattern="[a-z0-9][a-z0-9-]{0,39}" maxlength="40" placeholder="my-nas" required></label><button class="keep-label" type="submit">별칭 적용</button><p data-status role="status"></p></form><p class="muted">별칭은 주소창만 정리합니다. 실제 NAS 접속 주소는 개발자 도구에서 확인할 수 있습니다.</p>';host.append(group);
+ const form=group.querySelector('form'),input=form.elements.alias,status=group.querySelector('[data-status]'),base=new URL('api/',navigator.serviceWorker.controller.scriptURL).pathname.replace(/api\/$/,'');
+ input.value=location.pathname.startsWith(base+'@')?decodeURIComponent(location.pathname.slice(base.length+1)).replace(/\/$/,''):'my-nas';
+ form.onsubmit=async event=>{event.preventDefault();const button=form.querySelector('button');button.disabled=true;try{const alias=input.value.trim().toLowerCase();await message('alias:set',{alias});const url=new URL(location.href);url.pathname=base+'@'+alias;history.replaceState(history.state,'',url);status.textContent='별칭을 적용했습니다. 새로고침해도 연결이 유지됩니다.'}catch(error){status.textContent=error.message}finally{button.disabled=false}};
+}

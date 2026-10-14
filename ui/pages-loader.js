@@ -10,7 +10,7 @@ function workerMessage(type){
  });
 }
 try{
- const mode=globalThis.productionConnectionFromURL(location.href,base.href);
+ globalThis.productionConnectionFromURL(location.href,base.href);
  if(!('serviceWorker' in navigator))throw Error('서비스 워커를 지원하는 브라우저로 열어주세요.');
  const registration=await navigator.serviceWorker.register(new URL('pages-sw.js',base),{scope:base.pathname,updateViaCache:'none'});
  const installing=registration.installing||registration.waiting;
@@ -18,7 +18,7 @@ try{
  await navigator.serviceWorker.ready;
  if(!navigator.serviceWorker.controller)await new Promise(resolve=>navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true}));
  // Confirm that the controller understands URL-selected, per-tab routing.
- await workerMessage('route:ready');
+ const mode=await workerMessage('route:ready');
  if(mode!=='local'){
   status.textContent='NAS에 자동 연결하는 중…';
   const response=await fetch(mode+'/browser/api/auth/connection',{credentials:'omit',mode:'cors',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});

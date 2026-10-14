@@ -4,13 +4,18 @@
 importScripts('./pages-route.js','./pages-local.js');
 self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+async function connectionFor(href){const value=self.productionConnectionFromURL(href,self.registration.scope);if(!value.startsWith('alias:'))return value;const origin=await localRead('account','nas-alias:'+value.slice(6));if(!origin)throw Error('이 브라우저에 등록되지 않은 NAS 별칭입니다. 원래 NAS 주소로 먼저 접속하세요.');return self.productionConnectionFromURL(self.registration.scope+encodeURIComponent(origin),self.registration.scope)}
 self.addEventListener('message',event=>{
  if(!event.source?.url?.startsWith(self.registration.scope)||!event.ports[0])return;
- try{
-  if(!['route:ready','connection:get'].includes(event.data?.type))throw Error('Unknown connection request');
-  const value=self.productionConnectionFromURL(event.source.url,self.registration.scope);
+ event.waitUntil((async()=>{try{
+  if(!['route:ready','connection:get','alias:set'].includes(event.data?.type))throw Error('Unknown connection request');
+  const value=await connectionFor(event.source.url);
+  if(event.data.type==='alias:set'){
+   const alias=event.data.alias;if(typeof alias!=='string'||!/^([a-z0-9][a-z0-9-]{0,39})$/.test(alias))throw Error('별칭은 영문 소문자, 숫자, 하이픈으로 40자 이내로 입력하세요.');
+   if(value==='local')throw Error('NAS에 연결한 뒤 별칭을 지정하세요.');const previous=await localRead('account','nas-alias:'+alias);if(previous&&previous!==value)throw Error('다른 NAS에 사용 중인 별칭입니다.');await localWrite('account','nas-alias:'+alias,value);
+  }
   event.ports[0].postMessage({value});
- }catch(error){event.ports[0].postMessage({error:error.message})}
+ }catch(error){event.ports[0].postMessage({error:error.message})}})());
 });
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
@@ -30,7 +35,7 @@ self.addEventListener('fetch', event => {
     try {
       const client=await self.clients.get(event.clientId);
       if(!client)throw Error('App client unavailable');
-      const origin=self.productionConnectionFromURL(client.url,self.registration.scope);
+      const origin=await connectionFor(client.url);
       if (origin === 'local') return self.handleLocalRequest(event.request);
       if (!origin) return Response.json({error:'서버 연결 설정이 필요합니다.'}, {status:503});
       const target = origin + '/browser/api/' + url.pathname.slice(prefix.pathname.length) + url.search;

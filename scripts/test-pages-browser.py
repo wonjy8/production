@@ -48,26 +48,42 @@ with tempfile.TemporaryDirectory() as td:
    assert page.locator('.sidebar-main-spaces [data-main-space]').count()==3
    assert page.locator('.breadcrumbs [data-location=home]').inner_text()=='홈'
    assert page.locator('.topbar').evaluate('(el)=>getComputedStyle(el).borderBottomWidth')=='0px'
-   page.wait_for_function('new URL(location.href).searchParams.get("view")==="home"')
+   page.locator('.sidebar-settings').click()
+   page.locator('[data-settings-category=connections]').click()
+   page.get_by_label('NAS 주소 별칭',exact=True).fill('studio')
+   page.get_by_role('button',name='별칭 적용',exact=True).click()
+   page.wait_for_function('location.pathname==="/production/@studio"')
+   assert 'nas.test' not in page.url
+   page.reload()
+   page.wait_for_function('window.appAccount?.role==="superadmin"')
+   page.get_by_label('NAS 주소 별칭',exact=True).wait_for()
+   assert page.evaluate("async()=>(await fetch('/production/api/data')).status")==200
+   page.locator('[data-main-space=home]').click()
+   page.wait_for_function('location.hash==="#/home"')
+
+   page.wait_for_function('location.hash==="#/home"')
    page.locator('[data-main-space=references]').click()
-   page.wait_for_function('new URL(location.href).searchParams.get("view")==="references"')
+   page.wait_for_function('location.hash==="#/materials/references"')
    page.locator('.sidebar-source-sections button[data-source-section=sources]').click()
-   page.wait_for_function('new URL(location.href).searchParams.get("section")==="sources"')
+   page.wait_for_function('location.hash==="#/materials/sources"')
    source_url=page.url
-   assert '/production/nas.test:9444' in source_url
+   assert '/production/@studio' in source_url
    page.go_back()
-   page.wait_for_function('window.activeWorkspace==="references" && new URL(location.href).searchParams.get("section")==="references"')
+   page.wait_for_function('window.activeWorkspace==="references" && location.hash==="#/materials/references"')
    page.go_back()
    page.wait_for_function('window.activeWorkspace==="home"')
    page.go_forward()
    page.wait_for_function('window.activeWorkspace==="references"')
    page.go_forward()
-   page.wait_for_function('new URL(location.href).searchParams.get("section")==="sources"')
+   page.wait_for_function('location.hash==="#/materials/sources"')
    page.reload()
    page.wait_for_function('document.querySelector(".breadcrumbs")?.textContent.includes("소스")')
    assert page.url==source_url
+   page.goto('https://pages.test:9443/production/@studio?view=references&section=sources')
+   page.wait_for_function('location.hash==="#/materials/sources" && !location.search.includes("view=")')
+
    page.locator('[data-main-space=home]').click()
-   page.wait_for_function('new URL(location.href).searchParams.get("view")==="home"')
+   page.wait_for_function('location.hash==="#/home"')
 
    page.locator('#share').click();fresh_drawer=page.get_by_role('dialog',name='공유',exact=True)
    fresh_drawer.wait_for();assert fresh_drawer.bounding_box()['x']>700
@@ -113,7 +129,7 @@ with tempfile.TemporaryDirectory() as td:
    page.locator('#refadd').click()
    page.wait_for_function('!!window.activeReferenceId')
    assert page.locator('.breadcrumbs button').all_text_contents()[:2]==['자료','레퍼런스']
-   page.wait_for_function('new URL(location.href).searchParams.get("record")===window.activeReferenceId && !!new URL(location.href).searchParams.get("tab")')
+   page.wait_for_function('location.hash.startsWith("#/materials/references/") && location.hash.includes("/tabs/") && !!window.activeReferenceId')
    reference_url=page.url
    page.go_back()
    page.wait_for_function('!window.activeReferenceId && window.activeWorkspace==="references"')
@@ -160,6 +176,8 @@ with tempfile.TemporaryDirectory() as td:
    line=page.get_by_role('separator',name='구분선 이동',exact=True)
    line.wait_for();assert line.evaluate('(el)=>Math.abs(el.getBoundingClientRect().width-el.closest(".snap-canvas").getBoundingClientRect().width)')<2
    assert page.locator('.divider-box .fluid-resize-edge').count()==0
+   line.evaluate('(el)=>el.scrollIntoView({block:"center",behavior:"instant"})')
+   page.wait_for_timeout(200)
    line.hover();line.get_by_role('button',name='내용 제거',exact=True).click()
    line.get_by_role('button',name='모듈 삭제 확인',exact=True).click()
    assert page.get_by_role('separator',name='구분선 이동',exact=True).count()==0
@@ -288,9 +306,9 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.locator('[data-main-space=home]').click()
    fresh_page.locator('[data-production-id=workspace-project]').click()
    fresh_page.get_by_role('heading',name='오늘 할 일',exact=True).wait_for()
-   fresh_page.wait_for_function('new URL(location.href).searchParams.get("group")==="workspace-project"')
+   fresh_page.wait_for_function('location.hash.startsWith("#/projects/") && location.hash.endsWith("/overview") && window.productionSearchContext?.productionId==="workspace-project"')
    fresh_page.locator('[data-tab-id=schedule]').click()
-   fresh_page.wait_for_function('new URL(location.href).searchParams.get("section")==="schedule"')
+   fresh_page.wait_for_function('location.hash.endsWith("/schedule")')
    group_schedule_url=fresh_page.url
    fresh_page.go_back()
    fresh_page.get_by_role('heading',name='오늘 할 일',exact=True).wait_for()
@@ -302,12 +320,23 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.go_back()
    fresh_page.get_by_role('heading',name='오늘 할 일',exact=True).wait_for()
 
+   overview=fresh_page.locator('.production-overview')
+   assert overview.evaluate('(el)=>getComputedStyle(el).backgroundImage')=='none'
+   assert overview.locator('.overview-team-section').count()==0
+   assert overview.locator('.overview-identity').bounding_box()['x']<overview.locator('.production-heading-actions').bounding_box()['x']
+   assert len(set(overview.locator('.overview-summary-cards strong').evaluate_all('(els)=>els.map(el=>getComputedStyle(el).fontSize)')))==1
+   overview.get_by_role('button',name='수정',exact=True).click()
+   overview.get_by_role('button',name='십자가 아이콘',exact=True).click()
+   overview.get_by_role('button',name='저장',exact=True).click()
+   fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").icon==="cross"')
    assert fresh_page.get_by_role('heading',name='업무 그룹',exact=True).is_visible()
    assert fresh_page.locator('.project-direct-content').bounding_box()['y']>fresh_page.locator('.overview-activity').bounding_box()['y']
    assert fresh_page.locator('.module-toolbar [data-module-add]').count()==1
    fresh_page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes("워크스페이스 프로젝트")')
    assert fresh_page.locator('.breadcrumbs button').all_text_contents()[:2]==['홈','워크스페이스 프로젝트']
    assert fresh_page.evaluate('window.activeWorkspace')=='home'
+   fresh_page.goto('https://pages.test:9443/production/@unknown')
+   fresh_page.wait_for_function('document.querySelector("#status")?.textContent.includes("등록되지 않은")')
    fresh_page.goto('https://pages.test:9443/production/nas.test:9444/')
    fresh_page.locator('#account-form').wait_for()
    fresh_page.goto('https://pages.test:9443/production/')
@@ -411,7 +440,7 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    assert not errors,errors
    fresh.close()
-   print('PASS: URL screen history/back/forward, reference detail/tab reload, project schedule tab reload, preserved NAS path, three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, manual update icon with save deferral and persisted local data, aligned floating panels, Hub search motion and removed previews, inline deletion, full-width divider, five accent colors and overview activity, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: browser-local NAS aliases/reload and unknown alias isolation, legacy URL migration, readable word routes, transparent left-aligned overview and editable project icon, URL screen history/back/forward, reference detail/tab reload, project schedule tab reload, preserved NAS path, three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, manual update icon with save deferral and persisted local data, aligned floating panels, Hub search motion and removed previews, inline deletion, full-width divider, five accent colors and overview activity, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

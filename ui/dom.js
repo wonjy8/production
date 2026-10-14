@@ -17,3 +17,6 @@ installItemMenus(document,target=>window.productionItemActions?.(target));
 window.appAuthReady?.then(()=>window.accountGuard?.(document));
 import {installHistory} from './history.js';
 installHistory();
+
+import {renderNASAliasSettings} from './nas-alias.js';
+window.renderNASAliasSettings=renderNASAliasSettings;
