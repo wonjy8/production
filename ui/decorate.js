@@ -3,7 +3,7 @@ import {installDropdowns} from './dropdowns.js';
 const exclude='.source-gallery button,.admin-home button,.merge-project,.sidebar-project,.refopen,.task-title,.calendar-event,.calendar-task,.assignee-trigger,.assignee-popover button,.status-options button,.navlink,.keep-label,.space-switch,.space-option,.sidebar-ref-link';
 export function decorateUI(root){root.querySelectorAll('button').forEach(b=>{
  const actionLabel=b.getAttribute('aria-label')||b.textContent.trim();
- b.classList.toggle('ui-add-action',/추가|^[＋+]$/.test(actionLabel)&&!b.matches('.hub-card,.module-tab-empty,.calendar-event,.calendar-task'));
+ b.classList.toggle('ui-add-action',/추가|^[＋+]$/.test(actionLabel)&&!b.matches('.hub-card,.module-tab-empty,.calendar-event,.calendar-task,.tt-slot,.calendar-add'));
  if(b.matches(exclude))return;
  const svg=b.querySelector('svg');
  if(!svg&&b.matches('[data-newblock]'))b.childNodes.forEach(n=>{if(n.nodeType===3){const clean=n.textContent.replace(/^\s*[＋+]\s*/, '');if(clean!==n.textContent)n.textContent=clean;}});

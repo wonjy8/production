@@ -369,7 +369,13 @@ with tempfile.TemporaryDirectory() as td:
    calendar_event=fresh_page.locator('.calendar-event').filter(has_text='날짜 이동 일정').first
    calendar_event.wait_for()
    calendar_transfer=fresh_page.evaluate_handle('new DataTransfer()')
+   calendar_transfer.evaluate('(transfer)=>{const native=transfer.setDragImage.bind(transfer);transfer.setDragImage=(image,x,y)=>{window.calendarDragPreview={text:image.textContent,width:image.getBoundingClientRect().width};native(image,x,y)}}')
+   calendar_plus=fresh_page.locator('.calendar-add').first
+   assert calendar_plus.bounding_box()['height']==24
+   assert calendar_plus.evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='0px'
+   assert calendar_plus.evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgba(0, 0, 0, 0)'
    calendar_event.dispatch_event('dragstart',{'dataTransfer':calendar_transfer})
+   assert fresh_page.evaluate('window.calendarDragPreview.text.includes("날짜 이동 일정")&&window.calendarDragPreview.width>0')
    target_day=fresh_page.locator('[data-calendar-date="'+calendar_dates['target']+'"]')
    target_day.dispatch_event('dragover',{'dataTransfer':calendar_transfer})
    target_day.dispatch_event('drop',{'dataTransfer':calendar_transfer})
@@ -429,6 +435,9 @@ with tempfile.TemporaryDirectory() as td:
    group_manage=fresh_page.locator('.teams-heading-actions').get_by_role('button',name='그룹 관리',exact=True)
    assert group_manage.evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='1px'
    assert group_manage.evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgba(0, 0, 0, 0)'
+   assert group_manage.bounding_box()['height']==36
+   assert fresh_page.locator('.team-head select').bounding_box()['height']==36, fresh_page.locator('.team-head select').evaluate('(el)=>({height:getComputedStyle(el).height,minHeight:getComputedStyle(el).minHeight,padding:getComputedStyle(el).padding,box:el.getBoundingClientRect().height})')
+   assert fresh_page.locator('.team-head .sort-direction button').bounding_box()['height']==36
 
    assert fresh_page.locator('.team-directory-item.active').evaluate('(el)=>{const probe=document.createElement("i");probe.style.cssText="color:var(--accent);background:var(--accent-soft)";el.append(probe);const selected=getComputedStyle(el),accent=getComputedStyle(probe);const ok=selected.color===accent.color&&selected.backgroundColor===accent.backgroundColor&&getComputedStyle(el.querySelector("span")).color===accent.color;probe.remove();return ok}')
 
@@ -484,6 +493,14 @@ with tempfile.TemporaryDirectory() as td:
    team_add.get_by_role('button',name='팀 추가',exact=True).click()
    team_add.wait_for(state='detached')
    assert fresh_page.get_by_role('button',name='팀 이름 변경',exact=True).inner_text()=='새 제작팀'
+   fresh_page.evaluate('()=>{const w=window.productionBridge.read(),p=w.productions.find(p=>p.id==="workspace-project");p.customTabs.push({id:"timeline-regression",name:"타임라인 검사",modules:[{id:"timeline-ui",kind:"timetable",title:"타임라인",config:{start:"2026-02-03",end:"2026-02-05",days:3,projectIds:[]}}]});window.productionBridge.write(w);window.productionRefresh()}')
+   fresh_page.locator('[data-tab-id="tab:timeline-regression"]').click()
+   timeline_slot=fresh_page.locator('.tt-slot').first
+   timeline_slot.wait_for(state='attached')
+   assert timeline_slot.evaluate('(el)=>!el.classList.contains("ui-add-action")')
+   assert timeline_slot.evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgba(0, 0, 0, 0)'
+   assert timeline_slot.evaluate('(el)=>Math.abs(el.getBoundingClientRect().height-parseFloat(getComputedStyle(el.closest(".timetable-module")).getPropertyValue("--tt-slot-height")))<1')
+
    fresh_page.locator('[data-tab-id=projects]').click()
    lifecycle_file=fresh_page.evaluate("""async()=>{const id=crypto.randomUUID(),r=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'text/plain'},body:'완료 당시 문서'});if(!r.ok)throw Error('fixture file');const w=window.productionBridge.read();w.productions.push({id:'film-flow',name:'단편영화 검증',status:'진행 중',description:'',tasks:[{id:'overdue-flow',title:'색보정 확인',done:false,stage:'편집',due:'2000-01-01'}],feedback:[{id:'feedback-flow',body:'최종 색상 수정',resolved:false}],schedules:[{id:'next-flow',title:'시사회',date:'2099-01-01'}],customTabs:[{id:'script-tab-flow',name:'시나리오',modules:[{id:'script-flow',kind:'text',title:'촬영 대본',text:'완료 당시 대본'},{id:'file-flow',kind:'file',title:'결과 문서',files:[{id,name:'결과.txt',kind:'file',mime:'text/plain'}]}]}],teams:[],memberIds:[]},{id:'brand-flow',name:'브랜드 영상 검증',status:'진행 중',description:'',tasks:[],customTabs:[],teams:[],memberIds:[]});window.productionBridge.write(w);window.productionRefresh();await window.flushDocumentModules();return id}""")
    fresh_page.locator('[data-production-id=film-flow]').click()
