@@ -1,3 +1,5 @@
+import {CALENDAR_DRAG_TYPE,moveCalendarItem} from './calendar-drag.js';
+import {delayedPointerDrag} from '../ui/touch-drag.js';
 import {itemMenuBindings} from '../ui/item-menu.js';
 import {assigneeLabel} from './people-model.js';
 import { useEffect, useRef, useState } from "react";
@@ -116,6 +118,7 @@ export function ProjectWorkspace({
   const [taskFilter, setTaskFilter] = useState("전체");
   const [taskQuery, setTaskQuery] = useState("");
   const [taskLayout, setTaskLayout] = useState<"list" | "board">("list");
+  const [calendarDropDay,setCalendarDropDay]=useState('');const calendarGesture=useRef<any>(null),suppressCalendarClick=useRef(0);
   const [calendarDraft,setCalendarDraft]=useState(false);
   const [calendarPending,setCalendarPending]=useState<string[]>([]);
   const completionTimers=useRef(new Map<string,ReturnType<typeof setTimeout>>());
@@ -182,6 +185,8 @@ export function ProjectWorkspace({
   function switchDraft(kind:string,event:any){if((kind==='schedule'&&scheduleEditor)||(kind==='task'&&taskEditor))return;const form=event.currentTarget.closest('dialog')?.querySelector('form'),data=form?new FormData(form):null;const title=data?field(data,'title'):scheduleEditor?.title||taskEditor?.title||'',date=data?(field(data,'date')||field(data,'due')):scheduleEditor?.date||taskEditor?.due||today;const startTime=data?field(data,'startTime'):'',endTime=data?field(data,'endTime'):'';if(kind==='task'){setScheduleEditor(null);setTaskEditor({...newTask(title),due:date,startTime,endTime,stage:stageOptions[0],description:data?field(data,'note'):''})}else{setTaskEditor(null);setScheduleEditor({id:crypto.randomUUID(),title,date,endDate:date,startTime,endTime,location:'',note:data?field(data,'description'):''})}}
   const draftPicker=calendarDraft&&<div className="calendar-kind-switch" role="group" aria-label="추가 항목"><button type="button" className="keep-label" aria-pressed={!!scheduleEditor} onClick={e=>switchDraft('schedule',e)}>일정</button><button type="button" className="keep-label" aria-pressed={!!taskEditor} onClick={e=>switchDraft('task',e)}>할 일</button></div>;
   function taskMenu(t:Task){return itemMenuBindings([{label:'이름 변경',icon:'edit',run:()=>setTaskEditor(t)},{label:'단계 이동',icon:'folder',run:()=>setTaskEditor(t)},{label:'삭제',icon:'trash',danger:true,run:()=>onChange(p=>({...p,tasks:p.tasks.filter(item=>item.id!==t.id),schedules:p.schedules.map(s=>s.taskId===t.id?{...s,taskId:''}:s)}))}])}
+  function moveDate(payload:any,target:string){if(payload?.projectId!==project.id){calendarGesture.current=null;setCalendarDropDay('');return}onChange(p=>moveCalendarItem(p,payload.kind,payload.id,target,payload.anchor));suppressCalendarClick.current=Date.now()+600;calendarGesture.current=null;setCalendarDropDay('')}
+  function dragBindings(kind:string,id:string,anchor:string){const payload={kind,id,anchor,projectId:project.id};return {...delayedPointerDrag({onPointerDown:(e:any)=>{if(e.pointerType==='mouse'||e.target.closest('.calendar-task-check'))return;calendarGesture.current={...payload,grid:e.currentTarget.closest('.calendar-grid')};},onPointerMove:(e:any)=>{const gesture=calendarGesture.current;if(!gesture?.grid)return;const cell=[...gesture.grid.querySelectorAll('[data-calendar-date]')].find((node:any)=>{const rect=node.getBoundingClientRect();return e.clientX>=rect.left&&e.clientX<=rect.right&&e.clientY>=rect.top&&e.clientY<=rect.bottom}) as HTMLElement|undefined;gesture.target=cell?.dataset.calendarDate||'';setCalendarDropDay(gesture.target)},onPointerUp:()=>{const gesture=calendarGesture.current;if(gesture?.target)moveDate(gesture,gesture.target);calendarGesture.current=null;setCalendarDropDay('')},onPointerCancel:()=>{calendarGesture.current=null;setCalendarDropDay('')}}),draggable:true,onDragStart:(e:any)=>{if(e.target.closest('.calendar-task-check')){e.preventDefault();return}e.dataTransfer.setData(CALENDAR_DRAG_TYPE,JSON.stringify(payload));e.dataTransfer.effectAllowed='move';calendarGesture.current=payload},onDragEnd:()=>{calendarGesture.current=null;setCalendarDropDay('');suppressCalendarClick.current=Date.now()+600}}}
   function scheduleMenu(s:Schedule){return itemMenuBindings([{label:'이름 변경',icon:'edit',run:()=>setScheduleEditor(s)},{label:'날짜 이동',icon:'calendar',run:()=>setScheduleEditor(s)},{label:'삭제',icon:'trash',danger:true,run:()=>onChange(p=>({...p,schedules:p.schedules.filter(item=>item.id!==s.id)}))}])}
   function taskRow(t: Task) {
     return (
@@ -393,17 +398,21 @@ export function ProjectWorkspace({
                 const value = dateString(d);
                 return (
                   <div
-                    className={`calendar-day ${d.getMonth() !== month.getMonth() ? "outside" : ""} ${value === today ? "today" : ""}`}
+                    className={`calendar-day ${d.getMonth() !== month.getMonth() ? "outside" : ""} ${value === today ? "today" : ""} ${calendarDropDay===value?"calendar-drop-target":""}`}
                     key={value}
+                    data-calendar-date={value}
+                    onDragOver={e=>{if(e.dataTransfer.types.includes(CALENDAR_DRAG_TYPE)){e.preventDefault();e.stopPropagation();e.dataTransfer.dropEffect='move';setCalendarDropDay(value)}}}
+                    onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setCalendarDropDay('')}}
+                    onDrop={e=>{if(!e.dataTransfer.types.includes(CALENDAR_DRAG_TYPE))return;e.preventDefault();e.stopPropagation();try{moveDate(JSON.parse(e.dataTransfer.getData(CALENDAR_DRAG_TYPE)),value)}catch{setCalendarDropDay('')}}}
                   >
                     <div className="calendar-day-heading"><span aria-current={value===today?"date":undefined}>{d.getDate()}{value===today&&<small>오늘</small>}</span><button type="button" className="icon-button calendar-add" aria-label={value+" 할 일·일정 추가"} title="추가" onClick={()=>openCalendarDraft(value)}><Plus size={14}/></button></div>
                     {project.schedules
-                      .filter((s) => s.date <= value && s.endDate >= value)
+                      .filter((s) => s.date <= value && (s.endDate||s.date) >= value)
                       .map((s) => (
                         <button
                           key={s.id}
-                          {...scheduleMenu(s)} className="calendar-event"
-                          onClick={() => {setCalendarDraft(false);setScheduleEditor(s)}}
+                          {...scheduleMenu(s)} {...dragBindings('schedule',s.id,value)} className="calendar-event"
+                          onClick={() => {if(suppressCalendarClick.current>Date.now())return;setCalendarDraft(false);setScheduleEditor(s)}}
                           title={s.title}
                         >
                           <span className="calendar-event-title">{s.title}</span>{taskSources?.[s.id]&&<small className="project-name-chip">{taskSources[s.id]}</small>}
@@ -412,7 +421,7 @@ export function ProjectWorkspace({
                     {project.tasks
                       .filter((t) => t.due === value&&!t.done)
                       .map((t) => (
-                        <div key={t.id} {...taskMenu(t)} className={'calendar-task-row '+(calendarPending.includes(t.id)?'pending':'')}><button type="button" className="calendar-task-check keep-label" aria-label={t.title+' 완료'} aria-pressed={calendarPending.includes(t.id)} onClick={()=>completeCalendarTask(t.id)}>{calendarPending.includes(t.id)&&<Check size={12}/>}</button><button className="calendar-task keep-label" onClick={()=>{setCalendarDraft(false);setTaskEditor(t)}} title={t.title}><span className="calendar-task-title">{t.title}</span>{taskSources?.[t.id]&&<small className="project-name-chip">{taskSources[t.id]}</small>}</button></div>
+                        <div key={t.id} {...taskMenu(t)} {...dragBindings('task',t.id,value)} className={'calendar-task-row '+(calendarPending.includes(t.id)?'pending':'')}><button type="button" className="calendar-task-check keep-label" aria-label={t.title+' 완료'} aria-pressed={calendarPending.includes(t.id)} onClick={()=>completeCalendarTask(t.id)}>{calendarPending.includes(t.id)&&<Check size={12}/>}</button><button className="calendar-task keep-label" onClick={()=>{if(suppressCalendarClick.current>Date.now())return;setCalendarDraft(false);setTaskEditor(t)}} title={t.title}><span className="calendar-task-title">{t.title}</span>{taskSources?.[t.id]&&<small className="project-name-chip">{taskSources[t.id]}</small>}</button></div>
                       ))}
                     {project.due === value && (
                       <span className="calendar-deadline">프로젝트 마감</span>

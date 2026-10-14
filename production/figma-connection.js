@@ -23,3 +23,4 @@ export function figmaDesignURL(raw){
  const url=new URL(source);if(url.pathname==='/embed')return figmaFileURL(url.searchParams.get('url')||'');url.hostname='www.figma.com';url.searchParams.delete('embed-host');url.searchParams.delete('embed_host');return figmaFileURL(url.href);
 }
 export function figmaEmbedURL(raw){const source=figmaModuleURL(raw);if(!source)return '';return figmaFileURL(source)?'https://www.figma.com/embed?embed_host=share&url='+encodeURIComponent(source):source}
+export function figmaFileTitle(raw){const source=figmaDesignURL(raw);if(!source)return '';try{const parts=new URL(source).pathname.split('/').filter(Boolean);return parts.length>=3?decodeURIComponent(parts.slice(2).join('/')).replace(/-+/g,' ').trim():''}catch{return ''}}

@@ -1,3 +1,4 @@
+import {projectIconPaths} from './project-icon-paths.js';
 // Production icon pack: 24px grid, 1.75px stroke, rounded caps and joins.
 export const icons={
  cross:'<path d="M10 3h4v5h5v4h-5v9h-4v-9H5V8h5Z"/>',
@@ -58,7 +59,11 @@ export const icons={
  print:'<path d="M6 8V3h12v5M6 17H3V9h18v8h-3M6 14h12v7H6ZM17 11h.01"/>',
  drag:'<circle cx="8" cy="5" r="1"/><circle cx="16" cy="5" r="1"/><circle cx="8" cy="12" r="1"/><circle cx="16" cy="12" r="1"/><circle cx="8" cy="19" r="1"/><circle cx="16" cy="19" r="1"/>'
 };
-export function iconSVG(name){return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(icons[name]||icons.plus)+'</svg>';}
+Object.assign(icons,projectIconPaths);
+// Latin cross: long lower stem, rather than the medical cross silhouette.
+icons.cross='<path d="M12 3v18M6 8h12"/>';
+icons.figma='<g stroke="none"><path fill="#f24e1e" d="M6 2h6v7H6a3.5 3.5 0 0 1 0-7Z"/><path fill="#ff7262" d="M12 2h5a3.5 3.5 0 0 1 0 7h-5Z"/><path fill="#a259ff" d="M6 9h6v7H6a3.5 3.5 0 0 1 0-7Z"/><circle fill="#1abcfe" cx="15.5" cy="12.5" r="3.5"/><path fill="#0acf83" d="M6 16h6v3.5A3.5 3.5 0 1 1 6 16Z"/></g>';
+export function iconSVG(name){if(String(name).startsWith('emoji:'))return '<span class="ui-icon ui-emoji" aria-hidden="true">'+String(name).slice(6).slice(0,32).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</span>';return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(icons[name]||icons.plus)+'</svg>';}
 export function inferIcon(label){if(/사이드바|목차/.test(label))return 'menu';if(/새 프로젝트|새 프로덕션/.test(label))return 'plus';if(/닫기|취소|삭제.*모듈|×|지우기/.test(label))return 'close';if(/휴지통|삭제/.test(label))return 'trash';if(/복사|복제/.test(label))return 'copy';if(/공유/.test(label))return 'share';if(/인쇄|PDF/.test(label))return 'print';if(/저장/.test(label))return 'save';if(/복원|다시|초기화/.test(label))return 'refresh';if(/즐겨찾기|☆|★/.test(label))return 'star';if(/숨기기/.test(label))return 'eyeOff';if(/표시/.test(label))return 'eye';if(/위로|↑/.test(label))return 'up';if(/아래로|↓/.test(label))return 'down';if(/실행 취소|↶/.test(label))return 'undo';if(/목록/.test(label))return 'list';if(/보드/.test(label))return 'board';if(/갤러리|카드/.test(label))return 'projects';if(/레퍼런스/.test(label))return 'reference';if(/프로젝트/.test(label))return 'projects';if(/프로덕션/.test(label))return 'folder';if(/담당자/.test(label))return 'users';if(/수정|편집/.test(label))return 'edit';if(/링크/.test(label))return 'link';if(/사진|이미지/.test(label))return 'reference';if(/영상/.test(label))return 'video';if(/파일|자료/.test(label))return 'file';if(/텍스트/.test(label))return 'text';if(/표|붙여넣기/.test(label))return 'table';if(/모듈 이동/.test(label))return 'drag';if(/일정/.test(label))return 'calendar';if(/피드백/.test(label))return 'feedback';if(/할 일|체크/.test(label))return 'tasks';if(/보관/.test(label))return 'archive';if(/다운로드/.test(label))return 'download';if(/검색/.test(label))return 'search';if(/추가|만들기|등록|＋|\+/.test(label))return 'plus';return 'plus';}
 
 // The app shell is constructed before the deferred UI bundle finishes loading.

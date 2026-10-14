@@ -1,3 +1,4 @@
+import {ProjectIconPicker} from './ProjectIconPicker';
 import {CompletionReview} from './CompletionReview';
 import {ArchiveLibrary,duplicateFiles} from './ArchiveLibrary';
 import {archiveProject,completionTransitions,projectHealth} from './project-lifecycle.js';
@@ -94,8 +95,7 @@ function App({initialProject,initialSection,initialCreate,initialProduction}:{in
 
  if(!current&&!production&&section==='dashboard'&&['superadmin','admin'].includes((window as any).appAccount?.role))return <div className="merged-workspace"><ArchiveLibrary workspace={w} onChange={change}/><AdminHome workspace={w} onChange={change} onOpen={(origin:any,kind:string,id:string)=>{if(origin.projectId){openLinked(origin.projectId,kind,id);return true}if(origin.productionId){setActiveProduction(origin.productionId);setMode(kind==='schedule'?'schedule':kind==='task'?'tasks':'projects');setSection('overview');bridge().production(origin.productionId);return true}return false}} onReferences={async(r:any)=>{await (window as any).openRefs();await (window as any).openReferenceModules(r)}}/></div>;
  return <div className={'merged-workspace'+((current||production)?' project-page':'')}>
- {completionDialog}<ArchiveLibrary workspace={w} onChange={change} ownerId={(current||production)?.id}/>
- {(current||production)&&<header className="project-page-heading"><h1>{(current||production)!.name}</h1></header>}
+ {completionDialog}{(current||production)?<header className="project-page-heading"><ProjectIconPicker label={current?'업무 그룹':'프로젝트'} icon={(current||production)!.icon} onChange={icon=>{if(current)edit(p=>({...p,icon}));else change(w=>({...w,productions:w.productions.map(p=>p.id===production!.id?{...p,icon}:p)}))}}/><h1>{(current||production)!.name}</h1><ArchiveLibrary workspace={w} onChange={change} ownerId={(current||production)!.id}/></header>:<ArchiveLibrary workspace={w} onChange={change}/>}
  {current?<>
  <nav className="merge-sections" aria-label="프로젝트 메뉴">{customTabButtons}</nav>
  <div className="project-tab-content" role="tabpanel" aria-label={activeTab?.name||sections.find(([id])=>id===section)?.[1]||'프로젝트'} key={current.id+':'+section}>

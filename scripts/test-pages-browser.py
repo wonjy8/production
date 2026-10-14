@@ -218,13 +218,13 @@ with tempfile.TemporaryDirectory() as td:
    page.get_by_role('button',name='미디어',exact=True).click()
    page.get_by_role('button',name=re.compile('Figma 임베드')).click()
    page.get_by_label('Figma 임베드 코드 또는 링크',exact=True).fill('https://www.figma.com/design/Ab123/Example')
-   page.get_by_label('이 주소를 다음 Figma 모듈에서도 사용',exact=True).check()
+   assert page.get_by_label('이 주소를 다음 Figma 모듈에서도 사용',exact=True).count()==0
    page.locator('dialog[open]').get_by_role('button',name='추가',exact=True).click()
    assert page.locator('.embed-frame').count()==1
    page.locator('.custom-module-tab [data-module-add]').click()
    page.get_by_role('button',name='미디어',exact=True).click()
    page.get_by_role('button',name=re.compile('Figma 임베드')).click()
-   assert page.get_by_label('Figma 임베드 코드 또는 링크',exact=True).input_value()=='https://www.figma.com/design/Ab123/Example'
+   assert page.get_by_label('Figma 임베드 코드 또는 링크',exact=True).input_value()==''
    page.keyboard.press('Escape')
    figma_embed='https://embed.figma.com/design/EmbedExample123/%EB%94%94%EC%9E%90%EC%9D%B8?embed-host=share'
    page.route('https://embed.figma.com/**',lambda route:route.fulfill(body='<p>Figma embed fixture</p>',content_type='text/html'))
@@ -236,10 +236,17 @@ with tempfile.TemporaryDirectory() as td:
    figma_module=page.locator('.workspace-module').filter(has=page.locator('iframe.embed-frame')).last
    figma_module.locator('iframe.embed-frame').wait_for()
    assert figma_module.locator('iframe.embed-frame').get_attribute('src')==figma_embed
+   assert figma_module.locator('.figma-bookmark strong').inner_text()=='디자인'
+   assert figma_module.locator('.figma-bookmark small').count()==0
+   assert figma_module.locator('.figma-module-actions').count()==0
+   assert figma_module.locator('.figma-bookmark').bounding_box()['height']<60
+
    figma_module.get_by_role('button',name='임베드 수정',exact=True).click()
    page.get_by_label('임베드 코드 또는 링크 수정',exact=True).fill('<iframe src="'+figma_embed+'&amp;node-id=1-2"></iframe>')
+   figma_module.get_by_label('Figma 파일 제목',exact=True).fill('로고 디자인')
    figma_module.get_by_role('button',name='저장',exact=True).click()
    assert figma_module.locator('iframe.embed-frame').get_attribute('src')==figma_embed+'&node-id=1-2'
+   assert figma_module.locator('.figma-bookmark strong').inner_text()=='로고 디자인'
    page.locator('.custom-module-tab [data-module-add]').click()
    page.get_by_role('button',name='기본',exact=True).click()
    assert page.get_by_role('button',name=re.compile('Wordcraft 문서')).count()==0
@@ -357,22 +364,56 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.go_back()
    fresh_page.get_by_role('heading',name='오늘 할 일',exact=True).wait_for()
 
+   calendar_dates=fresh_page.evaluate('''()=>{const day=offset=>{const d=new Date();d.setDate(d.getDate()+offset);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};const w=window.productionBridge.read(),p=w.productions.find(p=>p.id==="workspace-project");p.tasks=[{id:"drag-task",title:"날짜 이동 할 일",done:false,due:day(2),stage:"기획"}];p.schedules=[{id:"drag-event",title:"날짜 이동 일정",date:day(2),endDate:day(4),startTime:"10:00",endTime:"11:00"}];p.customTabs=[{id:"calendar-module-tab",name:"일정 모듈",modules:[{id:"calendar-module",kind:"schedule"}]}];window.productionBridge.write(w);window.productionRefresh();return {start:day(2),target:day(3),end:day(5),taskTarget:day(6),moduleTarget:day(4),moduleEnd:day(6)}}''')
+   fresh_page.locator('[data-tab-id=schedule]').click()
+   calendar_event=fresh_page.locator('.calendar-event').filter(has_text='날짜 이동 일정').first
+   calendar_event.wait_for()
+   calendar_transfer=fresh_page.evaluate_handle('new DataTransfer()')
+   calendar_event.dispatch_event('dragstart',{'dataTransfer':calendar_transfer})
+   target_day=fresh_page.locator('[data-calendar-date="'+calendar_dates['target']+'"]')
+   target_day.dispatch_event('dragover',{'dataTransfer':calendar_transfer})
+   target_day.dispatch_event('drop',{'dataTransfer':calendar_transfer})
+   fresh_page.wait_for_function('(date)=>window.productionBridge.read().productions.find(p=>p.id==="workspace-project").schedules[0].date===date',arg=calendar_dates['target'])
+   assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").schedules[0].endDate')==calendar_dates['end']
+   calendar_task=fresh_page.locator('.calendar-task-row').filter(has_text='날짜 이동 할 일').first
+   task_transfer=fresh_page.evaluate_handle('new DataTransfer()')
+   calendar_task.dispatch_event('dragstart',{'dataTransfer':task_transfer})
+   fresh_page.locator('[data-calendar-date="'+calendar_dates['taskTarget']+'"]').dispatch_event('drop',{'dataTransfer':task_transfer})
+   fresh_page.wait_for_function('(date)=>window.productionBridge.read().productions.find(p=>p.id==="workspace-project").tasks[0].due===date',arg=calendar_dates['taskTarget'])
+   fresh_page.locator('[data-tab-id="tab:calendar-module-tab"]').click()
+   module_event=fresh_page.locator('.workspace-module .calendar-event').filter(has_text='날짜 이동 일정').first
+   module_event.wait_for()
+   module_transfer=fresh_page.evaluate_handle('new DataTransfer()')
+   module_event.dispatch_event('dragstart',{'dataTransfer':module_transfer})
+   fresh_page.locator('.workspace-module [data-calendar-date="'+calendar_dates['moduleTarget']+'"]').dispatch_event('drop',{'dataTransfer':module_transfer})
+   fresh_page.wait_for_function('(date)=>window.productionBridge.read().productions.find(p=>p.id==="workspace-project").schedules[0].date===date',arg=calendar_dates['moduleTarget'])
+   assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").schedules[0].endDate')==calendar_dates['moduleEnd']
+   fresh_page.locator('[data-tab-id=projects]').click()
    overview=fresh_page.locator('.production-overview')
    assert overview.evaluate('(el)=>getComputedStyle(el).backgroundImage')=='none'
    assert overview.locator('.overview-team-section').count()==0
-   assert overview.locator('.overview-identity').bounding_box()['x']<overview.locator('.production-heading-actions').bounding_box()['x']
+   assert fresh_page.locator('.project-page-heading .project-icon-choice').bounding_box()['x']<fresh_page.locator('.project-page-heading h1').bounding_box()['x']
    assert overview.locator('.overview-health button').count()==3
    assert overview.get_by_text('기한 초과',exact=True).is_visible()
    assert overview.get_by_text('현재 단계',exact=False).is_visible()
-   overview.get_by_role('button',name='프로젝트 아이콘 변경',exact=True).click()
+   fresh_page.get_by_role('button',name='프로젝트 아이콘 변경',exact=True).click()
    fresh_page.get_by_role('dialog',name='프로젝트 아이콘 선택',exact=True).get_by_role('button',name='십자가 아이콘',exact=True).click()
    overview.get_by_role('button',name='수정',exact=True).click()
    assert overview.get_by_label('프로젝트 아이콘 검색',exact=True).count()==0
    overview.get_by_role('button',name='저장',exact=True).click()
    fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").icon==="cross"')
+   fresh_page.get_by_role('button',name='프로젝트 아이콘 변경',exact=True).click()
+   icon_menu=fresh_page.get_by_role('dialog',name='프로젝트 아이콘 선택',exact=True)
+   assert icon_menu.locator('.project-icon-grid button span:not(.ui-icon)').count()==0
+   icon_menu.get_by_role('tab',name=re.compile('^이모지')).click()
+   icon_menu.get_by_label('프로젝트 아이콘 검색',exact=True).fill('🎬')
+   icon_menu.get_by_role('button',name='🎬 이모지',exact=True).click()
+   fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").icon==="emoji:🎬"')
+   assert fresh_page.locator('[data-production-id=workspace-project] .ui-emoji').inner_text()=='🎬'
+
    assert fresh_page.get_by_role('heading',name='업무 그룹',exact=True).is_visible()
    assert fresh_page.locator('.project-direct-content').bounding_box()['y']>fresh_page.locator('.overview-activity').bounding_box()['y']
-   assert fresh_page.locator('.module-toolbar [data-module-add]').count()==1
+   assert fresh_page.locator('.project-direct-content .module-toolbar [data-module-add]').count()==1
    fresh_page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes("워크스페이스 프로젝트")')
    assert fresh_page.locator('.breadcrumbs button').all_text_contents()[:2]==['홈','워크스페이스 프로젝트']
    assert fresh_page.evaluate('window.activeWorkspace')=='home'
@@ -624,7 +665,7 @@ with tempfile.TemporaryDirectory() as td:
    failure.get_by_role('button',name='연결 확인',exact=True).click()
    assert '인터넷' in failure.locator('#boot-reason').inner_text()
    failure.close()
-   print('PASS: completion checks and frozen archive files, independent/link reuse, missing source reconnection, NAS archive capability/persistence, loading failure alternatives, browser-local NAS aliases/reload and unknown alias isolation, legacy URL migration, readable word routes, transparent left-aligned overview and editable project icon, URL screen history/back/forward, reference detail/tab reload, project schedule tab reload, preserved NAS path, three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, manual update icon with save deferral and persisted local data, aligned floating panels, Hub search motion and removed previews, inline deletion, full-width divider, five accent colors and overview activity, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   print('PASS: schedule/task date drag in tabs and modules, emoji selection and sidebar sync, compact named Figma bookmark, completion checks and frozen archive files, independent/link reuse, missing source reconnection, NAS archive capability/persistence, loading failure alternatives, browser-local NAS aliases/reload and unknown alias isolation, legacy URL migration, readable word routes, transparent left-aligned overview and editable project icon, URL screen history/back/forward, reference detail/tab reload, project schedule tab reload, preserved NAS path, three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, manual update icon with save deferral and persisted local data, aligned floating panels, Hub search motion and removed previews, inline deletion, full-width divider, five accent colors and overview activity, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

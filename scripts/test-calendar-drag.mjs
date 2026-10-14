@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {calendarDate,moveCalendarItem} from '../production/calendar-drag.js';
+import {figmaFileTitle} from '../production/figma-connection.js';
+import {emojiCount} from '../production/emoji-pack.js';
+import {iconSVG,icons} from '../ui/icons.js';
+const project={due:'2026-10-14',tasks:[{id:'a',due:'2026-10-14',title:'할 일'},{id:'b',due:'2026-10-14'}],schedules:[{id:'s',date:'2026-10-14',endDate:'2026-10-16',startTime:'10:00',endTime:'11:00',projectLinked:true}]};
+let next=moveCalendarItem(project,'schedule','s','2026-10-20','2026-10-15');assert.equal(next.schedules[0].date,'2026-10-19');assert.equal(next.schedules[0].endDate,'2026-10-21');assert.equal(next.schedules[0].startTime,'10:00');assert.equal(next.schedules[0].projectLinked,true);assert.equal(project.schedules[0].date,'2026-10-14');
+next=moveCalendarItem(project,'task','a','2026-11-01');assert.equal(next.tasks[0].due,'2026-11-01');assert.equal(next.tasks[1].due,'2026-10-14');assert.equal(calendarDate('2026-02-30'),false);assert.equal(calendarDate('2028-02-29'),true);assert.equal(moveCalendarItem(project,'schedule','s','invalid'),project);
+assert.equal(figmaFileTitle('https://embed.figma.com/design/key/%EB%A1%9C%EA%B3%A0-%EB%94%94%EC%9E%90%EC%9D%B8?embed-host=share'),'로고 디자인');assert.ok(emojiCount>1800);assert.match(iconSVG('emoji:🎬'),/🎬/);assert.doesNotMatch(iconSVG('emoji:<script>'),/<script>/);assert.match(icons.figma,/f24e1e/);
+console.log('Calendar drag: task and multi-day schedule dates, preserved linked deadlines/duration/times, leap-day validation; complete base emoji pack and Figma titles passed');
