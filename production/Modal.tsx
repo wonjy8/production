@@ -17,6 +17,9 @@ export function Modal({
     if (!trigger.current)
       trigger.current = (element?.getRootNode() as ShadowRoot)?.activeElement as HTMLElement;
     element?.showModal();
+    const active = (element?.getRootNode() as ShadowRoot)?.activeElement;
+    if (active?.matches('[data-control-icon="close"]'))
+      element?.focus({ preventScroll: true });
     return () => {
       element?.close();
       trigger.current?.focus();
@@ -25,6 +28,7 @@ export function Modal({
   return (
     <dialog
       ref={dialog}
+      tabIndex={-1}
       className="create-dialog editor-dialog"
       aria-label={title}
       onCancel={(e) => {
