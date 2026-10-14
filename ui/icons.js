@@ -1,6 +1,6 @@
 // Production icon pack: 24px grid, 1.75px stroke, rounded caps and joins.
 export const icons={
- cross:'<path d="M10 2h4v7h7v4h-7v9h-4v-9H3V9h7Z"/>',
+ cross:'<path d="M10 3h4v5h5v4h-5v9h-4v-9H5V8h5Z"/>',
  church:'<path d="M12 2v7m-3-4h6M4 22V11l8-5 8 5v11M9 22v-7h6v7M3 22h18"/>',
  bible:'<path d="M5 3h14v18H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Zm-2 15a3 3 0 0 1 3-3h13M12 6v6m-3-3h6"/>',
  dove:'<path d="M3 16c4 1 6-1 8-4l-2-7 5 3 4-4 1 6 3 3-5 1c-2 5-8 7-14 2Z"/>',

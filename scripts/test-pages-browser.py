@@ -149,10 +149,21 @@ with tempfile.TemporaryDirectory() as td:
    card=page.get_by_role('button',name=re.compile('^체크리스트'))
    assert card.locator('strong').inner_text()=='체크리스트'
    assert card.locator('.hub-preview').count()==0
+   assert page.locator('.hub-switch [role=tab]').all_text_contents()==['모듈','템플릿','불러오기']
+   page.get_by_role('tab',name='불러오기',exact=True).click()
+   page.locator('.hub-import-content .module-browser').wait_for()
+   page.get_by_role('tab',name='모듈',exact=True).click()
+   assert page.get_by_role('button',name='자동 정렬',exact=True).count()==0
+   assert page.locator('.module-toolbar').get_by_role('button',name='불러오기',exact=True).count()==0
+
    assert abs(page.locator('.hub-sidebar').bounding_box()['y']-page.locator('#sidebar').bounding_box()['y'])<2
    assert abs(page.locator('.hub-sidebar').bounding_box()['height']-page.locator('#sidebar').bounding_box()['height'])<2
    page.get_by_role('button',name='Hub 검색 열기',exact=True).click()
    page.get_by_label('Hub 검색',exact=True).fill('체크리스트')
+   assert page.get_by_label('Hub 검색',exact=True).evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='0px'
+   assert page.locator('.hub-search').evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='1px'
+   assert abs(page.locator('.hub-search').bounding_box()['height']-page.get_by_role('button',name='Hub 검색 닫기',exact=True).bounding_box()['height'])<2
+
    assert not page.locator('.hub-categories').count()
    page.get_by_role('button',name='Hub 검색 닫기',exact=True).click()
    if os.environ.get('HUB_SCREENSHOT'): page.screenshot(path=os.environ['HUB_SCREENSHOT'],full_page=True)
@@ -345,11 +356,13 @@ with tempfile.TemporaryDirectory() as td:
    assert overview.evaluate('(el)=>getComputedStyle(el).backgroundImage')=='none'
    assert overview.locator('.overview-team-section').count()==0
    assert overview.locator('.overview-identity').bounding_box()['x']<overview.locator('.production-heading-actions').bounding_box()['x']
-   assert overview.locator('.overview-summary-cards button').count()==3
+   assert overview.locator('.overview-health button').count()==3
    assert overview.get_by_text('기한 초과',exact=True).is_visible()
    assert overview.get_by_text('현재 단계',exact=False).is_visible()
+   overview.get_by_role('button',name='프로젝트 아이콘 변경',exact=True).click()
+   fresh_page.get_by_role('dialog',name='프로젝트 아이콘 선택',exact=True).get_by_role('button',name='십자가 아이콘',exact=True).click()
    overview.get_by_role('button',name='수정',exact=True).click()
-   overview.get_by_role('button',name='십자가 아이콘',exact=True).click()
+   assert overview.get_by_label('프로젝트 아이콘 검색',exact=True).count()==0
    overview.get_by_role('button',name='저장',exact=True).click()
    fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").icon==="cross"')
    assert fresh_page.get_by_role('heading',name='업무 그룹',exact=True).is_visible()
