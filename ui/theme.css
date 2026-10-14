@@ -198,3 +198,23 @@ html{overflow-y:scroll;scrollbar-gutter:stable}
 .team-empty-insert{height:2px;margin:8px;background:var(--accent);border-radius:1px}
 
 body[data-motion=off]{--overview-edit-animation:none}
+
+.task-board>section{background:transparent!important}
+.project-icon-popover{overscroll-behavior:contain!important;overflow-y:auto!important;touch-action:pan-y}
+.icon-picker-search{display:grid;gap:6px}.icon-picker-search input,.icon-picker-search input:focus,.icon-picker-search input:focus-visible{outline:none!important;box-shadow:none!important;border:1px solid var(--control-border)!important}
+input[type=search]:focus,input[type=search]:focus-visible{outline:none!important;box-shadow:none!important;border-color:var(--accent)!important}
+:is(.hub-search,.assignee-search,.app-search-head):focus-within{outline:none!important;box-shadow:none!important}
+:is(.hub-search,.assignee-search)>input[type=search],:is(.hub-search,.assignee-search)>input[type=search]:focus{border:0!important;outline:none!important;box-shadow:none!important}
+.project-icon-picker .icon-pack-tabs{display:flex;gap:8px;border-bottom:1px solid var(--border);padding:0;margin:12px 0 18px;background:transparent}
+.project-icon-picker .icon-pack-tabs>button.keep-label{position:relative;flex:1;min-height:40px!important;background:transparent!important;border:0!important;border-radius:0!important;color:var(--text-muted)!important}
+.project-icon-picker .icon-pack-tabs>button[aria-selected=true]{color:var(--accent)!important;font-weight:600!important}
+.project-icon-picker .icon-pack-tabs>button[aria-selected=true]::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:3px;background:var(--accent);border-radius:2px}
+.ui-photo-icon{object-fit:cover;border-radius:30%;display:block}.project-identity-icon>.ui-photo-icon{width:100%!important;height:100%!important;max-width:52px;max-height:52px}
+.sidebar-project>.ui-photo-icon{width:18px!important;height:18px!important;min-width:18px!important;flex:none!important;margin-right:8px}
+.icon-photo-editor{display:grid;gap:12px}.icon-photo-upload{display:grid;gap:8px}.icon-photo-preview{width:160px;height:160px;object-fit:cover;border-radius:30%;justify-self:center;background:var(--accent-soft)}.icon-photo-editor label{display:grid;gap:6px}
+
+.sidebar-project{position:relative}.sidebar-project.sidebar-insert-before::after,.sidebar-project.sidebar-insert-after::after{content:"";position:absolute;left:8px;right:8px;height:2px;background:var(--accent);pointer-events:none}
+.sidebar-project.sidebar-insert-before::after{top:0}.sidebar-project.sidebar-insert-after::after{bottom:0}
+
+input:is([type=search],[aria-label$="검색"],[placeholder*="검색"]):is(:focus,:focus-visible){outline:none!important;box-shadow:none!important;border-color:var(--accent)!important}
+:is(.hub-search,.assignee-search)>input,:is(.hub-search,.assignee-search)>input:focus{outline:none!important;box-shadow:none!important;border:0!important}

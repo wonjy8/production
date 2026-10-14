@@ -416,6 +416,8 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.reload()
    fresh_page.locator('.work-task').first.wait_for()
    assert fresh_page.locator('.work-task').last.inner_text().startswith('순서 이동 할 일')
+   assert fresh_page.get_by_role('button',name='보드',exact=True).get_attribute('aria-pressed')=='true'
+   assert fresh_page.locator('.task-board>section').first.evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgba(0, 0, 0, 0)'
 
    fresh_page.locator('[data-tab-id=projects]').click()
    overview=fresh_page.locator('.production-overview')
@@ -452,6 +454,29 @@ with tempfile.TemporaryDirectory() as td:
    icon_menu.get_by_role('button',name='🎬 이모지',exact=True).click()
    fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").icon==="emoji:🎬"')
    assert fresh_page.locator('[data-production-id=workspace-project] .ui-emoji').inner_text()=='🎬'
+   fresh_page.get_by_role('button',name='프로젝트 아이콘 변경',exact=True).click()
+   icon_menu=fresh_page.get_by_role('dialog',name='프로젝트 아이콘 선택',exact=True)
+   assert icon_menu.get_by_label('프로젝트 아이콘 검색').evaluate('(el)=>getComputedStyle(el).outlineStyle')=='none'
+   assert icon_menu.evaluate('(el)=>getComputedStyle(el).overscrollBehaviorY')=='contain'
+   icon_menu.get_by_role('tab',name='아이콘',exact=True).click()
+   assert icon_menu.get_by_role('button',name='노트북 아이콘',exact=True).count()==1
+   assert icon_menu.get_by_role('button',name='피자 아이콘',exact=True).count()==1
+   icon_menu.evaluate('(el)=>{el.scrollTop=el.scrollHeight}')
+   scroll_before=fresh_page.evaluate('window.scrollY')
+   icon_box=icon_menu.bounding_box()
+   fresh_page.mouse.move(icon_box['x']+icon_box['width']/2,icon_box['y']+icon_box['height']-12)
+   fresh_page.mouse.wheel(0,500)
+   fresh_page.wait_for_timeout(120)
+   assert fresh_page.evaluate('window.scrollY')==scroll_before
+   icon_menu.evaluate('(el)=>{el.scrollTop=0}')
+   icon_menu.get_by_role('tab',name='사진',exact=True).click()
+   icon_menu.get_by_label('아이콘 사진 업로드').set_input_files({'name':'icon.png','mimeType':'image/png','buffer':base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')})
+   icon_menu.get_by_role('button',name='사진 적용',exact=True).wait_for()
+   assert icon_menu.locator('canvas').evaluate('(el)=>el.width===256&&el.height===256')
+   icon_menu.get_by_role('button',name='사진 적용',exact=True).click()
+   fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="workspace-project").icon.startsWith("image:data:image/")')
+   assert fresh_page.locator('[data-production-id=workspace-project] .ui-photo-icon').count()==1
+
 
    assert fresh_page.get_by_role('heading',name='업무 그룹',exact=True).is_visible()
    assert fresh_page.locator('.project-direct-content').bounding_box()['y']>fresh_page.locator('.overview-activity').bounding_box()['y']
@@ -553,6 +578,19 @@ with tempfile.TemporaryDirectory() as td:
 
    fresh_page.locator('[data-tab-id=projects]').click()
    lifecycle_file=fresh_page.evaluate("""async()=>{const id=crypto.randomUUID(),r=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'text/plain'},body:'완료 당시 문서'});if(!r.ok)throw Error('fixture file');const w=window.productionBridge.read();w.productions.push({id:'film-flow',name:'단편영화 검증',status:'진행 중',description:'',tasks:[{id:'overdue-flow',title:'색보정 확인',done:false,stage:'편집',due:'2000-01-01'}],feedback:[{id:'feedback-flow',body:'최종 색상 수정',resolved:false}],schedules:[{id:'next-flow',title:'시사회',date:'2099-01-01'}],customTabs:[{id:'script-tab-flow',name:'시나리오',modules:[{id:'script-flow',kind:'text',title:'촬영 대본',text:'완료 당시 대본'},{id:'file-flow',kind:'file',title:'결과 문서',files:[{id,name:'결과.txt',kind:'file',mime:'text/plain'}]}]}],teams:[],memberIds:[]},{id:'brand-flow',name:'브랜드 영상 검증',status:'진행 중',description:'',tasks:[],customTabs:[],teams:[],memberIds:[]});window.productionBridge.write(w);window.productionRefresh();await window.flushDocumentModules();return id}""")
+
+   sidebar_transfer=fresh_page.evaluate_handle('new DataTransfer()')
+   fresh_page.locator('#sidebar-projects [data-production-id=brand-flow]').dispatch_event('dragstart',{'dataTransfer':sidebar_transfer})
+   sidebar_target=fresh_page.locator('#sidebar-projects [data-production-id=workspace-project]')
+   sidebar_y=sidebar_target.bounding_box()['y']+1
+   sidebar_target.dispatch_event('dragover',{'dataTransfer':sidebar_transfer,'clientY':sidebar_y})
+   sidebar_target.dispatch_event('drop',{'dataTransfer':sidebar_transfer,'clientY':sidebar_y})
+   assert fresh_page.locator('#sidebar-projects .sidebar-project').first.get_attribute('data-production-id')=='brand-flow'
+   fresh_page.evaluate('async()=>{await window.flushDocumentModules()}')
+   fresh_page.reload()
+   fresh_page.locator('#sidebar-projects .sidebar-project').first.wait_for()
+   assert fresh_page.locator('#sidebar-projects .sidebar-project').first.get_attribute('data-production-id')=='brand-flow'
+   assert fresh_page.locator('[data-production-id=workspace-project] .ui-photo-icon').count()==1
    fresh_page.locator('[data-production-id=film-flow]').click()
    film_overview=fresh_page.locator('.production-overview')
    film_overview.get_by_text('기한 초과',exact=True).wait_for()

@@ -117,7 +117,8 @@ export function ProjectWorkspace({
   const [taskTools,setTaskTools]=useState(false),[taskSource,setTaskSource]=useState('전체'),[taskGroup,setTaskGroup]=useState('없음'),[taskSort,setTaskSort]=useState('등록순');
   const [taskFilter, setTaskFilter] = useState("전체");
   const [taskQuery, setTaskQuery] = useState("");
-  const [taskLayout, setTaskLayout] = useState<"list" | "board">("list");
+  const [taskLayout, setTaskLayout] = useState<"list" | "board">(()=>{try{return localStorage.getItem('pn-task-layout:'+project.id)==='board'?'board':'list'}catch{return 'list'}});
+  useEffect(()=>{try{localStorage.setItem('pn-task-layout:'+project.id,taskLayout)}catch{}},[project.id,taskLayout]);
   const [calendarDropDay,setCalendarDropDay]=useState('');const calendarGesture=useRef<any>(null),suppressCalendarClick=useRef(0);
   const [calendarDraft,setCalendarDraft]=useState(false);
   const [calendarPending,setCalendarPending]=useState<string[]>([]);

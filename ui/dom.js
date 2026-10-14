@@ -1,3 +1,5 @@
+import {installSidebarOrdering} from './sidebar-order.js';
+window.installSidebarOrdering=installSidebarOrdering;
 import './accent.js';
 import {installDelayedPointerDrag} from './touch-drag.js';
 window.installDelayedPointerDrag=installDelayedPointerDrag;
@@ -20,3 +22,5 @@ installHistory();
 
 import {renderNASAliasSettings} from './nas-alias.js';
 window.renderNASAliasSettings=renderNASAliasSettings;
+
+window.dispatchEvent(new Event("production-ui-ready"));
