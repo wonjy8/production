@@ -423,8 +423,10 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.locator('.team-member-row').first.inner_text().startswith('팀원Z')
    assert fresh_page.locator('.teams-heading-actions').get_by_role('button').all_text_contents()==['그룹 관리','팀 추가']
    assert fresh_page.locator('.team-head select').evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='1px'
-   assert int(fresh_page.locator('.team-member-row').first.locator('span').evaluate('(el)=>getComputedStyle(el).fontWeight'))>=600
+   assert int(fresh_page.locator('.team-member-row').first.locator('span').first.evaluate('(el)=>getComputedStyle(el).fontWeight'))>=600
    assert fresh_page.locator('.team-member-row').first.evaluate('(el)=>getComputedStyle(el.querySelector("span")).color===getComputedStyle(el.querySelector("select")).color')
+   assert fresh_page.locator('.team-role-chip').first.bounding_box()['width']<90
+   assert fresh_page.locator('.team-member-row button').first.evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='0px'
    fresh_page.get_by_label('멤버 정렬 기준',exact=True).first.select_option('custom')
    team_drag=fresh_page.evaluate_handle('new DataTransfer()')
    fresh_page.locator('.team-member-row').first.dispatch_event('dragstart',{'dataTransfer':team_drag})

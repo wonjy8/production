@@ -37,6 +37,7 @@ export function Modal({
         <h2>{title}</h2>
         <button
           className="icon-button"
+          data-control-icon="close"
           aria-label={`${title} 닫기`}
           onClick={onClose}
         >

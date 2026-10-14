@@ -10,6 +10,7 @@ export function decorateUI(root){root.querySelectorAll('button').forEach(b=>{
  if(!label)return;
  if(!b.hasAttribute('aria-label')||b.dataset.uiAutoLabel==='true'){b.dataset.uiAutoLabel='true';b.setAttribute('aria-label',label);}
  b.title=label;
+ b.dataset.controlIcon=b.dataset.controlIcon||b.dataset.iconName||inferIcon(label);
  const compact=b.matches('.workspace-tabs button,.project-sections button,.merge-sections button,[data-newblock],.choice');
  b.classList.toggle('compact-nav',compact);b.classList.toggle('ui-icon-button',!compact);
  if(svg){b.classList.remove('has-pack-icon');b.style.removeProperty('--button-icon');delete b.dataset.uiIconLabel;}
