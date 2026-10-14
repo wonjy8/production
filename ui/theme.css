@@ -146,3 +146,8 @@ button.ui-add-action.ui-icon-button{width:var(--action-height)!important;min-wid
 :is(.merge-sections,.project-sections)>button{margin-inline:0!important;border:0!important;padding-inline:12px!important}
 :is(.merge-sections,.project-sections)>button+button::after{content:none}
 :is(.merge-sections,.project-sections)>button:not(:last-child)::after{content:"";position:absolute;left:auto;right:-8.5px;top:50%;transform:translateY(-50%);width:1px;height:22px;background:var(--border);pointer-events:none}
+
+/* Module and template choices share one compact two-line card height. */
+.hub-sidebar .hub-results>.hub-card.keep-label,.hub-sidebar .hub-results>.hub-card.hub-upload{height:80px!important;min-height:80px!important;max-height:80px!important;padding:10px 14px!important;justify-content:center!important;flex-shrink:0}
+.hub-sidebar .hub-card-content strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hub-sidebar .hub-card-content small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
