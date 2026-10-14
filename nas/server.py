@@ -153,7 +153,7 @@ def save_workspace(conn, data):
 def health():
     with database() as conn:
         conn.execute('SELECT 1')
-    return {'ok': True, 'schemaVersion': 1, 'storage': 'nas'}
+    return {'ok': True, 'schemaVersion': 1, 'storage': 'nas', 'features': {'archiveScopes': 1}}
 
 
 @app.get('/api/data')

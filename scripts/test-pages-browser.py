@@ -34,7 +34,7 @@ with tempfile.TemporaryDirectory() as td:
    browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH'),headless=True,args=['--no-sandbox','--no-proxy-server','--host-resolver-rules=MAP pages.test 127.0.0.1, MAP nas.test 127.0.0.1','--ignore-certificate-errors-spki-list='+spki])
    context=browser.new_context();page=context.new_page();errors=[];page.on('pageerror',lambda e: errors.append(e.stack))
    page.goto('https://pages.test:9443/production/http%3A%2F%2Fnas.test%3A9444')
-   page.wait_for_function('document.querySelector("#status").textContent.includes("HTTPS")')
+   page.wait_for_function('document.body.textContent.includes("HTTPS")')
    assert page.locator('#connection-form').count()==0
    page.goto('https://pages.test:9443/production/nas.test:9444')
    page.locator('#account-form [name=email]').fill('admin@example.com')
@@ -285,6 +285,27 @@ with tempfile.TemporaryDirectory() as td:
    assert media
    cdp=context.new_cdp_session(page);cdp.send('ServiceWorker.enable');cdp.send('ServiceWorker.stopAllWorkers')
    page.reload();page.wait_for_function('window.appAccount?.role === "superadmin"')
+   page.wait_for_function('!!window.activeReferenceId')
+   page.evaluate('''async()=>{const w=window.productionBridge.read();w.productions.push({id:"nas-complete-flow",name:"NAS 완료 검증",status:"진행 중",description:"",tasks:[],customTabs:[],teams:[],memberIds:[]});window.productionBridge.write(w);window.productionRefresh?.();await window.flushDocumentModules()}''')
+   page.locator('[data-main-space=home]').click()
+   page.locator('[data-production-id=nas-complete-flow]').click()
+   nas_overview=page.locator('.production-overview')
+   nas_overview.get_by_role('button',name='수정',exact=True).click()
+   nas_overview.get_by_label('프로젝트 상태',exact=True).select_option('완료')
+   nas_overview.get_by_role('button',name='저장',exact=True).click()
+   nas_review=page.get_by_role('dialog',name='프로젝트 완료 점검',exact=True)
+   nas_review.get_by_label('결과물 링크',exact=True).fill('https://example.com/final')
+   page.evaluate('''()=>{window.lifecycleRealFetch=window.fetch;window.fetch=(url,options)=>String(url).endsWith("/auth/connection")?Promise.resolve(new Response(JSON.stringify({nasReachable:true,authenticationInstalled:true}),{headers:{"Content-Type":"application/json"}})):window.lifecycleRealFetch(url,options)}''')
+   nas_review.get_by_role('button',name='완료하고 아카이빙',exact=True).click()
+   nas_review.get_by_role('alert').wait_for()
+   assert 'NAS 서버 업데이트' in nas_review.get_by_role('alert').inner_text()
+   assert page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="nas-complete-flow").status')=='진행 중'
+   page.evaluate('window.fetch=window.lifecycleRealFetch;delete window.lifecycleRealFetch')
+   nas_review.get_by_role('button',name='완료하고 아카이빙',exact=True).click()
+   nas_review.wait_for(state='detached')
+   page.reload()
+   page.wait_for_function('window.productionSearchContext?.productionId==="nas-complete-flow"')
+   assert page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="nas-complete-flow").archives.length')==1
    page.evaluate("async()=>{await fetch('/production/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}")
    assert page.evaluate("async()=>(await fetch('/production/api/data')).status")==401
    assert not errors,errors
@@ -324,7 +345,9 @@ with tempfile.TemporaryDirectory() as td:
    assert overview.evaluate('(el)=>getComputedStyle(el).backgroundImage')=='none'
    assert overview.locator('.overview-team-section').count()==0
    assert overview.locator('.overview-identity').bounding_box()['x']<overview.locator('.production-heading-actions').bounding_box()['x']
-   assert len(set(overview.locator('.overview-summary-cards strong').evaluate_all('(els)=>els.map(el=>getComputedStyle(el).fontSize)')))==1
+   assert overview.locator('.overview-summary-cards button').count()==3
+   assert overview.get_by_text('기한 초과',exact=True).is_visible()
+   assert overview.get_by_text('현재 단계',exact=False).is_visible()
    overview.get_by_role('button',name='수정',exact=True).click()
    overview.get_by_role('button',name='십자가 아이콘',exact=True).click()
    overview.get_by_role('button',name='저장',exact=True).click()
@@ -335,8 +358,81 @@ with tempfile.TemporaryDirectory() as td:
    fresh_page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes("워크스페이스 프로젝트")')
    assert fresh_page.locator('.breadcrumbs button').all_text_contents()[:2]==['홈','워크스페이스 프로젝트']
    assert fresh_page.evaluate('window.activeWorkspace')=='home'
+   lifecycle_file=fresh_page.evaluate("""async()=>{const id=crypto.randomUUID(),r=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'text/plain'},body:'완료 당시 문서'});if(!r.ok)throw Error('fixture file');const w=window.productionBridge.read();w.productions.push({id:'film-flow',name:'단편영화 검증',status:'진행 중',description:'',tasks:[{id:'overdue-flow',title:'색보정 확인',done:false,stage:'편집',due:'2000-01-01'}],feedback:[{id:'feedback-flow',body:'최종 색상 수정',resolved:false}],schedules:[{id:'next-flow',title:'시사회',date:'2099-01-01'}],customTabs:[{id:'script-tab-flow',name:'시나리오',modules:[{id:'script-flow',kind:'text',title:'촬영 대본',text:'완료 당시 대본'},{id:'file-flow',kind:'file',title:'결과 문서',files:[{id,name:'결과.txt',kind:'file',mime:'text/plain'}]}]}],teams:[],memberIds:[]},{id:'brand-flow',name:'브랜드 영상 검증',status:'진행 중',description:'',tasks:[],customTabs:[],teams:[],memberIds:[]});window.productionBridge.write(w);window.productionRefresh();await window.flushDocumentModules();return id}""")
+   fresh_page.locator('[data-production-id=film-flow]').click()
+   film_overview=fresh_page.locator('.production-overview')
+   film_overview.get_by_text('기한 초과',exact=True).wait_for()
+   assert film_overview.get_by_text('시사회',exact=True).is_visible()
+   film_overview.get_by_role('button',name='수정',exact=True).click()
+   film_overview.get_by_label('프로젝트 상태',exact=True).select_option('완료')
+   film_overview.get_by_role('button',name='저장',exact=True).click()
+   review=fresh_page.get_by_role('dialog',name='프로젝트 완료 점검',exact=True)
+   review.wait_for()
+   assert review.get_by_role('heading',name='미완료 업무 1').is_visible()
+   assert review.get_by_role('heading',name='미해결 피드백 1').is_visible()
+   review.get_by_role('button',name='완료하고 아카이빙',exact=True).click()
+   review.get_by_role('alert').wait_for()
+   assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="film-flow").status')=='진행 중'
+   review.get_by_role('button',name='해결됨 표시',exact=True).click()
+   review.get_by_role('heading',name='미해결 피드백 0').wait_for()
+   review.get_by_label('회고',exact=True).fill('촬영 준비를 앞당기자')
+   review.get_by_label('성과',exact=True).fill('시사회 준비 완료')
+   review.get_by_label('예외 완료 사유',exact=True).fill('추가 색보정은 다음 버전으로 이관')
+   for checkbox in review.locator('[name=candidate]').all():checkbox.check()
+   review.get_by_role('button',name='완료하고 아카이빙',exact=True).click()
+   review.wait_for(state='detached')
+   archive_info=fresh_page.evaluate('''()=>{const a=window.productionBridge.read().productions.find(p=>p.id==="film-flow").archives.at(-1);return {id:a.id,file:a.candidates.find(c=>c.module.kind==="file").module.files[0].id,checks:a.checks,text:a.candidates.find(c=>c.module.kind==="text").module.text}}''')
+   assert archive_info['file']!=lifecycle_file
+   assert archive_info['checks']['pending']==1 and archive_info['text']=='완료 당시 대본'
+   assert fresh_page.evaluate("async(id)=>(await fetch('/production/api/ref-files/'+id)).text()",archive_info['file'])=='완료 당시 문서'
+   fresh_page.get_by_role('button',name=re.compile('^완료 아카이브')).click()
+   library=fresh_page.get_by_role('dialog',name='완료 아카이브',exact=True)
+   library.get_by_role('button',name=re.compile('^단편영화 검증')).click()
+   assert library.get_by_text('촬영 준비를 앞당기자',exact=True).is_visible()
+   library.get_by_role('button',name='다음 프로젝트로 가져오기',exact=True).click()
+   library.get_by_label('대상 프로젝트').select_option('production:brand-flow')
+   library.get_by_role('button',name='가져오기',exact=True).click()
+   library.get_by_role('status').wait_for()
+   imported=fresh_page.evaluate('''()=>window.productionBridge.read().productions.find(p=>p.id==="brand-flow").customTabs.at(-1).modules.map(m=>({kind:m.kind,source:m.source,file:m.files?.[0]?.id}))''')
+   assert len(imported)==2 and all(not m.get('source') for m in imported)
+   assert next(m['file'] for m in imported if m['kind']=='file')!=archive_info['file']
+   library.get_by_role('button',name='다음 프로젝트로 가져오기',exact=True).click()
+   library.get_by_label('대상 프로젝트').select_option('production:brand-flow')
+   library.get_by_label('가져오기 방식').select_option('link')
+   library.get_by_role('button',name='가져오기',exact=True).click()
+   fresh_page.wait_for_function('window.productionBridge.read().productions.find(p=>p.id==="brand-flow").customTabs.length===2')
+   fresh_page.get_by_role('button',name='완료 아카이브 닫기',exact=True).click()
+   fresh_page.locator('[data-production-id=brand-flow]').click()
+   fresh_page.locator('[data-tab-id^="tab:"]').last.click()
+   fresh_page.locator('.shared-source').first.wait_for()
+   assert fresh_page.locator('.shared-source').first.inner_text().find('단편영화 검증')>=0
+   fresh_page.locator('.shared-source').first.get_by_role('button',name='새 원본 연결').click()
+   reconnect=fresh_page.get_by_role('dialog',name='새 원본 연결',exact=True)
+   reconnect.get_by_role('button',name=re.compile('^프로젝트')).click()
+   reconnect.get_by_role('button',name=re.compile('^단편영화 검증')).click()
+   reconnect.get_by_role('button',name=re.compile('^시나리오')).click()
+   reconnect.get_by_role('button',name=re.compile('^결과 문서')).click()
+   reconnect.get_by_role('button',name='적용',exact=True).click()
+   reconnect.wait_for(state='detached')
+   assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="brand-flow").customTabs.at(-1).modules[0].source.moduleId')=='file-flow'
+   fresh_page.evaluate('''()=>{const w=window.productionBridge.read();w.productions.find(p=>p.id==="film-flow").customTabs[0].modules=w.productions.find(p=>p.id==="film-flow").customTabs[0].modules.filter(m=>m.id!=="file-flow");window.productionBridge.write(w);window.productionRefresh()}''')
+   fresh_page.get_by_text('원본이 삭제되었거나 접근 권한이 없습니다.',exact=True).first.wait_for()
+   fresh_page.locator('.shared-source').first.get_by_role('button',name='새 원본 연결').click()
+   reconnect=fresh_page.get_by_role('dialog',name='새 원본 연결',exact=True)
+   reconnect.get_by_role('button',name=re.compile('^프로젝트')).click()
+   reconnect.get_by_role('button',name=re.compile('^브랜드 영상 검증')).click()
+   reconnect.get_by_role('button',name=re.compile('^단편영화 검증 재사용')).first.click()
+   reconnect.get_by_role('button',name=re.compile('^결과 문서')).click()
+   reconnect.get_by_role('button',name='적용',exact=True).click()
+   reconnect.wait_for(state='detached')
+   assert fresh_page.evaluate('window.productionBridge.read().productions.find(p=>p.id==="brand-flow").customTabs.at(-1).modules[0].source.ownerId')=='brand-flow'
+   await_archive=fresh_page.evaluate('''async()=>{await window.flushDocumentModules();return window.productionBridge.read().productions.find(p=>p.id==="film-flow").archives.length}''')
+   assert await_archive==1
+   fresh_page.reload()
+   fresh_page.wait_for_function('window.productionSearchContext?.productionId==="brand-flow" && window.productionBridge.read().productions.find(p=>p.id==="film-flow")?.archives.length===1')
+
    fresh_page.goto('https://pages.test:9443/production/@unknown')
-   fresh_page.wait_for_function('document.querySelector("#status")?.textContent.includes("등록되지 않은")')
+   fresh_page.wait_for_function('document.body.textContent.includes("등록되지 않은")')
    fresh_page.goto('https://pages.test:9443/production/nas.test:9444/')
    fresh_page.locator('#account-form').wait_for()
    fresh_page.goto('https://pages.test:9443/production/')
@@ -443,7 +539,18 @@ with tempfile.TemporaryDirectory() as td:
    assert fresh_page.evaluate("async()=>(await fetch('/production/api/data')).json().then(x=>x.projects.some(p=>p.name==='로컬 프로젝트'))")
    assert not errors,errors
    fresh.close()
-   print('PASS: browser-local NAS aliases/reload and unknown alias isolation, legacy URL migration, readable word routes, transparent left-aligned overview and editable project icon, URL screen history/back/forward, reference detail/tab reload, project schedule tab reload, preserved NAS path, three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, manual update icon with save deferral and persisted local data, aligned floating panels, Hub search motion and removed previews, inline deletion, full-width divider, five accent colors and overview activity, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
+   failure=context.new_page()
+   failure.route('**/app.html?*',lambda route:route.fulfill(status=503,body='unavailable'))
+   failure.goto('https://pages.test:9443/production/')
+   failure.locator('#boot-help').wait_for(state='visible')
+   assert failure.get_by_role('button',name='다시 시도',exact=True).is_visible()
+   assert failure.get_by_role('button',name='연결 확인',exact=True).is_visible()
+   assert failure.get_by_role('link',name='웹에서 열기',exact=True).get_attribute('href')=='/production/'
+   assert failure.locator('#status').inner_text()=='앱 화면에 실패했습니다.'
+   failure.get_by_role('button',name='연결 확인',exact=True).click()
+   assert '인터넷' in failure.locator('#boot-reason').inner_text()
+   failure.close()
+   print('PASS: completion checks and frozen archive files, independent/link reuse, missing source reconnection, NAS archive capability/persistence, loading failure alternatives, browser-local NAS aliases/reload and unknown alias isolation, legacy URL migration, readable word routes, transparent left-aligned overview and editable project icon, URL screen history/back/forward, reference detail/tab reload, project schedule tab reload, preserved NAS path, three-workspace hierarchy and section/project breadcrumbs, NAS installer download, direct URL NAS connection, fresh 404 entry, per-tab local/NAS isolation, root browser mode, writing-only new document tab, text-to-DOCX module conversion, original-file autosave and reopen, stale-editor conflict protection, local original TXT autosave and offline draft recovery, manual update icon with save deferral and persisted local data, aligned floating panels, Hub search motion and removed previews, inline deletion, full-width divider, five accent colors and overview activity, mobile bottom navigation/category landing/back, grade calculator, Figma iframe code addition/editing and address persistence/settings, NAS and browser-only modes, separate persistent data and files, HTTPS validation, login, media/canvas and worker restart')
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

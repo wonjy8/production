@@ -1,10 +1,11 @@
+import {ProjectHealth} from './ProjectHealth';
 import {useState} from 'react';
 import type {Project,Workspace} from './data';
 import {statuses} from './data';
 import {Icon} from './Icon';
 import {projectIconGroups} from './project-icons.js';
 import {memberLabel,assigneeLabel,categoryFor,projectCatalog,projectMembers,changeProjectCategory} from './people-model.js';
-export function ProjectOverview({workspace:w,project:p,onChange,onTitle}:{workspace:Workspace;project:Project;onChange:(fn:(p:Project)=>Project)=>void;onTitle:(name:string)=>void}){
+export function ProjectOverview({workspace:w,project:p,onOpen,onChange,onTitle}:{onOpen?:(origin:any,kind:string,id:string)=>void;workspace:Workspace;project:Project;onChange:(fn:(p:Project)=>Project)=>void;onTitle:(name:string)=>void}){
  const [draft,setDraft]=useState<Project|null>(null),[iconQuery,setIconQuery]=useState('');
  const shown=draft||p, group=w.productions.find(g=>g.id===shown.productionId), teams=group?.teams||[], members=projectMembers(w,shown);
  const selectedTeams=teams.filter(t=>(shown.teamIds||[]).includes(t.id));
@@ -19,7 +20,7 @@ export function ProjectOverview({workspace:w,project:p,onChange,onTitle}:{worksp
  <label>구분<select value={draft.categoryId} onChange={e=>patch({categoryId:e.target.value})}>{projectCatalog(w.projectCatalog).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
  <label>담당자<select value={draft.owner||''} onChange={e=>patch({owner:e.target.value})}><option value="">미지정</option>{draft.owner&&!members.some(m=>m.name===draft.owner)&&<option value={draft.owner}>{draft.owner}</option>}{members.map(m=><option key={m.id} value={m.name}>{memberLabel(m)}</option>)}</select></label>
  </div><div className="project-icon-picker"><label>프로젝트 아이콘 검색<input aria-label="프로젝트 아이콘 검색" value={iconQuery} onChange={e=>setIconQuery(e.target.value)} placeholder="십자가, 성경, 사진…"/></label>{projectIconGroups.map(group=>{const matches=group.items.filter(([,name])=>!iconQuery||name.includes(iconQuery.trim())||group.name.includes(iconQuery.trim()));return matches.length?<div key={group.name}><strong>{group.name}</strong><div className="project-icon-grid">{matches.map(([id,name])=><button type="button" key={id} title={name} aria-label={name+' 아이콘'} aria-pressed={(draft.icon||'projects')===id} onClick={()=>patch({icon:id})}><Icon name={id}/><span>{name}</span></button>)}</div></div>:null})}</div><label>개요<textarea aria-label="프로젝트 개요" value={draft.description||''} onChange={e=>patch({description:e.target.value})} maxLength={2000}/></label>{group&&<fieldset className="overview-team-options"><legend>팀</legend>{teams.length?teams.map(t=><label key={t.id}><input type="checkbox" checked={(draft.teamIds||[]).includes(t.id)} onChange={e=>patch({teamIds:e.target.checked?[...(draft.teamIds||[]),t.id]:(draft.teamIds||[]).filter(id=>id!==t.id)})}/><span>{t.name}</span><small>{t.members.length}명</small></label>):<span className="muted">등록된 팀 없음</span>}</fieldset>}<div className="overview-actions"><button type="button" className="button keep-label" onClick={()=>setDraft(null)}>취소</button><button type="submit" className="button primary keep-label" disabled={!draft.name.trim()}>완료</button></div></form>:<>
- {p.description?.trim()&&<p className="overview-note">{p.description}</p>}<dl className="overview-facts">{[['상태',p.status],['마감일',p.due],['구분',categoryFor(w,p).name],['담당자',p.owner?assigneeLabel(w.members,p.owner):'']].filter(([,value])=>value).map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+ <ProjectHealth workspace={w} kind="project" id={p.id} onOpen={onOpen}/>{p.description?.trim()&&<p className="overview-note">{p.description}</p>}<dl className="overview-facts">{[['상태',p.status],['마감일',p.due],['구분',categoryFor(w,p).name],['담당자',p.owner?assigneeLabel(w.members,p.owner):'']].filter(([,value])=>value).map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
  {(selectedTeams.length>0||members.length>0)&&<div className="overview-compact-people">{selectedTeams.length>0&&<span><Icon name="users"/>{selectedTeams.map(t=>t.name).join(' · ')}</span>}{members.length>0&&<span>멤버 {members.length}명</span>}</div>}
 
  </>}

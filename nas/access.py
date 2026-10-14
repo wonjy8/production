@@ -27,7 +27,7 @@ def scope(data,actor):
     for g in groups:
         mids.update(g.get('memberIds',[]))
         for t in g.get('teams',[]):mids.update(a.get('memberId') for a in t.get('members',[]))
-    out['productions']=groups;out['projects']=copy.deepcopy(projects)
+    out['productions']=copy.deepcopy(groups);out['projects']=copy.deepcopy(projects)
     out['members']=[copy.deepcopy(m) if m['id']==mid else {k:v for k,v in m.items() if k in ('id','name','nameSuffix','kind','deleted')} for m in data.get('members',[]) if m['id'] in mids]
     out['equipment']=[e for e in data.get('equipment',[]) if e.get('ownerId') in mids]
     out['rentalShops']=[];out['locations']=[]
@@ -51,6 +51,13 @@ def apply_tab_visibility(conn,data,actor):
             if not permitted(conn,actor,obj['id'],'materials','view'):
                 obj['modules']=[];obj['productionAssets']=[]
             if 'customTabs' in obj:obj['customTabs']=[t for t in obj['customTabs'] if permitted(conn,actor,obj['id'],'tab:'+t['id'],'view')]
+            # Frozen records still contain tasks and files; hide an archive if any captured scope is unavailable.
+            visible_ids={item['id'] for collection in ('productions','projects') for item in data.get(collection,[])}
+            if 'archives' in obj:
+                obj['archives']=[archive for archive in obj.get('archives',[]) if all(
+                    row.get('owner',{}).get('id') in visible_ids and all(permitted(conn,actor,row['owner']['id'],tab,'view') for tab in ('overview','tasks','schedule','materials')) and all(permitted(conn,actor,row['owner']['id'],'tab:'+tab['id'],'view') for tab in row['owner'].get('customTabs',[]))
+                    for row in archive.get('snapshot',[])) and all(permitted(conn,actor,obj['id'],tab,'view') for tab in ('overview','materials'))]
+
     return data
 
 def validate_list_changes(conn,actor,owner,tab,old,new):
@@ -84,6 +91,11 @@ def merge_workspace(conn,full,incoming,actor):
                 if before.get(field)==obj.get(field):continue
                 a,b=before.get(field),obj.get(field)
                 tab='tasks' if field=='tasks' else 'schedule' if field=='schedules' else 'people' if field in ('memberIds','teams','teamGroups','memberOrder') else 'materials' if field in ('modules','productionAssets') else 'overview'
+                if field=='archives':
+                    visible_archive_ids={a['id'] for a in before.get('archives',[])}
+                    hidden_archives=[a for a in old[ident].get('archives',[]) if a['id'] not in visible_archive_ids]
+                    if not permitted(conn,actor,ident,'overview','edit') or not permitted(conn,actor,ident,'materials','view'):deny()
+                    merged[field]=hidden_archives+(b or []);continue
                 if field=='customTabs':
                     if actor['role']=='viewer':
                         # A viewer may edit an existing tab's contents only if an administrator explicitly permits it.

@@ -64,7 +64,7 @@ class BrowserGateway:
         transport = httpx.ASGITransport(app=self.app)
         async with httpx.AsyncClient(transport=transport, base_url='http://nas.internal', headers=internal_headers) as client:
             if path == '/api/auth/connection' and method == 'GET':
-                return await reply({'nasReachable': True, 'authenticationInstalled': True})
+                return await reply({'nasReachable': True, 'authenticationInstalled': True, 'features': {'archiveScopes': 1}})
             if path.startswith('/api/auth/'):
                 part = path[len('/api/auth/'):]
                 if part not in AUTH and not re.fullmatch(r'users/[a-f0-9-]{36}', part):

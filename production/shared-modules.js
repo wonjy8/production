@@ -8,7 +8,7 @@ export function referenceModules(r){
 }
 export function resolveSharedModule(module,w,refs){
  const source=module.source;if(!source)return module;
- const owner=source.kind==='reference'?refs.find(r=>r.id===source.ownerId&&!r.deleted):(source.kind==='project'?w.projects:w.productions).find(p=>p.id===source.ownerId);
+ const owner=source.kind==='reference'?refs.find(r=>r.id===source.ownerId&&!r.deleted):(source.kind==='project'?w.projects:w.productions).find(p=>p.id===source.ownerId&&!p.deleted);
  const modules=source.kind==='reference'?(owner?referenceModules(owner):[]):(owner?.customTabs||[]).flatMap(t=>t.modules);
  const found=modules.find(m=>m.id===source.moduleId);
  return found&&!found.source?found:null;

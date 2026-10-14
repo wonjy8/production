@@ -11,6 +11,21 @@ class AccessTest(unittest.TestCase):
   spec=importlib.util.spec_from_file_location('access_server',Path(__file__).with_name('server.py'));self.s=importlib.util.module_from_spec(spec);spec.loader.exec_module(self.s);self.c=TestClient(self.s.app);self.service={'Authorization':'Bearer '+'t'*64};self.mid=str(uuid4());self.other=str(uuid4());self.gid='group-a';self.hidden='group-b'
   self.data={'projects':[{'id':'project-a','title':'A','productionId':self.gid,'tasks':[{'id':'task','title':'원본'}]},{'id':'project-b','title':'B','productionId':self.hidden,'tasks':[]}],'productions':[{'id':self.gid,'name':'A','memberIds':[self.mid,self.other],'teams':[]},{'id':self.hidden,'name':'B','memberIds':[],'teams':[]}],'members':[{'id':self.mid,'name':'예시 관리자','email':'admin@example.com','contact':'old'},{'id':self.other,'name':'멤버','contact':'private','email':'private@example.com'}],'equipment':[]}
   with self.s.database() as db:self.s.save_workspace(db,self.data)
+ def test_archive_visibility_preserves_hidden_records(self):
+  from access import scope,apply_tab_visibility,merge_workspace
+  full=copy.deepcopy(self.data)
+  full['productions'][0]['archives']=[{'id':'visible-archive','snapshot':[{'owner':{'id':'project-a','customTabs':[]}}],'retrospective':'visible'}, {'id':'hidden-archive','snapshot':[{'owner':{'id':'project-b','customTabs':[]}}],'retrospective':'hidden'}]
+  actor={'role':'operator','member_id':self.mid}
+  with self.s.database() as db:
+   visible=apply_tab_visibility(db,scope(full,actor),actor)
+   self.assertEqual([a['id'] for a in visible['productions'][0]['archives']],['visible-archive'])
+   self.assertEqual(len(full['productions'][0]['archives']),2)
+   visible['productions'][0]['description']='edited'
+   merged=merge_workspace(db,full,visible,actor)
+   self.assertEqual(len(merged['productions'][0]['archives']),2)
+   db.execute('INSERT INTO tab_permissions VALUES(?,?,?,?)',(self.gid,'materials',json.dumps({'operator':{'view':False,'edit':False}}),'admin'))
+   restricted=apply_tab_visibility(db,scope(full,actor),actor)
+   self.assertEqual(restricted['productions'][0]['archives'],[])
  def tearDown(self):self.folder.cleanup()
  def session(self,uid,role,mid,email='person@example.com',aal=2):
   raw=str(uuid4())
