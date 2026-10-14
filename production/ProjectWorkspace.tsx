@@ -188,16 +188,21 @@ export function ProjectWorkspace({
   function moveDate(payload:any,target:string){if(payload?.projectId!==project.id){calendarGesture.current=null;setCalendarDropDay('');return}onChange(p=>moveCalendarItem(p,payload.kind,payload.id,target,payload.anchor));suppressCalendarClick.current=Date.now()+600;calendarGesture.current=null;setCalendarDropDay('')}
   function dragBindings(kind:string,id:string,anchor:string){const payload={kind,id,anchor,projectId:project.id};return {...delayedPointerDrag({onPointerDown:(e:any)=>{if(e.pointerType==='mouse'||e.target.closest('.calendar-task-check'))return;calendarGesture.current={...payload,grid:e.currentTarget.closest('.calendar-grid')};},onPointerMove:(e:any)=>{const gesture=calendarGesture.current;if(!gesture?.grid)return;const cell=[...gesture.grid.querySelectorAll('[data-calendar-date]')].find((node:any)=>{const rect=node.getBoundingClientRect();return e.clientX>=rect.left&&e.clientX<=rect.right&&e.clientY>=rect.top&&e.clientY<=rect.bottom}) as HTMLElement|undefined;gesture.target=cell?.dataset.calendarDate||'';setCalendarDropDay(gesture.target)},onPointerUp:()=>{const gesture=calendarGesture.current;if(gesture?.target)moveDate(gesture,gesture.target);calendarGesture.current=null;setCalendarDropDay('')},onPointerCancel:()=>{calendarGesture.current=null;setCalendarDropDay('')}}),draggable:true,onDragStart:(e:any)=>{if(e.target.closest('.calendar-task-check')){e.preventDefault();return}e.dataTransfer.setData(CALENDAR_DRAG_TYPE,JSON.stringify(payload));e.dataTransfer.effectAllowed='move';setCalendarDragImage(e);calendarGesture.current=payload},onDragEnd:()=>{calendarGesture.current=null;setCalendarDropDay('');suppressCalendarClick.current=Date.now()+600}}}
   function scheduleMenu(s:Schedule){return itemMenuBindings([{label:'이름 변경',icon:'edit',run:()=>setScheduleEditor(s)},{label:'날짜 이동',icon:'calendar',run:()=>setScheduleEditor(s)},{label:'삭제',icon:'trash',danger:true,run:()=>onChange(p=>({...p,schedules:p.schedules.filter(item=>item.id!==s.id)}))}])}
+  const taskDragId=useRef(''),[taskDrop,setTaskDrop]=useState('');
+  function finishTaskDrag(){taskDragId.current='';setTaskDrop('');suppressCalendarClick.current=Date.now()+600}
+  function placeTask(targetId:string,stage?:string,after=false){const id=taskDragId.current;if(!id||id===targetId)return;onChange(p=>{const item=p.tasks.find(t=>t.id===id);if(!item)return p;const rest=p.tasks.filter(t=>t.id!==id),at=targetId?rest.findIndex(t=>t.id===targetId):rest.length;rest.splice(at<0?rest.length:at+(targetId&&after?1:0),0,{...item,...(stage?{stage}:{})});return {...p,tasks:rest}});setTaskSort('등록순');finishTaskDrag()}
+  function taskTarget(e:any){const root=e.currentTarget.getRootNode(),node=root.elementFromPoint(e.clientX,e.clientY)?.closest('[data-task-id],[data-task-stage]');if(!node)return null;return {id:node.dataset.taskId||'',stage:taskLayout==='board'&&(taskGroup==='없음'||taskGroup==='단계')?node.dataset.taskStage:undefined,after:e.clientY>node.getBoundingClientRect().top+node.getBoundingClientRect().height/2}}
+  function taskOrderBindings(t:Task){return delayedPointerDrag({...taskMenu(t),draggable:true,onDragStart:(e:any)=>{if(e.target.closest('input,select,textarea,button:not(.task-title)')){e.preventDefault();return}taskDragId.current=t.id;e.dataTransfer.setData('application/x-production-task-order',t.id);e.dataTransfer.effectAllowed='move';setCalendarDragImage(e)},onDragEnd:finishTaskDrag,onDragOver:(e:any)=>{if(!taskDragId.current)return;e.preventDefault();e.stopPropagation();setTaskDrop(t.id)},onDrop:(e:any)=>{if(!taskDragId.current)return;e.preventDefault();e.stopPropagation();placeTask(t.id,taskLayout==='board'&&(taskGroup==='없음'||taskGroup==='단계')?t.stage:undefined,e.clientY>e.currentTarget.getBoundingClientRect().top+e.currentTarget.getBoundingClientRect().height/2)},onPointerDown:(e:any)=>{if(e.pointerType==='touch'&&!e.target.closest('input,select,textarea,button:not(.task-title)'))taskDragId.current=t.id},onPointerMove:(e:any)=>{if(e.pointerType!=='touch'||!taskDragId.current)return;const target=taskTarget(e);setTaskDrop(target?.id||'')},onPointerUp:(e:any)=>{if(e.pointerType!=='touch'||!taskDragId.current)return;const target=taskTarget(e);if(target)placeTask(target.id,target.stage,target.after);finishTaskDrag()},onPointerCancel:finishTaskDrag})}
   function taskRow(t: Task) {
     return (
-      <div {...taskMenu(t)} key={t.id} className={`work-task ${t.done ? "is-done" : ""}`}>
+      <div {...taskMenu(t)} {...taskOrderBindings(t)} data-task-id={t.id} data-task-stage={t.stage} key={t.id} className={`work-task ${t.done ? "is-done" : ""} ${taskDrop===t.id?"task-order-target":""}`}>
         <input
           type="checkbox"
           aria-label={`${t.title} 완료`}
           checked={t.done}
           onChange={() => toggleTask(t.id)}
         />
-        <button className="task-title" onClick={() => {setCalendarDraft(false);setTaskEditor(t)}}>
+        <button className="task-title" onClick={() => {if(suppressCalendarClick.current>Date.now())return;setCalendarDraft(false);setTaskEditor(t)}}>
           <strong>{t.title}</strong>
           <small>
             {taskSources && (
@@ -320,7 +325,7 @@ export function ProjectWorkspace({
           ) : (
             <div className="task-board">
               {[...new Set(taskGroup==='없음'||taskGroup==='단계'?[...stageOptions,...tasks.map(t=>t.stage)]:tasks.map(groupLabel))].map((stage) => (
-                <section key={stage}>
+                <section key={stage} data-task-stage={taskGroup==='없음'||taskGroup==='단계'?stage:undefined} onDragOver={e=>{if(taskDragId.current){e.preventDefault();e.dataTransfer.dropEffect='move'}}} onDrop={e=>{if(!taskDragId.current)return;e.preventDefault();placeTask('',taskGroup==='없음'||taskGroup==='단계'?stage:undefined)}}>
                   <h3>
                     {stage}
                     <span className="count">

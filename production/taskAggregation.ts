@@ -20,6 +20,8 @@ export function productionTaskView(workspace: Workspace, productionId: string) {
   workspace.projects
     .filter((p) => p.productionId === productionId)
     .forEach((p) => p.tasks.forEach((t) => append(t, p.id, p.name)));
+  const order = (production as any).taskOrder as string[] | undefined;
+  if(order) tasks.sort((a,b)=>(order.indexOf(a.id)<0?order.length:order.indexOf(a.id))-(order.indexOf(b.id)<0?order.length:order.indexOf(b.id)));
   const project: Project = {
     id: production.id,
     productionId,
@@ -57,7 +59,7 @@ export function updateProductionTasks(
   return {
     ...workspace,
     productions: workspace.productions.map((p) =>
-      p.id === productionId ? { ...p, tasks: own } : p,
+      p.id === productionId ? { ...p, tasks: own, taskOrder: next.tasks.map(t=>t.id) } : p,
     ),
     projects: workspace.projects.map((p) => {
       const tasks = byProject.get(p.id);
