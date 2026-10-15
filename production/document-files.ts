@@ -391,6 +391,33 @@ export async function loadDocument(blob: Blob, format: string) {
           ...(level ? { level } : {}),
           docxHeading: level || null,
           textAlign: align === "both" ? "justify" : align || "left",
+          ...(() => {
+            const spacing = props && child(props, "spacing"),
+              indent = props && child(props, "ind");
+            const out: any = {};
+            if (
+              val(spacing, "line") &&
+              (!val(spacing, "lineRule") || val(spacing, "lineRule") === "auto")
+            )
+              out.lineHeight = Number(val(spacing, "line")) / 240;
+            for (const [tag, key, ratio] of [
+              ["before", "spaceBefore", 20],
+              ["after", "spaceAfter", 20],
+            ] as const)
+              if (val(spacing, tag) !== "")
+                out[key] = Number(val(spacing, tag)) / ratio;
+            for (const [tag, key] of [
+              ["left", "indentLeft"],
+              ["right", "indentRight"],
+            ] as const)
+              if (val(indent, tag) !== "")
+                out[key] = (Number(val(indent, tag)) * 2.54) / 1440;
+            if (val(indent, "firstLine"))
+              out.firstLine = (Number(val(indent, "firstLine")) * 2.54) / 1440;
+            else if (val(indent, "hanging"))
+              out.firstLine = (-Number(val(indent, "hanging")) * 2.54) / 1440;
+            return out;
+          })(),
           docxProperties: props ? xml(props) : null,
         },
         content: await runs(n),
@@ -742,16 +769,31 @@ export async function saveDocument(
   function property(
     raw: string | undefined,
     tag: string,
-    updates: Record<string, string>,
+    updates: Record<string, any>,
   ) {
     const el = raw
       ? parse(raw).documentElement
       : parse("<w:" + tag + ' xmlns:w="' + W + '"/>').documentElement;
     for (const [key, value] of Object.entries(updates)) {
+      const previous = children(el, key)[0];
+      const oldAttributes = previous
+        ? Array.from(previous.attributes).map((a) => ({
+            namespace: a.namespaceURI,
+            name: a.name,
+            value: a.value,
+          }))
+        : [];
       for (const old of children(el, key)) old.remove();
       if (value) {
         const node = el.ownerDocument.createElementNS(W, "w:" + key);
-        if (key === "numPr") {
+        if (key === "spacing" || key === "ind") {
+          for (const a of oldAttributes)
+            node.setAttributeNS(a.namespace, a.name, a.value);
+          for (const [attr, v] of Object.entries(value)) {
+            if (v === null) node.removeAttributeNS(W, attr);
+            else node.setAttributeNS(W, "w:" + attr, String(v));
+          }
+        } else if (key === "numPr") {
           node.innerHTML = value;
         } else if (key === "tblW") {
           node.setAttributeNS(W, "w:w", value);
@@ -1000,6 +1042,52 @@ export async function saveDocument(
             : attrs.docxHeading
               ? { pStyle: "" }
               : {}),
+          ...(["lineHeight", "spaceBefore", "spaceAfter"].some(
+            (key) => attrs[key] != null,
+          )
+            ? {
+                spacing: {
+                  ...(attrs.lineHeight != null
+                    ? {
+                        line: Math.round(attrs.lineHeight * 240),
+                        lineRule: "auto",
+                      }
+                    : {}),
+                  ...(attrs.spaceBefore != null
+                    ? { before: Math.round(attrs.spaceBefore * 20) }
+                    : {}),
+                  ...(attrs.spaceAfter != null
+                    ? { after: Math.round(attrs.spaceAfter * 20) }
+                    : {}),
+                },
+              }
+            : {}),
+          ...(["indentLeft", "indentRight", "firstLine"].some(
+            (key) => attrs[key] != null,
+          )
+            ? {
+                ind: {
+                  ...(attrs.indentLeft != null
+                    ? { left: Math.round((attrs.indentLeft * 1440) / 2.54) }
+                    : {}),
+                  ...(attrs.indentRight != null
+                    ? { right: Math.round((attrs.indentRight * 1440) / 2.54) }
+                    : {}),
+                  ...(attrs.firstLine != null
+                    ? {
+                        firstLine:
+                          attrs.firstLine >= 0
+                            ? Math.round((attrs.firstLine * 1440) / 2.54)
+                            : null,
+                        hanging:
+                          attrs.firstLine < 0
+                            ? Math.round((-attrs.firstLine * 1440) / 2.54)
+                            : null,
+                      }
+                    : {}),
+                },
+              }
+            : {}),
           jc:
             attrs.textAlign === "justify" ? "both" : attrs.textAlign || "left",
           numPr: list

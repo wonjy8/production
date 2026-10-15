@@ -174,12 +174,6 @@ with tempfile.TemporaryDirectory() as td:
    missing=page.locator('.document-toolbar button').evaluate_all("nodes=>nodes.filter(b=>b.querySelector('svg')&&!b.title).map(b=>b.textContent)")
    assert not missing,missing
    assert page.locator('.document-editor').evaluate('e=>getComputedStyle(e).fontFamily===getComputedStyle(document.body).fontFamily')
-   open_sidebar();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='설정',exact=True).click()
-   panel=page.get_by_role('complementary',name='문서 설정 패널',exact=True)
-   panel.locator('.font-list>div',has_text='NanumMyeongjo').wait_for()
-   page.get_by_label('글꼴 파일 추가',exact=True).set_input_files({'name':'bad.ttf','mimeType':'font/ttf','buffer':b'invalid font'})
-   panel.get_by_role('alert').wait_for()
-   close_sidebar()
    open_sidebar();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='문서',exact=True).click()
    page.get_by_label('용지 크기',exact=True).select_option('a4')
    close_sidebar()

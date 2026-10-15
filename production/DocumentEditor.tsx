@@ -1,14 +1,19 @@
+import {
+  Alignment,
+  ParagraphControls,
+  ListControls,
+} from "./ParagraphControls";
 import { ColorControl, TablePicker, shapeImage } from "./EditorControls";
 import {
   Highlight,
   scripts,
   editorAttributes,
   DocumentTableView,
+  ListLevels,
 } from "./document-extensions";
 import { addResourceFile } from "./resources";
 import { readFile } from "./files";
 import { ResourceImagePicker } from "./ResourceImagePicker";
-import { FontManager } from "./FontManager";
 import {
   currentCustomFonts,
   prepareCustomFonts,
@@ -212,8 +217,7 @@ function DocumentEditor({ file }: { file: any }) {
     [pageInfo, setPageInfo] = useState({ current: 1, total: 1 }),
     [outlineOpen, setOutlineOpen] = useState(false),
     [updateAvailable, setUpdateAvailable] = useState(false),
-    [deleteConfirm, setDeleteConfirm] = useState(false),
-    [marginMarks, setMarginMarks] = useState(true);
+    [marginMarks] = useState(true);
   const dismissedUpdate = useRef("");
   const deviceImage = useRef<HTMLInputElement>(null),
     deviceFile = useRef<HTMLInputElement>(null);
@@ -272,7 +276,7 @@ function DocumentEditor({ file }: { file: any }) {
   }, [ready, zoom, fitScale, active]);
   const headings: any[] = [];
   editor.current?.state.doc.descendants((node, pos) => {
-    if (node.type.name === "heading")
+    if (node.type.name === "heading" && node.textContent.trim())
       headings.push({
         pos,
         level: node.attrs.level,
@@ -284,18 +288,6 @@ function DocumentEditor({ file }: { file: any }) {
     .find((h) => h.pos <= (editor.current?.state.selection.from || 0))?.pos;
   const words =
     editor.current?.getText().trim().split(/\s+/).filter(Boolean).length || 0;
-  const furniture = editor.current?.state.doc.attrs.docxFurniture || {};
-  function setFurniture(key: string, value: any) {
-    editor.current?.commands.command(({ tr }: any) => {
-      tr.setDocAttribute("docxFurniture", {
-        ...furniture,
-        [key]: value,
-        custom: true,
-      });
-      return true;
-    });
-    setActive((v) => v + 1);
-  }
   function insertImage(src: string, width: number, height: number, alt = "") {
     const ratio = Math.min(
       1,
@@ -367,21 +359,6 @@ function DocumentEditor({ file }: { file: any }) {
       pendingOperations.current--;
     }
   }
-  async function trashDocument() {
-    try {
-      if ((await session.current?.flush()) === false)
-        throw Error("편집 내용을 저장한 뒤 삭제하세요.");
-      const row = (await listResources()).find(
-        (r: any) => r.fileId === file.id,
-      );
-      if (!row) throw Error("자료에 등록된 문서만 여기서 삭제할 수 있습니다.");
-      await saveResource({ ...row, deleted: true });
-      location.href = new URL("./#/materials/trash", document.baseURI).href;
-    } catch (e: any) {
-      setError(e.message);
-      setDeleteConfirm(false);
-    }
-  }
   useEffect(() => {
     let alive = true;
     const refresh = () =>
@@ -406,13 +383,11 @@ function DocumentEditor({ file }: { file: any }) {
     };
   }, [ready]);
   useEffect(() => {
-    const sidebar = document.querySelector<HTMLElement>(".document-settings");
+    const sidebar = document.querySelector<HTMLElement>(
+      ".document-settings-body",
+    );
     if (sidebar) sidebar.scrollTop = 0;
   }, [panel, showLayout]);
-  function openPanel(tab: string) {
-    setPanel(tab);
-    setShowLayout(true);
-  }
   const layout = documentLayout(editor.current?.getJSON().attrs?.docxLayout);
   const scroll = useRef<HTMLDivElement>(null),
     titleInput = useRef<HTMLInputElement>(null);
@@ -754,6 +729,7 @@ function DocumentEditor({ file }: { file: any }) {
         editor.current = new Editor({
           element: host.current!,
           extensions: [
+            ListLevels,
             commentMark,
             Highlight,
             ...scripts,
@@ -1048,7 +1024,7 @@ function DocumentEditor({ file }: { file: any }) {
             if (showLayout) editor.current?.view.focus();
           }}
         >
-          <Icon name="sidebar" />
+          <Icon name="menu" />
         </button>
       </header>
       <div className="document-toolbar" role="toolbar" aria-label="문서 삽입">
@@ -1137,46 +1113,6 @@ function DocumentEditor({ file }: { file: any }) {
                 ))}
               </div>
             </details>
-            <span className="document-tool-divider" />
-            <details className="document-menu">
-              <summary
-                aria-label="페이지 요소"
-                title="머리글·바닥글·페이지 번호"
-              >
-                <Icon name="file" />
-                <span>페이지 요소</span>
-              </summary>
-              <div role="menu">
-                {[
-                  ["header", "머리글"],
-                  ["footer", "바닥글"],
-                  ["pageNumber", "페이지 번호"],
-                ].map(([key, label]) => (
-                  <button
-                    className="keep-label"
-                    key={key}
-                    onClick={(e) =>
-                      menuAction(e, () => {
-                        if (key === "pageNumber")
-                          setFurniture(key, !furniture.pageNumber);
-                        openPanel("page");
-                        setTimeout(
-                          () =>
-                            document
-                              .querySelector<HTMLInputElement>(
-                                '[aria-label="' + label + '"]',
-                              )
-                              ?.focus(),
-                          0,
-                        );
-                      })
-                    }
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </details>
           </>
         )}
       </div>
@@ -1254,60 +1190,67 @@ function DocumentEditor({ file }: { file: any }) {
       <div
         className={"document-workspace" + (showLayout ? " has-sidebar" : "")}
       >
-        <aside
-          className="document-outline"
-          onMouseEnter={() => setOutlineOpen(true)}
-          onMouseLeave={() => setOutlineOpen(false)}
-          aria-label="문서 목차"
-        >
-          <button
-            className="outline-trigger keep-label"
-            aria-label="목차"
-            aria-expanded={outlineOpen}
-            onClick={() => setOutlineOpen(true)}
+        {headings.length > 0 && (
+          <aside
+            className="document-outline"
+            onMouseEnter={() => setOutlineOpen(true)}
+            onMouseLeave={() => setOutlineOpen(false)}
+            aria-label="문서 목차"
           >
-            <Icon name="list" />
-          </button>
-          <div className="outline-rail" aria-hidden="true">
-            {headings.map((h) => (
-              <i
-                key={h.pos}
-                className={h.pos === currentHeading ? "active" : ""}
-                style={{ width: Math.max(10, 28 - h.level * 4) }}
-              />
-            ))}
-          </div>
-          {outlineOpen && (
-            <nav aria-label="목차 항목">
-              <strong>목차</strong>
-              {headings.length ? (
-                headings.map((h) => (
-                  <button
-                    className="keep-label"
-                    key={h.pos}
-                    aria-current={
-                      h.pos === currentHeading ? "location" : undefined
-                    }
-                    style={{ paddingLeft: 12 + (h.level - 1) * 14 }}
-                    onClick={() => {
-                      editor.current
-                        ?.chain()
-                        .focus()
-                        .setTextSelection(h.pos + 1)
-                        .scrollIntoView()
-                        .run();
-                      setOutlineOpen(false);
-                    }}
-                  >
-                    {h.text}
-                  </button>
-                ))
-              ) : (
-                <p>제목 스타일을 적용하면 목차가 표시됩니다.</p>
-              )}
-            </nav>
-          )}
-        </aside>
+            <div
+              className="outline-rail"
+              role="navigation"
+              aria-label="목차"
+              tabIndex={0}
+              onFocus={() => setOutlineOpen(true)}
+              onClick={() => setOutlineOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setOutlineOpen(true);
+                }
+              }}
+            >
+              {headings.map((h) => (
+                <i
+                  key={h.pos}
+                  className={h.pos === currentHeading ? "active" : ""}
+                  style={{ width: Math.max(10, 28 - h.level * 4) }}
+                />
+              ))}
+            </div>
+            {outlineOpen && (
+              <nav aria-label="목차 항목">
+                <strong>목차</strong>
+                {headings.length ? (
+                  headings.map((h) => (
+                    <button
+                      className="keep-label"
+                      key={h.pos}
+                      aria-current={
+                        h.pos === currentHeading ? "location" : undefined
+                      }
+                      style={{ paddingLeft: 12 + (h.level - 1) * 14 }}
+                      onClick={() => {
+                        editor.current
+                          ?.chain()
+                          .focus()
+                          .setTextSelection(h.pos + 1)
+                          .scrollIntoView()
+                          .run();
+                        setOutlineOpen(false);
+                      }}
+                    >
+                      {h.text}
+                    </button>
+                  ))
+                ) : (
+                  <p>제목 스타일을 적용하면 목차가 표시됩니다.</p>
+                )}
+              </nav>
+            )}
+          </aside>
+        )}
         <div className="document-scroll" ref={scroll}>
           <div
             className={
@@ -1339,16 +1282,13 @@ function DocumentEditor({ file }: { file: any }) {
               aria-label="문서 설정 종류"
               style={
                 {
-                  "--panel-index": ["page", "properties", "settings"].indexOf(
-                    panel,
-                  ),
+                  "--panel-index": ["page", "properties"].indexOf(panel),
                 } as React.CSSProperties
               }
             >
               {[
                 ["page", "문서", "file"],
                 ["properties", "속성", "sliders"],
-                ["settings", "설정", "settings"],
               ].map(([id, label, icon]) => (
                 <button
                   key={id}
@@ -1361,28 +1301,27 @@ function DocumentEditor({ file }: { file: any }) {
                 </button>
               ))}
             </nav>
-            {panel === "properties" && (
-              <section
-                className="document-properties"
-                aria-label="선택 항목 속성"
-              >
-                <h3>
-                  {editor.current?.isActive("image")
-                    ? editor.current
-                        ?.getAttributes("image")
-                        .alt?.startsWith("도형:")
-                      ? "도형"
-                      : "이미지"
-                    : editor.current?.isActive("table")
-                      ? "표 및 텍스트"
-                      : "텍스트"}
-                </h3>
-                {(editor.current?.isActive("image") ||
-                  editor.current?.isActive("table")) && (
-                  <label>
-                    맞춤
-                    <select
-                      aria-label="개체 맞춤"
+            <div className="document-settings-body">
+              {panel === "properties" && (
+                <section
+                  className="document-properties"
+                  aria-label="선택 항목 속성"
+                >
+                  <h3>
+                    {editor.current?.isActive("image")
+                      ? editor.current
+                          ?.getAttributes("image")
+                          .alt?.startsWith("도형:")
+                        ? "도형"
+                        : "이미지"
+                      : editor.current?.isActive("table")
+                        ? "표 및 텍스트"
+                        : "텍스트"}
+                  </h3>
+                  {(editor.current?.isActive("image") ||
+                    editor.current?.isActive("table")) && (
+                    <Alignment
+                      object
                       value={
                         editor.current?.isActive("table")
                           ? editor.current.getAttributes("table").objectAlign ||
@@ -1390,619 +1329,400 @@ function DocumentEditor({ file }: { file: any }) {
                           : editor.current?.getAttributes("paragraph")
                               .textAlign || "left"
                       }
-                      onChange={(e) => {
+                      onChange={(value) => {
                         const ed = editor.current;
                         if (ed?.isActive("table"))
                           ed.chain()
                             .focus()
-                            .updateAttributes("table", {
-                              objectAlign: e.target.value,
-                            })
+                            .updateAttributes("table", { objectAlign: value })
                             .run();
-                        else
-                          ed?.chain()
-                            .focus()
-                            .setTextAlign(e.target.value)
-                            .run();
+                        else ed?.chain().focus().setTextAlign(value).run();
                       }}
-                    >
-                      <option value="left">왼쪽</option>
-                      <option value="center">가운데</option>
-                      <option value="right">오른쪽</option>
-                    </select>
-                  </label>
-                )}
-                {editor.current?.isActive("table") && (
-                  <label>
-                    표 너비 (%)
-                    <input
-                      type="number"
-                      aria-label="표 너비 (%)"
-                      min="10"
-                      max="100"
-                      value={
-                        editor.current.getAttributes("table").objectWidth || 100
-                      }
-                      onChange={(e) => {
-                        const value = Number(e.target.value);
-                        if (value >= 10 && value <= 100)
+                    />
+                  )}
+                  {editor.current?.isActive("table") && (
+                    <label>
+                      표 너비 (%)
+                      <input
+                        type="number"
+                        aria-label="표 너비 (%)"
+                        min="10"
+                        max="100"
+                        value={
+                          editor.current.getAttributes("table").objectWidth ||
+                          100
+                        }
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          if (value >= 10 && value <= 100)
+                            editor.current
+                              ?.chain()
+                              .focus()
+                              .updateAttributes("table", { objectWidth: value })
+                              .run();
+                        }}
+                      />
+                    </label>
+                  )}
+                  {editor.current?.isActive("image") ? (
+                    <>
+                      {["width", "height"].map((key) => (
+                        <label key={key}>
+                          {key === "width" ? "이미지 너비" : "이미지 높이"}
+                          <input
+                            type="number"
+                            min="1"
+                            max="2000"
+                            aria-label={
+                              key === "width" ? "이미지 너비" : "이미지 높이"
+                            }
+                            value={
+                              editor.current?.getAttributes("image")[key] || ""
+                            }
+                            onChange={(e) => {
+                              const value = Number(e.target.value);
+                              if (value > 0 && value <= 2000) {
+                                const ed = editor.current;
+                                if (ed)
+                                  ed.chain()
+                                    .updateAttributes("image", { [key]: value })
+                                    .setNodeSelection(ed.state.selection.from)
+                                    .run();
+                                setActive((v) => v + 1);
+                              }
+                            }}
+                          />
+                        </label>
+                      ))}
+                      <button
+                        className="keep-label danger"
+                        onClick={() =>
                           editor.current
                             ?.chain()
                             .focus()
-                            .updateAttributes("table", { objectWidth: value })
-                            .run();
-                      }}
-                    />
-                  </label>
-                )}
-                {editor.current?.isActive("image") ? (
-                  <>
-                    {["width", "height"].map((key) => (
-                      <label key={key}>
-                        {key === "width" ? "이미지 너비" : "이미지 높이"}
-                        <input
-                          type="number"
-                          min="1"
-                          max="2000"
-                          aria-label={
-                            key === "width" ? "이미지 너비" : "이미지 높이"
-                          }
-                          value={
-                            editor.current?.getAttributes("image")[key] || ""
-                          }
-                          onChange={(e) => {
-                            const value = Number(e.target.value);
-                            if (value > 0 && value <= 2000) {
-                              const ed = editor.current;
-                              if (ed)
-                                ed.chain()
-                                  .updateAttributes("image", { [key]: value })
-                                  .setNodeSelection(ed.state.selection.from)
-                                  .run();
-                              setActive((v) => v + 1);
+                            .deleteSelection()
+                            .run()
+                        }
+                      >
+                        이미지 삭제
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <select
+                        className="keep-label"
+                        aria-label="문단 스타일"
+                        disabled={!ready || format === "text"}
+                        value={
+                          editor.current?.isActive("heading")
+                            ? "heading" +
+                              editor.current.getAttributes("heading").level
+                            : "paragraph"
+                        }
+                        onChange={(e) => {
+                          const ed = editor.current;
+                          if (!ed) return;
+                          if (e.target.value === "paragraph")
+                            ed.chain().focus().setParagraph().run();
+                          else
+                            ed.chain()
+                              .focus()
+                              .setHeading({
+                                level: Number(e.target.value.slice(-1)) as any,
+                              })
+                              .run();
+                          setActive((v) => v + 1);
+                        }}
+                      >
+                        <option value="paragraph">본문</option>
+                        {[1, 2, 3].map((level) => (
+                          <option key={level} value={"heading" + level}>
+                            제목 {level}
+                          </option>
+                        ))}
+                      </select>
+                      {format !== "text" && (
+                        <>
+                          <ParagraphControls editor={editor.current} />
+                          <hr />
+                          <h3>글자</h3>
+                          <select
+                            aria-label="글꼴"
+                            className="keep-label"
+                            disabled={!ready}
+                            value={
+                              editor.current?.getAttributes("textStyle")
+                                .fontFamily || "Arial"
                             }
-                          }}
-                        />
-                      </label>
-                    ))}
+                            onChange={(e) => {
+                              editor.current
+                                ?.chain()
+                                .focus()
+                                .setFontFamily(e.target.value)
+                                .run();
+                              prepareCustomFonts([e.target.value])
+                                .then((rows) => {
+                                  setCustomFonts(rows);
+                                  editor.current?.view.dom.dispatchEvent(
+                                    new Event("document-layout-change"),
+                                  );
+                                })
+                                .catch((err) => setError(err.message));
+                              setActive((v) => v + 1);
+                            }}
+                          >
+                            {[
+                              ...new Set([
+                                ...customFonts.map((font) => font.family),
+                                editor.current?.getAttributes("textStyle")
+                                  .fontFamily || "Arial",
+                                "Arial",
+                                "맑은 고딕",
+                                "Noto Sans KR",
+                                "바탕",
+                                "Times New Roman",
+                                "Calibri",
+                              ]),
+                            ].map((font) => (
+                              <option key={font}>{font}</option>
+                            ))}
+                          </select>
+                          <select
+                            aria-label="글자 크기"
+                            className="keep-label"
+                            value={
+                              editor.current?.getAttributes("textStyle")
+                                .fontSize || "11pt"
+                            }
+                            onChange={(e) => {
+                              editor.current
+                                ?.chain()
+                                .focus()
+                                .setFontSize(e.target.value)
+                                .run();
+                              setActive((v) => v + 1);
+                            }}
+                          >
+                            {[9, 10, 11, 12, 14, 16, 18, 24, 32].map((size) => (
+                              <option key={size} value={size + "pt"}>
+                                {size}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="document-tool-divider" />
+                          {command("bold", (ed) =>
+                            ed.chain().focus().toggleBold().run(),
+                          )}
+                          {command("italic", (ed) =>
+                            ed.chain().focus().toggleItalic().run(),
+                          )}
+                          {command("underline", (ed) =>
+                            ed.chain().focus().toggleUnderline().run(),
+                          )}
+                          {command("strike", (ed) =>
+                            ed.chain().focus().toggleStrike().run(),
+                          )}
+                          <ColorControl
+                            label="글자색"
+                            value={
+                              editor.current?.getAttributes("textStyle")
+                                .color || "#242424"
+                            }
+                            onChange={(color) =>
+                              editor.current
+                                ?.chain()
+                                .focus()
+                                .setColor(color)
+                                .run()
+                            }
+                          />
+                          <ColorControl
+                            label="하이라이트"
+                            value={
+                              editor.current?.getAttributes("highlight")
+                                .color || "#fff29a"
+                            }
+                            onChange={(color) =>
+                              editor.current
+                                ?.chain()
+                                .focus()
+                                .setMark("highlight", { color })
+                                .run()
+                            }
+                            onClear={() => {
+                              editor.current
+                                ?.chain()
+                                .focus()
+                                .unsetMark("highlight")
+                                .run();
+                            }}
+                          />
+                          {command("아래 첨자", (ed) =>
+                            ed.chain().focus().toggleMark("subscript").run(),
+                          )}
+                          {command("위 첨자", (ed) =>
+                            ed.chain().focus().toggleMark("superscript").run(),
+                          )}
+                          <hr />
+                          <ListControls editor={editor.current} />
+                        </>
+                      )}
+                      {editor.current?.isActive("table") && (
+                        <>
+                          <hr />
+                          <h3>표 구성</h3>
+                          {command("행 추가", (ed) =>
+                            ed.chain().focus().addRowAfter().run(),
+                          )}
+                          {command("열 추가", (ed) =>
+                            ed.chain().focus().addColumnAfter().run(),
+                          )}
+                          {command("행 삭제", (ed) =>
+                            ed.chain().focus().deleteRow().run(),
+                          )}
+                          {command("열 삭제", (ed) =>
+                            ed.chain().focus().deleteColumn().run(),
+                          )}
+                          {command("셀 병합", (ed) =>
+                            ed.chain().focus().mergeCells().run(),
+                          )}
+                          {command("셀 분할", (ed) =>
+                            ed.chain().focus().splitCell().run(),
+                          )}
+                          {command("표 삭제", (ed) =>
+                            ed.chain().focus().deleteTable().run(),
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                </section>
+              )}
+              {panel === "page" && (
+                <section className="document-page-controls">
+                  <h3>레이아웃</h3>
+                  <fieldset className="document-layout-controls">
+                    <legend>페이지 설정 · mm</legend>
+                    <label>
+                      용지 크기
+                      <select
+                        className="keep-label"
+                        aria-label="용지 크기"
+                        value={
+                          (layout.width === 210 && layout.height === 297) ||
+                          (layout.width === 297 && layout.height === 210)
+                            ? "a4"
+                            : (layout.width === 148 && layout.height === 210) ||
+                                (layout.width === 210 && layout.height === 148)
+                              ? "a5"
+                              : (layout.width === 215.9 &&
+                                    layout.height === 279.4) ||
+                                  (layout.width === 279.4 &&
+                                    layout.height === 215.9)
+                                ? "letter"
+                                : "custom"
+                        }
+                        onChange={(e) => {
+                          const sizes: any = {
+                            a4: [210, 297],
+                            a5: [148, 210],
+                            letter: [215.9, 279.4],
+                          };
+                          if (sizes[e.target.value]) {
+                            const [width, height] = sizes[e.target.value];
+                            editor.current?.commands.command(({ tr }: any) => {
+                              tr.setDocAttribute("docxLayout", {
+                                ...layout,
+                                width,
+                                height,
+                              });
+                              return true;
+                            });
+                            setActive((v) => v + 1);
+                          }
+                        }}
+                      >
+                        <option value="a4">A4 (210 × 297)</option>
+                        <option value="a5">A5 (148 × 210)</option>
+                        <option value="letter">Letter (215.9 × 279.4)</option>
+                        <option value="custom">사용자 지정</option>
+                      </select>
+                    </label>
                     <button
-                      className="keep-label danger"
-                      onClick={() =>
-                        editor.current?.chain().focus().deleteSelection().run()
-                      }
-                    >
-                      이미지 삭제
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <select
                       className="keep-label"
-                      aria-label="문단 스타일"
-                      disabled={!ready || format === "text"}
-                      value={
-                        editor.current?.isActive("heading")
-                          ? "heading" +
-                            editor.current.getAttributes("heading").level
-                          : "paragraph"
-                      }
-                      onChange={(e) => {
-                        const ed = editor.current;
-                        if (!ed) return;
-                        if (e.target.value === "paragraph")
-                          ed.chain().focus().setParagraph().run();
-                        else
-                          ed.chain()
-                            .focus()
-                            .setHeading({
-                              level: Number(e.target.value.slice(-1)) as any,
-                            })
-                            .run();
+                      aria-label="용지 방향 전환"
+                      onClick={() => {
+                        editor.current?.commands.command(({ tr }: any) => {
+                          tr.setDocAttribute("docxLayout", {
+                            ...layout,
+                            width: layout.height,
+                            height: layout.width,
+                          });
+                          return true;
+                        });
                         setActive((v) => v + 1);
                       }}
                     >
-                      <option value="paragraph">본문</option>
-                      {[1, 2, 3].map((level) => (
-                        <option key={level} value={"heading" + level}>
-                          제목 {level}
-                        </option>
-                      ))}
-                    </select>
-                    {format !== "text" && (
-                      <>
-                        <select
-                          aria-label="글꼴"
-                          className="keep-label"
-                          disabled={!ready}
-                          value={
-                            editor.current?.getAttributes("textStyle")
-                              .fontFamily || "Arial"
-                          }
-                          onChange={(e) => {
-                            editor.current
-                              ?.chain()
-                              .focus()
-                              .setFontFamily(e.target.value)
-                              .run();
-                            prepareCustomFonts([e.target.value])
-                              .then((rows) => {
-                                setCustomFonts(rows);
-                                editor.current?.view.dom.dispatchEvent(
-                                  new Event("document-layout-change"),
-                                );
-                              })
-                              .catch((err) => setError(err.message));
-                            setActive((v) => v + 1);
-                          }}
-                        >
-                          {[
-                            ...new Set([
-                              ...customFonts.map((font) => font.family),
-                              editor.current?.getAttributes("textStyle")
-                                .fontFamily || "Arial",
-                              "Arial",
-                              "맑은 고딕",
-                              "Noto Sans KR",
-                              "바탕",
-                              "Times New Roman",
-                              "Calibri",
-                            ]),
-                          ].map((font) => (
-                            <option key={font}>{font}</option>
-                          ))}
-                        </select>
-                        <select
-                          aria-label="글자 크기"
-                          className="keep-label"
-                          value={
-                            editor.current?.getAttributes("textStyle")
-                              .fontSize || "11pt"
-                          }
-                          onChange={(e) => {
-                            editor.current
-                              ?.chain()
-                              .focus()
-                              .setFontSize(e.target.value)
-                              .run();
-                            setActive((v) => v + 1);
-                          }}
-                        >
-                          {[9, 10, 11, 12, 14, 16, 18, 24, 32].map((size) => (
-                            <option key={size} value={size + "pt"}>
-                              {size}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="document-tool-divider" />
-                        {command("bold", (ed) =>
-                          ed.chain().focus().toggleBold().run(),
-                        )}
-                        {command("italic", (ed) =>
-                          ed.chain().focus().toggleItalic().run(),
-                        )}
-                        {command("underline", (ed) =>
-                          ed.chain().focus().toggleUnderline().run(),
-                        )}
-                        {command("strike", (ed) =>
-                          ed.chain().focus().toggleStrike().run(),
-                        )}
-                        <ColorControl
-                          label="글자색"
-                          value={
-                            editor.current?.getAttributes("textStyle").color ||
-                            "#242424"
-                          }
-                          onChange={(color) =>
-                            editor.current
-                              ?.chain()
-                              .focus()
-                              .setColor(color)
-                              .run()
-                          }
+                      <Icon name="refresh" />
+                      가로·세로 전환
+                    </button>
+                    {[
+                      ["width", "쪽 너비"],
+                      ["height", "쪽 높이"],
+                      ["top", "위 여백"],
+                      ["right", "오른쪽 여백"],
+                      ["bottom", "아래 여백"],
+                      ["left", "왼쪽 여백"],
+                    ].map(([key, label]) => (
+                      <label key={key}>
+                        {label}
+                        <input
+                          type="number"
+                          aria-label={label}
+                          min={["width", "height"].includes(key) ? 100 : 0}
+                          max={["width", "height"].includes(key) ? 600 : 80}
+                          step="0.1"
+                          value={Math.round((layout as any)[key] * 10) / 10}
+                          onChange={(e) => applyLayout(key, e.target.value)}
                         />
-                        <ColorControl
-                          label="하이라이트"
-                          value={
-                            editor.current?.getAttributes("highlight").color ||
-                            "#fff29a"
-                          }
-                          onChange={(color) =>
-                            editor.current
-                              ?.chain()
-                              .focus()
-                              .setMark("highlight", { color })
-                              .run()
-                          }
-                          onClear={() => {
-                            editor.current
-                              ?.chain()
-                              .focus()
-                              .unsetMark("highlight")
-                              .run();
-                          }}
-                        />
-                        {command("아래 첨자", (ed) =>
-                          ed.chain().focus().toggleMark("subscript").run(),
-                        )}
-                        {command("위 첨자", (ed) =>
-                          ed.chain().focus().toggleMark("superscript").run(),
-                        )}
-                        <hr />
-                        <h3>문단 및 목록</h3>
-                        <select
+                      </label>
+                    ))}
+                  </fieldset>
+                  <hr />
+                  <section className="editor-control-section">
+                    <h3>내보내기</h3>
+                    <section className="document-export">
+                      <div role="menu">
+                        <button
                           className="keep-label"
-                          aria-label="문단 정렬"
-                          value={
-                            editor.current?.getAttributes("paragraph")
-                              .textAlign ||
-                            editor.current?.getAttributes("heading")
-                              .textAlign ||
-                            "left"
-                          }
-                          onChange={(e) => {
-                            editor.current
-                              ?.chain()
-                              .focus()
-                              .setTextAlign(e.target.value)
-                              .run();
-                            setActive((v) => v + 1);
-                          }}
+                          role="menuitem"
+                          disabled={!ready || exporting}
+                          onClick={(e) => menuAction(e, exportPDF)}
                         >
-                          <option value="left">왼쪽 정렬</option>
-                          <option value="center">가운데 정렬</option>
-                          <option value="right">오른쪽 정렬</option>
-                          <option value="justify">양쪽 정렬</option>
-                        </select>
-                        {command("bulletList", (ed) =>
-                          ed.chain().focus().toggleBulletList().run(),
-                        )}
-                        {command("orderedList", (ed) =>
-                          ed.chain().focus().toggleOrderedList().run(),
-                        )}
-                        <select
-                          aria-label="목록 기호 종류"
-                          value={
-                            editor.current?.getAttributes(
-                              editor.current?.isActive("orderedList")
-                                ? "orderedList"
-                                : "bulletList",
-                            ).listStyle || "disc"
-                          }
-                          onChange={(e) => {
-                            const ed = editor.current;
-                            if (!ed) return;
-                            const style = e.target.value;
-                            const ordered = [
-                              "decimal",
-                              "lower-alpha",
-                              "upper-roman",
-                            ].includes(style);
-                            if (
-                              !ed.isActive(
-                                ordered ? "orderedList" : "bulletList",
-                              )
+                          <Icon name="file" />
+                          PDF (.pdf)
+                        </button>
+                        <button
+                          className="keep-label"
+                          role="menuitem"
+                          disabled={!ready || exporting}
+                          onClick={(e) =>
+                            menuAction(e, () =>
+                              session.current
+                                ?.download()
+                                .catch((err: any) => setError(err.message)),
                             )
-                              (ordered
-                                ? ed.chain().focus().toggleOrderedList()
-                                : ed.chain().focus().toggleBulletList()
-                              ).run();
-                            ed.chain()
-                              .focus()
-                              .updateAttributes(
-                                ordered ? "orderedList" : "bulletList",
-                                { listStyle: style, docxNumId: null },
-                              )
-                              .run();
-                          }}
-                        >
-                          {[
-                            ["disc", "• 원"],
-                            ["circle", "○ 빈 원"],
-                            ["square", "▪ 사각형"],
-                            ["decimal", "1. 숫자"],
-                            ["lower-alpha", "a. 알파벳"],
-                            ["upper-roman", "I. 로마 숫자"],
-                          ].map(([id, label]) => (
-                            <option key={id} value={id}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          className="keep-label"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() =>
-                            editor.current
-                              ?.chain()
-                              .focus()
-                              .sinkListItem("listItem")
-                              .run()
                           }
                         >
-                          목록 단계 늘리기
+                          <Icon name="file" />
+                          {format === "docx" ? "Word (.docx)" : "원본 파일"}
                         </button>
-                        <button
-                          className="keep-label"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() =>
-                            editor.current
-                              ?.chain()
-                              .focus()
-                              .liftListItem("listItem")
-                              .run()
-                          }
-                        >
-                          목록 단계 줄이기
-                        </button>
-                      </>
-                    )}
-                    {editor.current?.isActive("table") && (
-                      <>
-                        <hr />
-                        <h3>표 구성</h3>
-                        {command("행 추가", (ed) =>
-                          ed.chain().focus().addRowAfter().run(),
-                        )}
-                        {command("열 추가", (ed) =>
-                          ed.chain().focus().addColumnAfter().run(),
-                        )}
-                        {command("행 삭제", (ed) =>
-                          ed.chain().focus().deleteRow().run(),
-                        )}
-                        {command("열 삭제", (ed) =>
-                          ed.chain().focus().deleteColumn().run(),
-                        )}
-                        {command("셀 병합", (ed) =>
-                          ed.chain().focus().mergeCells().run(),
-                        )}
-                        {command("셀 분할", (ed) =>
-                          ed.chain().focus().splitCell().run(),
-                        )}
-                        {command("표 삭제", (ed) =>
-                          ed.chain().focus().deleteTable().run(),
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-                <button
-                  className="keep-label"
-                  title="전체 선택"
-                  onClick={() =>
-                    editor.current?.chain().focus().selectAll().run()
-                  }
-                >
-                  전체 선택
-                </button>
-                <button
-                  className="keep-label"
-                  title="선택 영역 서식 지우기"
-                  onClick={() =>
-                    editor.current
-                      ?.chain()
-                      .focus()
-                      .unsetAllMarks()
-                      .clearNodes()
-                      .run()
-                  }
-                >
-                  서식 지우기
-                </button>
-              </section>
-            )}
-            {panel === "page" && (
-              <section className="document-page-controls">
-                <h3>레이아웃</h3>
-                <fieldset className="document-layout-controls">
-                  <legend>페이지 설정 · mm</legend>
-                  <label>
-                    용지 크기
-                    <select
-                      className="keep-label"
-                      aria-label="용지 크기"
-                      value={
-                        (layout.width === 210 && layout.height === 297) ||
-                        (layout.width === 297 && layout.height === 210)
-                          ? "a4"
-                          : (layout.width === 148 && layout.height === 210) ||
-                              (layout.width === 210 && layout.height === 148)
-                            ? "a5"
-                            : (layout.width === 215.9 &&
-                                  layout.height === 279.4) ||
-                                (layout.width === 279.4 &&
-                                  layout.height === 215.9)
-                              ? "letter"
-                              : "custom"
-                      }
-                      onChange={(e) => {
-                        const sizes: any = {
-                          a4: [210, 297],
-                          a5: [148, 210],
-                          letter: [215.9, 279.4],
-                        };
-                        if (sizes[e.target.value]) {
-                          const [width, height] = sizes[e.target.value];
-                          editor.current?.commands.command(({ tr }: any) => {
-                            tr.setDocAttribute("docxLayout", {
-                              ...layout,
-                              width,
-                              height,
-                            });
-                            return true;
-                          });
-                          setActive((v) => v + 1);
-                        }
-                      }}
-                    >
-                      <option value="a4">A4 (210 × 297)</option>
-                      <option value="a5">A5 (148 × 210)</option>
-                      <option value="letter">Letter (215.9 × 279.4)</option>
-                      <option value="custom">사용자 지정</option>
-                    </select>
-                  </label>
-                  <button
-                    className="keep-label"
-                    aria-label="용지 방향 전환"
-                    onClick={() => {
-                      editor.current?.commands.command(({ tr }: any) => {
-                        tr.setDocAttribute("docxLayout", {
-                          ...layout,
-                          width: layout.height,
-                          height: layout.width,
-                        });
-                        return true;
-                      });
-                      setActive((v) => v + 1);
-                    }}
-                  >
-                    <Icon name="refresh" />
-                    가로·세로 전환
-                  </button>
-                  {[
-                    ["width", "쪽 너비"],
-                    ["height", "쪽 높이"],
-                    ["top", "위 여백"],
-                    ["right", "오른쪽 여백"],
-                    ["bottom", "아래 여백"],
-                    ["left", "왼쪽 여백"],
-                  ].map(([key, label]) => (
-                    <label key={key}>
-                      {label}
-                      <input
-                        type="number"
-                        aria-label={label}
-                        min={["width", "height"].includes(key) ? 100 : 0}
-                        max={["width", "height"].includes(key) ? 600 : 80}
-                        step="0.1"
-                        value={Math.round((layout as any)[key] * 10) / 10}
-                        onChange={(e) => applyLayout(key, e.target.value)}
-                      />
-                    </label>
-                  ))}
-                </fieldset>
-                <hr />
-                <section className="editor-control-section">
-                  <h3>머리글·바닥글</h3>
-                  <label>
-                    머리글
-                    <input
-                      aria-label="머리글"
-                      maxLength={200}
-                      placeholder="머리글 입력"
-                      value={furniture.header || ""}
-                      onChange={(e) => setFurniture("header", e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    바닥글
-                    <input
-                      aria-label="바닥글"
-                      maxLength={200}
-                      placeholder="바닥글 입력"
-                      value={furniture.footer || ""}
-                      onChange={(e) => setFurniture("footer", e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      aria-label="페이지 번호"
-                      checked={!!furniture.pageNumber}
-                      onChange={(e) =>
-                        setFurniture("pageNumber", e.target.checked)
-                      }
-                    />
-                    페이지 번호
-                  </label>
-                </section>
-                <hr />
-                <section className="editor-control-section">
-                  <h3>내보내기</h3>
-                  <section className="document-export">
-                    <div role="menu">
-                      <button
-                        className="keep-label"
-                        role="menuitem"
-                        disabled={!ready || exporting}
-                        onClick={(e) => menuAction(e, exportPDF)}
-                      >
-                        <Icon name="file" />
-                        PDF (.pdf)
-                      </button>
-                      <button
-                        className="keep-label"
-                        role="menuitem"
-                        disabled={!ready || exporting}
-                        onClick={(e) =>
-                          menuAction(e, () =>
-                            session.current
-                              ?.download()
-                              .catch((err: any) => setError(err.message)),
-                          )
-                        }
-                      >
-                        <Icon name="file" />
-                        {format === "docx" ? "Word (.docx)" : "원본 파일"}
-                      </button>
-                    </div>
+                      </div>
+                    </section>
                   </section>
                 </section>
-              </section>
-            )}
-            {panel === "settings" && (
-              <>
-                <h3>글꼴 관리</h3>
-                <FontManager />
-              </>
-            )}
-            {panel === "settings" && (
-              <>
-                <hr />
-                <section className="editor-control-section">
-                  <h3>문서</h3>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={marginMarks}
-                      onChange={(e) => setMarginMarks(e.target.checked)}
-                    />
-                    페이지 여백 표시
-                  </label>
-                  <button
-                    className="keep-label"
-                    onClick={() => setEditingTitle(true)}
-                  >
-                    <Icon name="edit" />
-                    문서 이름 바꾸기
-                  </button>
-                  {deleteConfirm ? (
-                    <div className="editor-delete-confirm">
-                      <p>문서를 휴지통으로 옮길까요?</p>
-                      <button
-                        className="keep-label"
-                        onClick={() => setDeleteConfirm(false)}
-                      >
-                        취소
-                      </button>
-                      <button
-                        className="keep-label danger"
-                        onClick={trashDocument}
-                      >
-                        휴지통으로 이동
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      className="keep-label danger"
-                      onClick={() => setDeleteConfirm(true)}
-                    >
-                      <Icon name="trash" />
-                      문서 삭제
-                    </button>
-                  )}
-                </section>
-              </>
-            )}
+              )}
+            </div>
           </aside>
         )}
       </div>

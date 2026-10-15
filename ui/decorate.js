@@ -1,4 +1,3 @@
-import {installRemovalReveal} from './removal-reveal.js';
 import {iconSVG,inferIcon} from './icons.js';
 import {installDropdowns} from './dropdowns.js';
 const exclude='.source-gallery button,.admin-home button,.merge-project,.sidebar-project,.refopen,.task-title,.calendar-event,.calendar-task,.assignee-trigger,.assignee-popover button,.status-options button,.navlink,.keep-label,.space-switch,.space-option,.sidebar-ref-link';
@@ -19,4 +18,4 @@ export function decorateUI(root){root.querySelectorAll('button').forEach(b=>{
  if(svg){b.classList.remove('has-pack-icon');b.style.removeProperty('--button-icon');delete b.dataset.uiIconLabel;}
  else if(b.dataset.uiIconLabel!==label+'|'+(b.dataset.iconName||'')||!b.classList.contains('has-pack-icon')){b.dataset.uiIconLabel=label+'|'+(b.dataset.iconName||'');b.classList.add('has-pack-icon');b.style.setProperty('--button-icon','url("data:image/svg+xml,'+encodeURIComponent(iconSVG(b.dataset.iconName||inferIcon(label)).replace('currentColor','#111'))+'")');}
  });}
-export function observeUI(root){const stopRemovalReveal=installRemovalReveal(root);installDropdowns(root);decorateUI(root);let queued=false;const observer=new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;decorateUI(root)})});observer.observe(root,{childList:true,subtree:true,characterData:true});return ()=>{observer.disconnect();stopRemovalReveal()};}
+export function observeUI(root){installDropdowns(root);decorateUI(root);let queued=false;const observer=new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;decorateUI(root)})});observer.observe(root,{childList:true,subtree:true,characterData:true});return ()=>{observer.disconnect()};}

@@ -1,3 +1,4 @@
+import { indentList, listDepth } from "./ParagraphControls";
 import { Extension, Mark } from "@tiptap/core";
 
 export const Highlight = Mark.create({
@@ -27,6 +28,68 @@ export const editorAttributes = Extension.create({
   name: "editorAttributes",
   addGlobalAttributes() {
     return [
+      {
+        types: ["paragraph", "heading"],
+        attributes: Object.fromEntries(
+          [
+            "lineHeight",
+            "spaceBefore",
+            "spaceAfter",
+            "indentLeft",
+            "indentRight",
+            "firstLine",
+          ].map((key) => [
+            key,
+            {
+              default: null,
+              parseHTML: (el: HTMLElement) => {
+                const v: any = {
+                  lineHeight: el.style.lineHeight,
+                  spaceBefore: el.style.marginTop,
+                  spaceAfter: el.style.marginBottom,
+                  indentLeft: el.style.marginLeft,
+                  indentRight: el.style.marginRight,
+                  firstLine: el.style.textIndent,
+                };
+                const raw = v[key];
+                if (!raw) return null;
+                return (
+                  parseFloat(raw) *
+                  (raw.endsWith("px")
+                    ? key.startsWith("space")
+                      ? 0.75
+                      : key.startsWith("indent") || key === "firstLine"
+                        ? 2.54 / 96
+                        : 1
+                    : 1)
+                );
+              },
+              renderHTML: (a: any) => {
+                if (a[key] == null) return {};
+                const css: any = {
+                  lineHeight: "line-height",
+                  spaceBefore: "margin-top",
+                  spaceAfter: "margin-bottom",
+                  indentLeft: "margin-left",
+                  indentRight: "margin-right",
+                  firstLine: "text-indent",
+                };
+                return {
+                  style:
+                    css[key] +
+                    ":" +
+                    a[key] +
+                    (key === "lineHeight"
+                      ? ""
+                      : key.startsWith("space")
+                        ? "pt"
+                        : "cm"),
+                };
+              },
+            },
+          ]),
+        ),
+      },
       {
         types: ["doc"],
         attributes: { docxFurniture: { default: null, rendered: false } },
@@ -87,3 +150,22 @@ export class DocumentTableView extends TableView {
       this.table.style.width = node.attrs.objectWidth + "%";
   }
 }
+
+export const ListLevels = Extension.create({
+  name: "listLevels",
+  priority: 1100,
+  addKeyboardShortcuts() {
+    return {
+      Tab: () => {
+        if (!listDepth(this.editor)) return false;
+        indentList(this.editor);
+        return true;
+      },
+      "Shift-Tab": () => {
+        if (!listDepth(this.editor)) return false;
+        indentList(this.editor, true);
+        return true;
+      },
+    };
+  },
+});

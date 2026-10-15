@@ -285,10 +285,10 @@ button.primary.danger,.button.primary.danger,button.catalog-delete,button[aria-l
 .home-schedule-future{min-height:calc(100dvh - 230px)}
 @media(max-width:720px){.home-schedule-future{min-height:calc(100dvh - 270px)}}
 
-/* Contextual removal: row hover, pointer proximity, and keyboard focus share one reveal. */
+/* List controls reveal on their row; modules retain proximity. Keyboard and touch stay accessible. */
 @media(hover:hover) and (pointer:fine){
  .compact-remove,.context-remove,[data-removal-reveal=true]{opacity:0;pointer-events:none;transition:opacity .15s ease}
- :is(.compact-remove,.context-remove,[data-removal-reveal=true]):is(.remove-near,:focus-visible),
+ :is(.compact-remove,.context-remove,[data-removal-reveal=true]):focus-visible,
  :has(>.compact-remove):hover>.compact-remove,
  :has(>.context-remove):hover>.context-remove,
  :has(>[data-removal-reveal=true]):hover>[data-removal-reveal=true],
@@ -298,3 +298,5 @@ button.primary.danger,.button.primary.danger,button.catalog-delete,button[aria-l
  .fluid-box:is(:hover,[data-module-near=true])>.module-divider-row .compact-remove{opacity:1;pointer-events:auto}
 }
 @media(prefers-reduced-motion:reduce){.compact-remove,.context-remove,[data-removal-reveal=true]{transition:none}}
+
+button.compact-remove.ui-icon-button:hover,button.context-remove.icon-button:hover,button.ui-icon-button[data-removal-reveal=true]:hover{color:#dc2626!important;background:#fef2f2!important;border-color:#fecaca!important}

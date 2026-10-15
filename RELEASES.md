@@ -141,3 +141,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Measure intrinsic module heights even when fixed, update automatic layout as content changes, and magnetically return to content height with hysteresis during pointer or keyboard resizing. Manual heights persist until reset; double-click/Home also restores automatic height.
 - Preserve independent neighboring sizes, snapped responsive width layout and drag cancellation. Coalesce content/resize observation and removal proximity work into animation frames.
 - NAS files, database schema and configuration: unchanged.
+
+## 0.0.15
+
+- Reserve a fixed header for Document/Properties tabs in the floating editor panel, animate canvas movement, use a hamburger toggle and remove Settings and page-furniture insertion controls.
+- Group paragraph and character properties; add icon alignment, line spacing, paragraph spacing, first-line/hanging indentation and DOCX round-trip support. Keep Word normal margins (25.4mm).
+- Add split bullet/number style controls and keyboard nesting up to five levels; show outline lines only for nonempty headings. Keep insertion menus above the canvas.
+- Reveal list removal controls only on their row hover, retaining keyboard and touch access; use red hover emphasis for member and other removal controls. Preserve module proximity reveal.
+- NAS files, database schema and configuration: unchanged.

@@ -41,13 +41,13 @@ with tempfile.TemporaryDirectory() as td:
     page.goto(base)
     if mode=='nas':
      page.locator('#account-form [name=email]').fill('admin@example.com');page.locator('#account-form [name=password]').fill('StrongPassword2026!');page.locator('#account-form button').click()
-    page.wait_for_function('!!window.productionBridge && typeof window.mountProduction==="function"')
+    page.wait_for_function('!!window.productionBridge && typeof window.mountProduction==="function"');page.locator('.admin-home').wait_for()
     project=page.evaluate("""async()=>{const w=window.productionBridge.read(),id=crypto.randomUUID();w.productions=[];w.projects=[{id,name:'맞춤 검증',status:'진행 중',due:'',owner:'',tasks:[],schedules:[],assets:[],feedback:[],customTabs:[{id:'fit',name:'자동 크기',modules:[{id:'a',kind:'checklist',title:'자동 모듈',span:6,items:[{id:'first',text:'첫 항목'}]},{id:'b',kind:'checklist',title:'다른 모듈',span:6,items:[{id:'other',text:'다른 항목'}]},{id:'c',kind:'text',title:'아래 모듈',text:'아래쪽 내용'}]}]}];window.productionBridge.write(w);await window.flushDocumentModules();window.productionBridge.select(id,'tab:fit');return id}""")
-    page.goto(base+'#/work-groups/'+project+'/tabs/fit')
+    page.goto(base+'#/work-groups/'+project+'/tabs/fit');page.reload()
     a=page.locator('[data-fluid-id=a]');b=page.locator('[data-fluid-id=b]');
     try:a.wait_for()
     except Exception:
-     print(page.locator('body').inner_text(),flush=True);raise
+     print(page.locator('body').inner_text(),errors,flush=True);raise
     def h(box):return box.bounding_box()['height']
     def module_data():return page.evaluate("window.productionBridge.read().projects[0].customTabs.find(t=>t.id==='fit').modules.find(m=>m.id==='a')")
     def idle():page.wait_for_timeout(250)
@@ -55,14 +55,16 @@ with tempfile.TemporaryDirectory() as td:
      edge=a.get_by_role('separator',name='모듈 높이 조절',exact=True);r=edge.bounding_box();x=r['x']+r['width']/2;y=r['y']+r['height']/2;page.mouse.move(x,y);page.mouse.down();page.mouse.move(x,y+delta,steps=12);page.mouse.up();idle()
     page.mouse.move(0,0);idle()
     removal=a.locator('.module-outside-title .compact-remove');assert removal.evaluate('e=>getComputedStyle(e).opacity')=='0'
-    r=a.bounding_box();page.mouse.move(r['x']+r['width']+7,r['y']+5);idle();assert removal.evaluate('e=>getComputedStyle(e).opacity')=='1'
+    r=a.bounding_box();page.mouse.move(r['x']+r['width']/2,r['y']-7);idle();assert removal.evaluate('e=>getComputedStyle(e).opacity')=='1', (r,a.get_attribute('data-module-near'))
     page.mouse.move(0,0);idle();assert removal.evaluate('e=>getComputedStyle(e).opacity')=='0'
     # Keyboard-only access remains visible and confirmation never vanishes off hover.
     removal.focus();idle();assert removal.evaluate('e=>getComputedStyle(e).opacity')=='1'
     removal.click();page.mouse.move(0,0);a.get_by_role('button',name='모듈 삭제 확인',exact=True).wait_for();a.get_by_role('button',name='삭제 취소',exact=True).click()
     page.evaluate("document.querySelector('#production-panel')?.shadowRoot?.activeElement?.blur()");page.mouse.move(0,0);idle()
     row_remove=a.get_by_role('button',name='항목 삭제',exact=True);assert row_remove.evaluate('e=>getComputedStyle(e).opacity')=='0'
-    r=row_remove.bounding_box();page.mouse.move(r['x']+r['width']+10,r['y']+r['height']/2);idle();assert row_remove.evaluate('e=>getComputedStyle(e).opacity')=='1'
+    r=a.locator('.checklist-row').first.bounding_box();page.mouse.move(r['x']+r['width']+4,r['y']+r['height']/2);idle();assert row_remove.evaluate('e=>getComputedStyle(e).opacity')=='0'
+    a.locator('.checklist-row').first.hover();idle();assert row_remove.evaluate('e=>getComputedStyle(e).opacity')=='1'
+    row_remove.hover();idle();assert row_remove.evaluate('e=>getComputedStyle(e).color')=='rgb(220, 38, 38)',row_remove.evaluate('e=>({color:getComputedStyle(e).color,html:e.outerHTML})')
     # Intrinsic content changes repack the board, independently of adjacent cards.
     first=h(a);other=h(b);a.get_by_role('button',name='항목 추가',exact=True).click();idle();natural=h(a);row_height=natural-first;assert row_height>20
     assert module_data().get('frameHeight') is None
@@ -88,7 +90,7 @@ with tempfile.TemporaryDirectory() as td:
     assert mobile.locator('[data-fluid-id=a] [data-removal-reveal=true]').first.evaluate('e=>getComputedStyle(e).opacity')=='1'
     touch.close()
     assert not errors,errors
-    print('PASS '+mode+': near/hover/keyboard removal, stable confirmation, auto height growth, fixed persistence, magnetic reset, board packing and width resizing',flush=True)
+    print('PASS '+mode+': module proximity, row-only hover, red removal, keyboard/touch access, stable confirmation, auto height growth, fixed persistence, magnetic reset, board packing and width resizing',flush=True)
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()
