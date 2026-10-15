@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {createRequire} from 'node:module';import * as model from '../production/project-lifecycle.js';
+const require=createRequire(import.meta.url),esbuild=require('esbuild'),jsx=(type,props)=>({type,props}),state=[];let cursor=0;
+const ctx={module:{exports:{}},exports:{},window:{referenceBridge:{cached:()=>[]}},FormData:class{constructor(target){Object.assign(this,target)}},require(name){if(name==='react')return {useState:v=>{const i=cursor++;if(!(i in state))state[i]=typeof v==='function'?v():v;return[state[i],v=>state[i]=v]},useEffect(){}};if(name==='react/jsx-runtime')return {jsx,jsxs:jsx};if(name==='./project-lifecycle.js')return model;return {Modal:'Modal'}}};
+vm.runInNewContext(esbuild.transformSync(fs.readFileSync('production/CompletionReview.tsx','utf8'),{loader:'tsx',format:'cjs',jsx:'automatic'}).code,ctx);
+const owner={id:'p',name:'P',status:'진행 중',tasks:[{id:'todo',title:'남은 업무'}],schedules:[],assets:[{id:'out',name:'결과물',kind:'file'}],feedback:[]},w={members:[],projects:[owner],productions:[]};
+const render=()=>{cursor=0;return ctx.module.exports.CompletionReview({workspace:w,transition:{id:'p',kind:'project',name:'P'}})};
+const nodes=n=>[n,...[n?.props?.children].flat(Infinity).filter(v=>v&&typeof v==='object').flatMap(nodes)];
+let tree=render();assert.equal(nodes(tree).find(n=>n.props?.name==='exceptionReason').props.required,true);assert.ok(nodes(tree).some(n=>n.props?.role==='status'));
+owner.tasks=[];tree=render();assert.equal(nodes(tree).find(n=>n.props?.name==='exceptionReason').props.required,false);
+nodes(tree).find(n=>n.type==='form').props.onChange({currentTarget:{getAll:()=>[],get:()=>''}});tree=render();assert.equal(nodes(tree).find(n=>n.props?.name==='exceptionReason').props.required,true);
+nodes(tree).find(n=>n.type==='form').props.onChange({currentTarget:{getAll:()=>[],get:key=>key==='outputURL'?'https://example.com/final':''}});tree=render();assert.equal(nodes(tree).find(n=>n.props?.name==='exceptionReason').props.required,false);
+console.log('Completion summary: pending work, deselected outputs and new output URL update exception requirement before submission');
+// The archive form exposes the exact module and reset selection before committing.
+state.length=0;cursor=0;ctx.module={exports:{}};ctx.window.appAccount={role:'admin'};
+vm.runInNewContext(esbuild.transformSync(fs.readFileSync('production/ArchiveLibrary.tsx','utf8'),{loader:'tsx',format:'cjs',jsx:'automatic'}).code,ctx);
+const archive={id:'a',name:'지난 프로젝트',completedAt:'2026-10-15',outputs:[],snapshot:[],candidates:[{key:'one',name:'노트',tabName:'기록',module:{id:'m1',kind:'text'}},{key:'two',name:'진행표',tabName:'운영',module:{id:'m2',kind:'text'}}]};
+const aw={members:[],productions:[],projects:[{id:'old',name:'이전',status:'완료',archives:[archive]},{id:'new',name:'다음',status:'진행 중'}]};
+const renderArchive=()=>{cursor=0;return ctx.module.exports.ArchiveLibrary({workspace:aw,autoOpen:true,onChange(){}})};
+tree=renderArchive();nodes(tree).find(n=>n.type==='button'&&nodes(n).some(child=>child.type==='strong'&&child.props.children==='지난 프로젝트')).props.onClick();tree=renderArchive();nodes(tree).find(n=>n.type==='button'&&n.props.children==='다음 프로젝트로 가져오기').props.onClick();tree=renderArchive();
+assert.equal(nodes(tree).filter(n=>n.type==='li').length,2);
+nodes(tree).find(n=>n.type==='form').props.onChange({currentTarget:{getAll:()=>['one'],get:()=> 'copy',has:()=>false}});tree=renderArchive();assert.equal(nodes(tree).filter(n=>n.type==='li').length,1);
+const preview=nodes(tree).find(n=>n.props?.['aria-label']==='재사용 미리보기');assert.ok(preview);assert.equal(nodes(preview).filter(n=>n.type==='li')[0].props.children[2],'노트');
+console.log('Archive preview: selected modules, reuse mode and empty reset selection reflect form changes');

@@ -157,3 +157,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Share record data between views in the same tab while preserving per-view presentation; materialize snapshots when disconnecting, deleting a data owner, importing or reusing archived candidates.
 - Add editable filming, event, lesson and travel tab templates with unique data IDs, shared list/progress records and independent copies between instances. Include new module kinds in search and Hub.
 - NAS files, database schema and configuration: unchanged.
+
+## 0.0.17
+
+- Make the project status All filter include completed projects; show all projects in Home's project browser and total while explicitly labeling the overview's active-project section.
+- Use generic resource defaults and add administrator-managed shared category/property settings through the existing workspace API. Add additive podcast, performance, video and photography presets without rewriting existing resource metadata.
+- Search resource filenames, URLs and origin project/work-group names alongside titles, tags and properties. Give global and module empty states actionable, distinct instructions.
+- Summarize outstanding work, feedback, selected outputs and required exception reasons before project completion. Preview selected archive modules, reuse mode and reset fields before reuse.
+- NAS server files, database schema and configuration: unchanged. Shared resource preferences use the existing administrator workspace settings authorization.

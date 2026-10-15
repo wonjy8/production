@@ -1,3 +1,9 @@
+import {
+  resourceDefaults,
+  resourcePresets,
+  applyResourcePreset,
+  resourceSearchText,
+} from "./resource-schema.js";
 import { readFile, downloadBlob } from "./files";
 import { useEffect, useState } from "react";
 import { Modal } from "./Modal";
@@ -13,7 +19,6 @@ import {
   saveResource,
   resourceFile,
   copyResource,
-  noteFields,
 } from "./resources";
 export function resourceType(row: any) {
   if (row.mime?.startsWith("image/") || row.kind === "image") return "image";
@@ -33,7 +38,7 @@ export function resourceType(row: any) {
     return "documents";
   return "file";
 }
-const defaults = ["예배", "QT", "동아리"];
+const defaults = resourceDefaults.databaseCategories;
 const day = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -64,8 +69,13 @@ export function ResourceDatabase({
     ),
     [sort, setSort] = useState("date"),
     [reverse, setReverse] = useState(true);
-  const fields = module?.databaseFields || noteFields,
-    categories = module?.databaseCategories || defaults,
+  const [schema, setSchema] = useState<any>(
+    () =>
+      (window as any).productionBridge?.read()?.resourceSchema ||
+      resourceDefaults,
+  );
+  const fields = module?.databaseFields || schema.databaseFields,
+    categories = module?.databaseCategories || schema.databaseCategories,
     readonly = (window as any).appAccount?.role === "viewer";
   async function refresh() {
     try {
@@ -98,17 +108,17 @@ export function ResourceDatabase({
     selected = global
       ? active
       : active.filter((r) => ids.has(r.fileId || r.id)),
-    needle = query.trim().toLocaleLowerCase(),
+    needle = query.trim().normalize("NFKC").toLocaleLowerCase(),
     visible = selected
       .filter(
         (r) =>
           (filterType === "all" || resourceType(r) === filterType) &&
           (!category || r.properties?.category === category) &&
           (!needle ||
-            [r.title, ...(r.tags || []), ...Object.values(r.properties || {})]
-              .join(" ")
-              .toLocaleLowerCase()
-              .includes(needle)),
+            resourceSearchText(
+              r,
+              (window as any).productionBridge?.read() || {},
+            ).includes(needle)),
       )
       .sort((a, b) => {
         const x = sort === "title" ? a.title : a.properties?.date || "",
@@ -246,7 +256,18 @@ export function ResourceDatabase({
               속성
             </button>
           )}
-          {!readonly&&global&&row.canEdit&&<InlineRemove triggerText="휴지통" label={row.title+" 휴지통으로 이동"} onDelete={()=>perform(async()=>{await saveResource({...row,deleted:true});await refresh()})}/>}
+          {!readonly && global && row.canEdit && (
+            <InlineRemove
+              triggerText="휴지통"
+              label={row.title + " 휴지통으로 이동"}
+              onDelete={() =>
+                perform(async () => {
+                  await saveResource({ ...row, deleted: true });
+                  await refresh();
+                })
+              }
+            />
+          )}
           {!global && !readonly && (
             <InlineRemove
               onDelete={() =>
@@ -385,17 +406,24 @@ export function ResourceDatabase({
                 >
                   기존 자료 연결
                 </button>
-                <button
-                  className="keep-label"
-                  onClick={() => setSettings(true)}
-                  aria-label="데이터베이스 속성 설정"
-                >
-                  <Icon name="settings" />
-                </button>
               </>
             )}
           </>
         )}
+        {!readonly &&
+          (!global ||
+            !(window as any).appAccount ||
+            ["admin", "superadmin"].includes(
+              (window as any).appAccount.role,
+            )) && (
+            <button
+              className="keep-label"
+              aria-label="데이터베이스 속성 설정"
+              onClick={() => setSettings(true)}
+            >
+              <Icon name="settings" />
+            </button>
+          )}
       </header>
       {error && (
         <p role="alert" className="form-error">
@@ -435,7 +463,9 @@ export function ResourceDatabase({
       )}
       {!loading && !visible.length && (
         <p className="group-empty">
-          등록된 자료가 없습니다. 새 문서를 만들거나 기존 자료를 연결하세요.
+          {global
+            ? "등록된 자료가 없습니다. 새 문서를 만들거나 파일을 업로드하세요."
+            : "등록된 자료가 없습니다. 새 문서를 만들거나 기존 자료를 연결하세요."}
         </p>
       )}
       {!global && (
@@ -564,11 +594,21 @@ export function ResourceDatabase({
       )}
       {settings && (
         <DatabaseSettings
-          module={module}
+          module={global ? schema : module}
           onClose={() => setSettings(false)}
           onSave={(data: any) => {
-            onChange((old: any) => ({ ...old, ...data }));
-            setSettings(false);
+            if (global) {
+              perform(async () => {
+                const bridge = (window as any).productionBridge;
+                bridge.setResourceSchema(data);
+                await (window as any).flushDocumentModules?.();
+                setSchema(data);
+                setSettings(false);
+              });
+            } else {
+              onChange((old: any) => ({ ...old, ...data }));
+              setSettings(false);
+            }
           }}
         />
       )}
@@ -665,7 +705,9 @@ function DatabaseSettings({ module, onSave, onClose }: any) {
   const [categories, setCategories] = useState(
       (module.databaseCategories || defaults).join(", "),
     ),
-    [fields, setFields] = useState(module.databaseFields || noteFields),
+    [fields, setFields] = useState(
+      module.databaseFields || resourceDefaults.databaseFields,
+    ),
     [name, setName] = useState("");
   return (
     <Modal title="데이터베이스 속성 설정" onClose={onClose}>
@@ -687,17 +729,64 @@ function DatabaseSettings({ module, onSave, onClose }: any) {
         }}
       >
         <label>
+          프리셋 추가
+          <select
+            aria-label="자료 프리셋"
+            defaultValue=""
+            onChange={(e) => {
+              const preset = resourcePresets.find(
+                (p) => p.id === e.target.value,
+              );
+              if (preset) {
+                const next = applyResourcePreset(
+                  {
+                    databaseCategories: categories
+                      .split(",")
+                      .map((v) => v.trim())
+                      .filter(Boolean),
+                    databaseFields: fields,
+                  },
+                  preset,
+                );
+                setCategories(next.databaseCategories.join(", "));
+                setFields(next.databaseFields);
+              }
+              e.target.value = "";
+            }}
+          >
+            <option value="">프리셋 선택</option>
+            {resourcePresets.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="muted">
+          기존 자료 값은 유지됩니다. 프리셋은 분류와 속성을 추가합니다.
+        </p>
+        <label>
           분류 선택지
           <input
             aria-label="분류 선택지"
             value={categories}
             onChange={(e) => setCategories(e.target.value)}
-            placeholder="예배, QT, 동아리"
+            placeholder="예: 기획, 제작, 완료"
           />
         </label>
         {fields.map((f: any) => (
           <div className="resource-field-setting" key={f.id}>
-            <span>{f.label}</span>
+            <input
+              aria-label="속성 표시 이름"
+              value={f.label}
+              onChange={(e) =>
+                setFields(
+                  fields.map((x: any) =>
+                    x.id === f.id ? { ...x, label: e.target.value } : x,
+                  ),
+                )
+              }
+            />
             {!["category", "date"].includes(f.id) && (
               <button
                 type="button"
