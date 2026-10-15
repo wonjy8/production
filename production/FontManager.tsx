@@ -12,7 +12,8 @@ import { InlineRemove } from "./InlineRemove";
 export function FontManager() {
   const [fonts, setFonts] = useState(currentCustomFonts()),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [progress, setProgress] = useState("");
   const readonly = (window as any).appAccount?.role === "viewer";
   useEffect(() => {
     let alive = true;
@@ -45,29 +46,48 @@ export function FontManager() {
           {busy ? "글꼴 확인 중…" : "글꼴 추가"}
           <input
             type="file"
+            multiple
             accept=".ttf,.otf,font/ttf,font/otf"
             aria-label="글꼴 파일 추가"
             disabled={busy}
             onChange={async (e) => {
-              const file = e.target.files?.[0];
+              const files = Array.from(e.target.files || []);
               e.target.value = "";
-              if (!file) return;
+              if (!files.length) return;
               setBusy(true);
               setError("");
-              try {
-                await addCustomFont(file);
+              const failures: string[] = [];
+              let installed = 0;
+              for (let i = 0; i < files.length; i++) {
+                setProgress(`${i + 1}/${files.length} · ${files[i].name}`);
+                try {
+                  await addCustomFont(files[i]);
+                  installed++;
+                } catch (error: any) {
+                  failures.push(
+                    files[i].name + ": " + (error.message || "설치 실패"),
+                  );
+                }
                 setFonts(currentCustomFonts());
-              } catch (e: any) {
-                setError(e.message || "글꼴을 추가하지 못했습니다.");
-              } finally {
-                setBusy(false);
               }
+              setProgress(`${installed}개 설치 · ${failures.length}개 실패`);
+              setError(failures.join("\n"));
+              setBusy(false);
             }}
           />
         </label>
       )}
+      {progress && (
+        <p role="status" aria-live="polite">
+          {progress}
+        </p>
+      )}
       {error && (
-        <p role="alert" className="form-error">
+        <p
+          role="alert"
+          className="form-error"
+          style={{ whiteSpace: "pre-wrap" }}
+        >
           {error}
         </p>
       )}

@@ -165,3 +165,13 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Search resource filenames, URLs and origin project/work-group names alongside titles, tags and properties. Give global and module empty states actionable, distinct instructions.
 - Summarize outstanding work, feedback, selected outputs and required exception reasons before project completion. Preview selected archive modules, reuse mode and reset fields before reuse.
 - NAS server files, database schema and configuration: unchanged. Shared resource preferences use the existing administrator workspace settings authorization.
+
+## 0.0.18
+
+- Use pointer-based module insertion guides for a single card, an entire row or adjacent placement. Persist independent column stacks and row boundaries, retain neighboring columns and coalesce drag updates per animation frame.
+- Suppress additional card transitions while sidebar/container width animates; measure initial layout before paint and reuse unchanged packing calculations during dragging.
+- Move modules between custom and built-in content tabs in projects and between reference tabs, highlighting the destination and opening it after an atomic move. Preserve shared-data snapshots, file identity, original placement metadata and undo history; enforce project tab edit permissions.
+- Rename project and reference tabs on double-click using the existing editor.
+- Install multiple TTF/OTF fonts sequentially with progress and per-file failures, continuing after invalid or duplicate files.
+- Align imported media's Save to Original control with upload/tag actions at the right edge, retaining the blue confirmation and removing the separate footer gap.
+- NAS files, database schema and configuration: unchanged.

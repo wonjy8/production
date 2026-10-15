@@ -1,6 +1,6 @@
 import { contentHeightResize, naturalModuleHeight } from "./module-resize.js";
 import { delayedPointerDrag } from "../ui/touch-drag.js";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useLayoutEffect, useMemo } from "react";
 import { createAutoScroller } from "./auto-scroll.js";
 import {
   snapBoxes,
@@ -9,6 +9,7 @@ import {
   resizeSpan,
   resizeHeight,
   dropModule,
+  moduleDropTarget,
 } from "./snap-layout.js";
 export function SnapCanvas({
   items,
@@ -16,7 +17,11 @@ export function SnapCanvas({
   renderItem,
   className = "",
   onTemplateDrop,
+  currentTabId,
+  onTransfer,
 }: {
+  currentTabId?: string;
+  onTransfer?: (id: string, toTab: string) => void;
   items: any[];
   onChange: (fn: any) => void;
   renderItem: (item: any, index: number, drag: any) => any;
@@ -31,19 +36,28 @@ export function SnapCanvas({
     gesture = useRef<any>(null),
     autoScroll = useRef<any>(null),
     latestMove = useRef<any>(null),
+    moveFrame = useRef(0),
+    pendingMove = useRef<any>(null),
     [metrics, setMetrics] = useState<any>({ width: 1000, heights: {} }),
     [preview, setPreview] = useState<any>(null),
     [externalDrop, setExternalDrop] = useState(false),
+    [dropTarget, setDropTarget] = useState<any>(null),
+    [tabTarget, setTabTarget] = useState<any>(null),
     [nearby, setNearby] = useState("");
   useEffect(() => {
     const stop = () => {
       autoScroll.current?.stop();
+      cancelAnimationFrame(moveFrame.current);
+      moveFrame.current = 0;
+      pendingMove.current = null;
       autoScroll.current = null;
       const g = gesture.current;
       gesture.current = null;
       if (g?.target.hasPointerCapture?.(g.pointerId))
         g.target.releasePointerCapture(g.pointerId);
       setPreview(null);
+      setDropTarget(null);
+      setTabTarget(null);
     };
     const escape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && gesture.current) {
@@ -56,17 +70,29 @@ export function SnapCanvas({
     window.addEventListener("keydown", escape);
     return () => {
       autoScroll.current?.stop();
+      cancelAnimationFrame(moveFrame.current);
       window.removeEventListener("blur", stop);
       window.removeEventListener("keydown", escape);
     };
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = canvas.current;
     if (!node || typeof ResizeObserver === "undefined") return;
-    let frame = 0;
+    let frame = 0,
+      resizeTimer: any;
+    let previousWidth = node.clientWidth;
     const measure = () => {
       frame = 0;
       if (!node.clientWidth) return;
+      if (previousWidth !== node.clientWidth) {
+        node.classList.add("canvas-width-changing");
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(
+          () => node.classList.remove("canvas-width-changing"),
+          220,
+        );
+        previousWidth = node.clientWidth;
+      }
       const heights: any = {},
         naturalHeights: any = {};
       node
@@ -101,30 +127,43 @@ export function SnapCanvas({
       attributeFilter: ["style", "src", "width", "height"],
     });
     node.addEventListener("load", schedule, true);
-    schedule();
+    measure();
     return () => {
       observer.disconnect();
+      clearTimeout(resizeTimer);
+      node.classList.remove("canvas-width-changing");
       mutations.disconnect();
       cancelAnimationFrame(frame);
       node.removeEventListener("load", schedule, true);
     };
   }, [items.map((i) => i.id).join("|")]);
-  const effective = items.map((i) => ({
-      ...i,
-      span:
-        preview?.id === i.id &&
-        preview.kind.startsWith("resize") &&
-        preview.span
-          ? preview.span
-          : moduleSpan(i),
-      frameHeight:
-        preview?.id === i.id && preview.autoHeight
-          ? undefined
-          : preview?.id === i.id && preview.height
-            ? preview.height
-            : i.frameHeight,
-    })),
-    layout = snapBoxes(effective, metrics.heights, metrics.width);
+  const sizingPreview = preview?.kind.startsWith("resize") ? preview : null;
+  const effective = useMemo(
+      () =>
+        items.map((i) => ({
+          ...i,
+          span:
+            (preview?.id === i.id ||
+              (i.columnId &&
+                items.find((item) => item.id === preview?.id)?.columnId ===
+                  i.columnId)) &&
+            preview?.kind.startsWith("resize") &&
+            preview.span
+              ? preview.span
+              : moduleSpan(i),
+          frameHeight:
+            preview?.id === i.id && preview.autoHeight
+              ? undefined
+              : preview?.id === i.id && preview.height
+                ? preview.height
+                : i.frameHeight,
+        })),
+      [items, sizingPreview],
+    ),
+    layout = useMemo(
+      () => snapBoxes(effective, metrics.heights, metrics.width),
+      [effective, metrics.heights, metrics.width],
+    );
   function down(e: any, id: string, kind: string) {
     if (
       e.button !== 0 ||
@@ -202,56 +241,106 @@ export function SnapCanvas({
           : {}),
       });
     } else {
-      const divider = items.find((i) => i.id === g.id)?.kind === "divider",
-        step = (metrics.width + 12) / 12,
-        span = moduleSpan(items.find((i) => i.id === g.id)),
-        left =
-          Math.max(
-            0,
-            Math.min(12 - span, Math.round((g.box.left + dx) / step)),
-          ) * step,
-        anchors = [
-          0,
-          ...Object.values(layout.boxes).flatMap((b: any) => [
-            b.top,
-            b.top + b.height + 12,
-          ]),
-        ],
-        desired = Math.max(0, g.box.top + dy),
-        nearest = anchors.reduce(
-          (a, b) => (Math.abs(a - desired) < Math.abs(b - desired) ? a : b),
-          0,
-        );
-      g.point = {
-        x: divider ? metrics.width / 2 : g.box.left + g.box.width / 2 + dx,
-        y: g.box.top + g.box.height / 2 + dy,
-      };
+      const root = canvas.current?.getRootNode() as any,
+        hit = root
+          ?.elementFromPoint?.(e.clientX, e.clientY)
+          ?.closest("[data-module-tab-target]");
+      const destination =
+        onTransfer &&
+        hit?.getAttribute("aria-current") !== "page" &&
+        hit?.dataset.moduleTabTarget &&
+        hit.dataset.moduleTabTarget !== currentTabId
+          ? hit
+          : null;
+      g.toTab = destination?.dataset.moduleTabTarget || null;
+      setTabTarget(
+        destination
+          ? {
+              name: destination.textContent.trim(),
+              left: destination.getBoundingClientRect().left,
+              top: destination.getBoundingClientRect().top,
+              width: destination.getBoundingClientRect().width,
+              height: destination.getBoundingClientRect().height,
+            }
+          : null,
+      );
+      g.point = { x: e.clientX - rect!.left, y: e.clientY - rect!.top };
+      g.dropTarget = moduleDropTarget(
+        items,
+        layout.boxes,
+        g.id,
+        g.point.x,
+        g.point.y,
+        metrics.width,
+      );
+      setDropTarget(g.toTab ? null : g.dropTarget);
       setPreview({
         id: g.id,
         kind: g.kind,
-        left: divider ? 0 : left,
-        top:
-          Math.abs(nearest - desired) < 25
-            ? nearest
-            : Math.round(desired / 16) * 16,
+        left: Math.max(
+          0,
+          Math.min(metrics.width - g.box.width, g.box.left + dx),
+        ),
+        top: Math.max(0, g.box.top + dy),
       });
     }
     e.preventDefault();
   }
-  latestMove.current = move;
+  function queueMove(e: any) {
+    if (!gesture.current) return;
+    if (gesture.current.kind !== "move") {
+      move(e);
+      return;
+    }
+    e.preventDefault();
+    pendingMove.current = {
+      pointerId: e.pointerId,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      automatic: e.automatic,
+      preventDefault() {},
+    };
+    if (!moveFrame.current)
+      moveFrame.current = requestAnimationFrame(() => {
+        moveFrame.current = 0;
+        const p = pendingMove.current;
+        pendingMove.current = null;
+        if (p) move(p);
+      });
+  }
+  latestMove.current = queueMove;
   function up(e: any, cancel = false) {
     const g = gesture.current;
     if (!g || (e.pointerId != null && e.pointerId !== g.pointerId)) return;
+    cancelAnimationFrame(moveFrame.current);
+    moveFrame.current = 0;
+    const point = pendingMove.current;
+    pendingMove.current = null;
+    if (point && !cancel) move(point);
     gesture.current = null;
     autoScroll.current?.stop();
     autoScroll.current = null;
     if (g.target.hasPointerCapture?.(g.pointerId))
       g.target.releasePointerCapture(g.pointerId);
+    if (g.changed && !cancel && g.toTab && onTransfer) {
+      onTransfer(g.id, g.toTab);
+      setPreview(null);
+      setDropTarget(null);
+      setTabTarget(null);
+      return;
+    }
     if (g.changed && !cancel)
       onChange((old: any[]) =>
         g.kind.startsWith("resize")
           ? old.map((item) => {
-              if (item.id !== g.id) return item;
+              if (item.id !== g.id) {
+                const moving = old.find((i) => i.id === g.id);
+                return g.kind !== "resize-height" &&
+                  moving?.columnId &&
+                  item.columnId === moving.columnId
+                  ? { ...item, span: g.span }
+                  : item;
+              }
               const { x, y, width, height, span, ...i } = item;
               if (g.kind !== "resize") delete i.frameHeight;
               return {
@@ -262,9 +351,18 @@ export function SnapCanvas({
                   : {}),
               };
             })
-          : dropModule(old, layout.boxes, g.id, g.point.x, g.point.y),
+          : dropModule(
+              old,
+              layout.boxes,
+              g.id,
+              g.point.x,
+              g.point.y,
+              g.dropTarget,
+            ),
       );
     setPreview(null);
+    setDropTarget(null);
+    setTabTarget(null);
   }
   function keys(e: any, i: any) {
     if (e.key === "Home") {
@@ -314,7 +412,13 @@ export function SnapCanvas({
     onChange((old: any[]) =>
       old.map((oldItem) => {
         const { x, y, width, height, ...item } = oldItem;
-        return { ...item, span: item.id === i.id ? span : moduleSpan(oldItem) };
+        return {
+          ...item,
+          span:
+            item.id === i.id || (i.columnId && item.columnId === i.columnId)
+              ? span
+              : moduleSpan(oldItem),
+        };
       }),
     );
   }
@@ -379,11 +483,25 @@ export function SnapCanvas({
           e.preventDefault();
           e.dataTransfer.dropEffect = "copy";
           setExternalDrop(true);
+          const r = e.currentTarget.getBoundingClientRect();
+          setDropTarget(
+            moduleDropTarget(
+              items,
+              layout.boxes,
+              "",
+              e.clientX - r.left,
+              e.clientY - r.top,
+              metrics.width,
+            ),
+          );
         }
       }}
       onDragLeave={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node))
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
           setExternalDrop(false);
+          setDropTarget(null);
+          setTabTarget(null);
+        }
       }}
       onDrop={(e) => {
         const id = e.dataTransfer.getData("application/x-module-template");
@@ -391,10 +509,23 @@ export function SnapCanvas({
         e.preventDefault();
         e.stopPropagation();
         setExternalDrop(false);
+        setDropTarget(null);
+        setTabTarget(null);
         const rect = e.currentTarget.getBoundingClientRect();
         onTemplateDrop(
           id,
-          { x: e.clientX - rect.left, y: e.clientY - rect.top },
+          {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+            placement: moduleDropTarget(
+              items,
+              layout.boxes,
+              "",
+              e.clientX - rect.left,
+              e.clientY - rect.top,
+              metrics.width,
+            ),
+          } as any,
           layout.boxes,
         );
       }}
@@ -409,12 +540,39 @@ export function SnapCanvas({
         ),
       }}
     >
+      {tabTarget && (
+        <div
+          className="module-tab-transfer-target"
+          role="status"
+          aria-label={tabTarget.name + " 탭으로 이동"}
+          style={{
+            position: "fixed",
+            left: tabTarget.left,
+            top: tabTarget.top,
+            width: tabTarget.width,
+            height: tabTarget.height,
+          }}
+        >
+          <span>{tabTarget.name} 탭으로 이동</span>
+        </div>
+      )}
+      {dropTarget && (
+        <div
+          className="module-insertion-line"
+          role="status"
+          aria-label={dropTarget.label}
+          data-drop-mode={dropTarget.mode}
+          style={dropTarget.line}
+        >
+          <span>{dropTarget.label}</span>
+        </div>
+      )}
       {effective.map((i, index) => {
         const b = layout.boxes[i.id],
           moving = preview?.id === i.id && preview.kind === "move",
           drag = delayedPointerDrag({
             onPointerDown: (e: any) => down(e, i.id, "move"),
-            onPointerMove: move,
+            onPointerMove: queueMove,
             onPointerUp: (e: any) => up(e),
             onPointerCancel: (e: any) => up(e, true),
             onLostPointerCapture: (e: any) => {
@@ -455,7 +613,7 @@ export function SnapCanvas({
                   aria-label="모듈 크기 단계 조절"
                   aria-orientation="vertical"
                   onPointerDown={(e) => down(e, i.id, "resize")}
-                  onPointerMove={move}
+                  onPointerMove={queueMove}
                   onPointerUp={(e) => up(e)}
                   onPointerCancel={(e) => up(e, true)}
                   onLostPointerCapture={(e) => {
@@ -480,7 +638,7 @@ export function SnapCanvas({
                   }
                   aria-orientation="horizontal"
                   onPointerDown={(e) => down(e, i.id, "resize-height")}
-                  onPointerMove={move}
+                  onPointerMove={queueMove}
                   onPointerUp={(e) => up(e)}
                   onPointerCancel={(e) => up(e, true)}
                   onLostPointerCapture={(e) => {
@@ -494,7 +652,7 @@ export function SnapCanvas({
                   tabIndex={0}
                   aria-label="모듈 너비와 높이 조절"
                   onPointerDown={(e) => down(e, i.id, "resize-corner")}
-                  onPointerMove={move}
+                  onPointerMove={queueMove}
                   onPointerUp={(e) => up(e)}
                   onPointerCancel={(e) => up(e, true)}
                   onLostPointerCapture={(e) => {
