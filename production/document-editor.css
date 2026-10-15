@@ -642,3 +642,5 @@ body.document-mode {
     flex: 0 0 1000px;
   }
 }
+
+.document-core-hint{margin:0;padding:6px 12px;font-size:11px;color:#777;flex:none}

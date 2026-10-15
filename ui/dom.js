@@ -28,3 +28,4 @@ import {renderNASAliasSettings} from './nas-alias.js';
 window.renderNASAliasSettings=renderNASAliasSettings;
 
 window.dispatchEvent(new Event("production-ui-ready"));
+import './workspace-nav.js';

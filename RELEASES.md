@@ -55,3 +55,12 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Load document editing separately from the main app; load the simpler editor only when selected or needed for TXT/HTML.
 - Transfer the verified engine as gzip (39,322,422 to 14,701,908 bytes) and reuse its persistent cache. Upstream files and checksum pins stay unchanged.
 - NAS configuration and server files do not change in this release.
+
+## 0.0.5
+
+- Replace the startup NAS connection notice with a general app loading message.
+- Center icon-only workspace navigation when its selected label cannot fit; keep inactive sidebar areas hidden across workspace changes.
+- Open the complete Home schedule timeline at today, with past schedules available by scrolling upward.
+- Show full document formatting, table, page layout and review tools by default. Remove the manual save button and add explicit Word and engine-rendered PDF exports.
+- Stop original-file autosaving if an export drops custom XML, embedded objects, macro or signature package parts; keep the edited recovery copy available. This does not establish complete Microsoft Word fidelity.
+- NAS configuration and server files do not change in this release.

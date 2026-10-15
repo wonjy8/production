@@ -21,7 +21,7 @@ try{
  // Confirm that the controller understands URL-selected, per-tab routing.
  const mode=await workerMessage('route:ready');
  if(mode!=='local'){
-  phase='NAS 연결';nasOrigin=mode;status.textContent='NAS에 자동 연결하는 중…';
+  phase='NAS 연결';nasOrigin=mode;status.textContent='앱을 불러오는 중…';
   const response=await fetch(mode+'/browser/api/auth/connection',{credentials:'omit',mode:'cors',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});
   const data=await response.json();
   if(response.status===401||response.status===403){phase='로그인 연결';throw Error('NAS 접근이 거부되었습니다. 앱 허용 주소와 로그인 서비스 설정을 확인하세요.')}if(data.authenticationInstalled!==true){phase='로그인 준비';throw Error('NAS 로그인 서비스를 확인하지 못했습니다. 서버 업데이트와 인증 설정을 확인하세요.')}if(!response.ok||data.nasReachable!==true)throw Error('NAS 실행 상태와 HTTPS·앱 허용 주소 설정을 확인하세요.');

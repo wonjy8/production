@@ -40,11 +40,11 @@ with tempfile.TemporaryDirectory() as td:
    with zipfile.ZipFile(package,'w') as z:
     z.writestr('[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
     z.writestr('_rels/.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')
-    z.writestr('word/document.xml','<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Original document</w:t></w:r></w:p><w:sectPr/></w:body></w:document>')
+    z.writestr('word/document.xml','<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Original document</w:t></w:r></w:p><w:tbl><w:tblPr/><w:tblGrid><w:gridCol w:w="3000"/></w:tblGrid><w:tr><w:tc><w:p><w:r><w:t>Word table cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:sectPr><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>')
    original=base64.b64encode(package.getvalue()).decode()
    file_id=page.evaluate("""async data=>{const id=crypto.randomUUID();const blob=await fetch('data:application/octet-stream;base64,'+data).then(r=>r.blob());const r=await fetch('/production/api/ref-files/'+id,{method:'PUT',body:blob});if(!r.ok)throw Error('fixture upload');return id}""",original)
    page.wait_for_function('typeof window.mountProduction === "function" && !!window.productionBridge')
-   page.evaluate("""async id=>{const w=window.productionBridge.read();w.productions.push({id:'documents-project',name:'문서 프로젝트',status:'진행 중',customTabs:[{id:'documents-tab',name:'기획 문서',modules:[{id:'documents-module',kind:'file',files:[{id,name:'Restored.docx',kind:'file',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]}]}],tasks:[],teams:[],memberIds:[],schedules:[{id:'geometry-timed',title:'시간 일정',date:'2099-01-01',startTime:'09:00',endTime:'10:00'},{id:'geometry-all',title:'종일 일정',date:'2099-01-02'}]});window.productionBridge.write(w);await window.flushDocumentModules();await window.referenceBridge.create({title:'문서 자료',modules:[{id:'reference-doc',kind:'file',files:[{id,name:'Restored.docx',kind:'file',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]}]})}""",file_id)
+   page.evaluate("""async id=>{const w=window.productionBridge.read();w.productions.push({id:'documents-project',name:'문서 프로젝트',status:'진행 중',customTabs:[{id:'documents-tab',name:'기획 문서',modules:[{id:'documents-module',kind:'file',files:[{id,name:'Restored.docx',kind:'file',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]}]}],tasks:[],teams:[],memberIds:[],schedules:[...Array.from({length:8},(_,i)=>({id:'past-'+i,title:'과거 일정 '+i,date:'2000-01-01'})),{id:'geometry-timed',title:'시간 일정',date:'2099-01-01',startTime:'09:00',endTime:'10:00'},{id:'geometry-all',title:'종일 일정',date:'2099-01-02'}]});window.productionBridge.write(w);await window.flushDocumentModules();await window.referenceBridge.create({title:'문서 자료',modules:[{id:'reference-doc',kind:'file',files:[{id,name:'Restored.docx',kind:'file',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]}]})}""",file_id)
    page.locator('[data-main-space=references]').click()
    page.locator('button[data-source-section=documents]').click()
    page.locator('.document-library').wait_for()
@@ -68,15 +68,27 @@ with tempfile.TemporaryDirectory() as td:
    page.set_viewport_size({'width':390,'height':844})
    page.goto('https://pages.test:9443/production/#/home/schedule')
    page.locator('.admin-schedule-list>button').first.wait_for()
-   positions=page.locator('.admin-schedule-list>button>div').evaluate_all('(nodes)=>nodes.map(n=>n.getBoundingClientRect().left)')
+   positions=page.locator('.home-schedule-future .admin-schedule-list>button>div').evaluate_all('(nodes)=>nodes.map(n=>n.getBoundingClientRect().left)')
    assert len(positions)==2 and max(positions)-min(positions)<1,positions
+   timeline=page.get_by_role('region',name='전체 일정',exact=True)
+   assert timeline.evaluate('(el)=>el.scrollTop')>100
+   assert page.get_by_text('과거 일정 0',exact=True).evaluate('(el)=>el.getBoundingClientRect().bottom') < timeline.evaluate('(el)=>el.getBoundingClientRect().top')
+   timeline.hover();page.mouse.wheel(0,-3000);page.wait_for_timeout(400)
+   assert timeline.evaluate('(el)=>el.scrollTop')==0
    def bottom_inside():
     return page.locator('.mobile-bottom-nav').evaluate('(nav)=>{const r=nav.getBoundingClientRect();return [...nav.querySelectorAll("[data-main-space]")].every(b=>{const p=b.getBoundingClientRect();return p.left>=r.left && p.right<=r.right})}')
    assert bottom_inside()
    page.locator('.mobile-bottom-nav [data-main-space=settings]').click()
    assert bottom_inside()
    page.set_viewport_size({'width':1400,'height':1000})
-   print('PASS mobile schedule title columns and bottom navigation bounds',flush=True)
+   for space in ['references','database','settings','references','home','references']:
+    page.locator('.sidebar-main-spaces [data-main-space='+space+']').first.click()
+    assert page.locator('.sidebar-project-area:visible,.sidebar-reference-area:visible,.sidebar-database-area:visible,.sidebar-settings-area:visible').count()==1
+   nav=page.locator('.sidebar .sidebar-main-spaces');nav.evaluate('(el)=>el.style.setProperty("width","170px","important")')
+   page.wait_for_function('document.querySelector(".sidebar .sidebar-main-spaces").classList.contains("nav-icons-only")')
+   assert nav.locator('button>span:visible').count()==0
+   nav.evaluate('(el)=>el.style.removeProperty("width")')
+   print('PASS past schedules above today, mobile geometry, compact tabs and workspace isolation',flush=True)
 
    url='https://pages.test:9443/production/?document='+file_id+'&name=Restored.docx'
    page.goto(url)
@@ -86,7 +98,7 @@ with tempfile.TemporaryDirectory() as td:
    page.set_viewport_size({'width':390,'height':844})
    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
    assert page.get_by_role('toolbar',name='문서 편집 도구').is_visible()
-   page.get_by_role('button',name='전체 도구',exact=True).click();assert page.locator('.full-document-editor').get_attribute('data-tools')=='true'
+   assert page.locator('.full-document-editor').get_attribute('data-tools')=='true'
    page.get_by_role('slider',name='전체 도구 좌우 이동',exact=True).press('End')
    assert page.locator('.full-editor-surface').evaluate('(el)=>el.scrollLeft')>0
    page.get_by_role('button',name='전체 도구',exact=True).click()
@@ -96,17 +108,21 @@ with tempfile.TemporaryDirectory() as td:
    page.set_viewport_size({'width':1400,'height':1000})
    print('READY full editor: mobile chrome, complete tools, isolated bundle and warm engine cache',flush=True)
    frame=page.frame_locator('iframe[title="WordCraft 전체 문서 편집기"]')
-   canvas=frame.locator('canvas');canvas.click(position={'x':500,'y':400});page.keyboard.press('Control+End');page.keyboard.press('Enter');page.get_by_role('button',name='굵게',exact=True).click();page.keyboard.type('RESTORED BOLD FEATURES',delay=30);page.keyboard.press('Control+b')
+   canvas=frame.locator('canvas');canvas.click(position={'x':500,'y':400});page.keyboard.press('Control+End');page.keyboard.press('Enter');page.get_by_role('button',name='굵게',exact=True).click();page.keyboard.type('RESTORED BOLD FEATURES',delay=30);page.keyboard.press('Control+b');page.wait_for_timeout(1200)
    page.wait_for_function("document.querySelector('.document-heading [role=status]').textContent==='저장됨'",timeout=30000)
    def saved_xml():
     data=page.evaluate("async id=>{const b=await fetch('/production/api/ref-files/'+id).then(r=>r.arrayBuffer());return btoa(String.fromCharCode(...new Uint8Array(b)))}",file_id)
     with zipfile.ZipFile(io.BytesIO(base64.b64decode(data))) as z:return z.read('word/document.xml').decode()
-   xml=saved_xml();assert 'RESTORED BOLD FEATURES' in xml,xml;assert '<w:b' in xml,xml
-   print('PASS full editor opens original DOCX and saves bold text',flush=True)
+   xml=saved_xml();assert 'RESTORED BOLD FEATURES' in xml,xml;assert '<w:b' in xml,xml;assert '<w:tbl>' in xml and 'Word table cell' in xml and 'w:top="1440"' in xml,xml
+   with page.expect_download() as pdf_download:
+    page.get_by_role('button',name='PDF 내보내기',exact=True).click();page.wait_for_timeout(500);page.screenshot(path='/tmp/pdf-native.png')
+   pdf_path=pdf_download.value.path();pdf_bytes=pathlib.Path(pdf_path).read_bytes();assert pdf_bytes.startswith(b'%PDF-') and b'%%EOF' in pdf_bytes
+   assert page.get_by_role('button',name='지금 저장',exact=True).count()==0
+   print('PASS full editor opens DOCX, saves bold text and exports engine PDF',flush=True)
    page.reload();page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
    # Saving an unchanged, reopened document must not rewrite its file version.
    before=page.evaluate("async id=>(await fetch('/production/api/ref-files/'+id)).headers.get('ETag')",file_id)
-   page.get_by_role('button',name='지금 저장',exact=True).click()
+   page.frame_locator('iframe').locator('canvas').focus();page.keyboard.press('Control+s');page.wait_for_timeout(400)
    after=page.evaluate("async id=>(await fetch('/production/api/ref-files/'+id)).headers.get('ETag')",file_id);assert before==after
    # Failed writes survive a reload as a local recovery copy.
    offline_script="window.fullTestFetch=window.fetch;window.fetch=(input,init)=>sessionStorage.getItem('full-test-offline')==='1'&&String(input).includes('/api/ref-files/')&&init?.method==='PUT'?Promise.resolve(new Response('offline',{status:503})):window.fullTestFetch(input,init)"
@@ -126,10 +142,24 @@ with tempfile.TemporaryDirectory() as td:
    canvas=page.frame_locator('iframe').locator('canvas');canvas.click(position={'x':500,'y':400});page.keyboard.press('Control+End');page.keyboard.type(' STALE CHANGE',delay=30)
    page.get_by_role('alert').filter(has_text='다른 곳에서').wait_for(timeout=30000)
    assert 'STALE CHANGE' not in saved_xml()
-   with page.expect_download() as download:page.get_by_role('button',name='사본 내려받기',exact=True).click()
+   with page.expect_download() as download:page.get_by_role('button',name='Word 내보내기',exact=True).click()
    with zipfile.ZipFile(download.value.path()) as z:assert 'STALE CHANGE' in z.read('word/document.xml').decode()
    assert not errors,errors
    print('PASS unchanged save, stale-original protection and edited-copy download',flush=True)
+   # Unsupported embedded/custom data must never silently disappear from the original.
+   protected_package=io.BytesIO()
+   with zipfile.ZipFile(io.BytesIO(base64.b64decode(original))) as source,zipfile.ZipFile(protected_package,'w') as target:
+    for name in source.namelist():target.writestr(name,source.read(name))
+    target.writestr('customXml/item1.xml','<custom>KEEP ORIGINAL DATA</custom>')
+   protected_data=base64.b64encode(protected_package.getvalue()).decode()
+   protected_id=page.evaluate("""async data=>{const id=crypto.randomUUID();await fetch('/production/api/ref-files/'+id,{method:'PUT',body:await fetch('data:application/octet-stream;base64,'+data).then(r=>r.blob())});return id}""",protected_data)
+   page.goto('https://pages.test:9443/production/?document='+protected_id+'&name=Protected.docx')
+   page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
+   canvas=page.frame_locator('iframe').locator('canvas');canvas.click(position={'x':500,'y':400});page.keyboard.press('Control+End');page.keyboard.type(' PROTECTED CHANGE',delay=30)
+   page.get_by_role('alert').filter(has_text='고급 개체').wait_for(timeout=30000)
+   assert page.evaluate("async id=>{const b=await fetch('/production/api/ref-files/'+id).then(r=>r.arrayBuffer());return btoa(String.fromCharCode(...new Uint8Array(b)))}",protected_id)==protected_data
+   print('PASS unsupported Word package data leaves original untouched',flush=True)
+   page.goto(url);page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
    # Corrupt compressed bytes must never start an unverified engine.
    import gzip
    page.evaluate("caches.delete('production-wordcraft-0.6.1')")

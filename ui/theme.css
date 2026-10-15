@@ -276,3 +276,11 @@ button.primary.danger,.button.primary.danger,button.catalog-delete,button[aria-l
 /* Keep a single schedule text origin for timed and all-day events. */
 .admin-schedule-list>button{display:grid!important;grid-template-columns:100px minmax(0,1fr) 14px!important;gap:14px!important;white-space:normal!important}.admin-schedule-time{width:100%;min-width:0;font-variant-numeric:tabular-nums;white-space:nowrap}.admin-schedule-list>button>div{min-width:0}.admin-schedule-list strong,.admin-schedule-list small{overflow-wrap:anywhere}
 @media(max-width:720px){.mobile-bottom-nav .sidebar-main-spaces{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important;width:100%!important;min-width:0!important}.mobile-bottom-nav .sidebar-main-spaces .sidebar-ref-link,.mobile-bottom-nav .sidebar-main-spaces .sidebar-ref-link[aria-pressed=true]{width:100%!important;min-width:0!important;max-width:100%!important;flex-basis:auto!important;padding:0 4px!important;gap:5px!important;box-sizing:border-box;overflow:hidden}.mobile-bottom-nav .sidebar-ref-link>svg{flex-shrink:0}.mobile-bottom-nav .sidebar-ref-link>span{overflow:hidden;text-overflow:ellipsis;min-width:0}}
+/* Author display rules must never reveal inactive workspace sections. */
+:is(.sidebar-project-area,.sidebar-reference-area,.sidebar-database-area,.sidebar-settings-area)[hidden]{display:none!important}
+.sidebar-main-spaces.nav-icons-only{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important}.sidebar-main-spaces.nav-icons-only>.sidebar-ref-link{width:100%!important;min-width:0!important;padding:0!important;justify-content:center!important;flex-basis:0!important}.sidebar-main-spaces.nav-icons-only>.sidebar-ref-link>span{display:none!important;margin:0!important}
+.home-schedule-timeline{position:relative;max-height:calc(100dvh - 200px);min-height:180px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;overflow-anchor:none}.home-schedule-today{padding:8px 0;color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border,#eee)}
+@media(max-width:720px){.home-schedule-timeline{max-height:calc(100dvh - 240px)}}
+
+.home-schedule-future{min-height:calc(100dvh - 230px)}
+@media(max-width:720px){.home-schedule-future{min-height:calc(100dvh - 270px)}}

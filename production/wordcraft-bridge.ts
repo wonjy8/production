@@ -21,6 +21,8 @@ export function wordcraftBridge(
   const urls = new Map<string, Blob>(),
     generations: number[] = [],
     waiters: any[] = [];
+  let pdfPending: any = null;
+  const pdfURLs = new Set<string>();
   let restore = () => {};
   const command = (key: string, shift = false) => {
     if (!canvas || !win) return;
@@ -69,11 +71,44 @@ export function wordcraftBridge(
         anchor = win.HTMLAnchorElement.prototype.click,
         input = win.HTMLInputElement.prototype.click,
         picker = win.showSaveFilePicker,
-        revoke = win.URL.revokeObjectURL;
+        revoke = win.URL.revokeObjectURL,
+        frameSrc = Object.getOwnPropertyDescriptor(
+          win.HTMLIFrameElement.prototype,
+          "src",
+        )!;
+      Object.defineProperty(win.HTMLIFrameElement.prototype, "src", {
+        ...frameSrc,
+        set(value: string) {
+          if (this.id === "wordcraft-print-frame" && pdfURLs.delete(value)) {
+            this.onload = null;
+            urls.delete(value);
+            this.remove();
+            revoke.call(win.URL, value);
+            return;
+          }
+          frameSrc.set!.call(this, value);
+        },
+      });
       win.showSaveFilePicker = undefined;
       win.URL.createObjectURL = function (blob: Blob) {
         const url = create.call(this, blob);
         urls.set(url, blob);
+        if (pdfPending && blob.type === "application/pdf") {
+          pdfURLs.add(url);
+          clearTimeout(pdfPending.timer);
+          pdfPending.resolve(blob);
+          win.setTimeout(() => {
+            for (const type of ["keydown", "keyup"])
+              canvas?.dispatchEvent(
+                new win.KeyboardEvent(type, {
+                  key: "Escape",
+                  code: "Escape",
+                  bubbles: true,
+                }),
+              );
+          }, 0);
+          pdfPending = null;
+        }
         return url;
       };
       win.URL.revokeObjectURL = function (url: string) {
@@ -214,6 +249,7 @@ export function wordcraftBridge(
         win.HTMLAnchorElement.prototype.click = anchor;
         win.HTMLInputElement.prototype.click = input;
         win.showSaveFilePicker = picker;
+        Object.defineProperty(win.HTMLIFrameElement.prototype, "src", frameSrc);
         urls.clear();
       };
     } catch (error) {
@@ -253,6 +289,45 @@ export function wordcraftBridge(
   }, 150);
   frame.addEventListener("load", install);
   return {
+    pdf() {
+      if (!loaded || disposed)
+        return Promise.reject(Error("문서 편집기가 아직 준비되지 않았습니다."));
+      if (pdfPending) return Promise.reject(Error("PDF를 만드는 중입니다."));
+      return new Promise<Blob>((resolve, reject) => {
+        pdfPending = {
+          resolve,
+          reject,
+          timer: setTimeout(() => {
+            pdfPending = null;
+            reject(
+              Error(
+                "PDF 내보내기에 응답이 없습니다. 열린 메뉴를 닫고 다시 시도하세요.",
+              ),
+            );
+          }, 30000),
+        };
+        canvas?.focus();
+        command("p");
+        // Pinned 0.6.1 File > Print action. Its page uses a fixed 200px
+        // navigation rail and fixed Print button; allow the canvas to render it.
+        win.setTimeout(() => {
+          if (!pdfPending || disposed || !canvas) return;
+          const rect = canvas.getBoundingClientRect();
+          for (const type of ["pointerdown", "pointerup"])
+            canvas.dispatchEvent(
+              new win.PointerEvent(type, {
+                pointerId: 1,
+                pointerType: "mouse",
+                button: 0,
+                buttons: type === "pointerdown" ? 1 : 0,
+                clientX: rect.left + 400,
+                clientY: rect.top + 215,
+                bubbles: true,
+              }),
+            );
+        }, 350);
+      });
+    },
     reflow() {
       if (!loaded || disposed || !canvas) return;
       // Pinned 0.6.1 status-bar Web Layout control (a view-only action).
@@ -297,8 +372,8 @@ export function wordcraftBridge(
           );
           const send = () => {
             if (disposed) return;
-            if (Date.now() - lastEdit < 120) {
-              settle = setTimeout(send, 120);
+            if (Date.now() - lastEdit < 300) {
+              settle = setTimeout(send, 300);
               return;
             }
             win.requestAnimationFrame(() =>
@@ -313,6 +388,11 @@ export function wordcraftBridge(
     },
     dispose() {
       disposed = true;
+      if (pdfPending) {
+        clearTimeout(pdfPending.timer);
+        pdfPending.reject(Error("편집기가 닫혔습니다."));
+        pdfPending = null;
+      }
       clearInterval(poll);
       clearTimeout(timeout);
       clearTimeout(settle);

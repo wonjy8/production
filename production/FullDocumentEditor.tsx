@@ -104,7 +104,7 @@ export function FullDocumentEditor({ file }: any) {
     [ready, setReady] = useState(false),
     [detached, setDetached] = useState(false),
     [recovery, setRecovery] = useState<Blob | null>(null);
-  const [tools, setTools] = useState(false);
+  const [tools, setTools] = useState(true);
   const surface = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (surface.current) surface.current.scrollLeft = 0;
@@ -170,6 +170,11 @@ export function FullDocumentEditor({ file }: any) {
     s.flush = flush;
     s.edit = (key: string, shift = false) => adapter?.edit(key, shift);
     s.reflow = () => adapter?.reflow();
+    s.pdf = async () =>
+      downloadBlob(
+        await adapter.pdf(),
+        file.name.replace(/\.docx$/i, "") + ".pdf",
+      );
     s.download = async () => {
       if (
         s.booted &&
@@ -193,6 +198,7 @@ export function FullDocumentEditor({ file }: any) {
         s.booted = true;
         return;
       }
+      if (generation <= s.saved) return;
       s.queue = s.queue
         .catch(() => {})
         .then(async () => {
@@ -210,6 +216,22 @@ export function FullDocumentEditor({ file }: any) {
             date: Date.now(),
           });
           if (s.conflict) return;
+          const exported = await JSZip.loadAsync(blob);
+          const protectedParts = Object.keys(
+            s.originalParts?.files || {},
+          ).filter(
+            (name) =>
+              !(s.originalParts?.files || {})[name].dir &&
+              /^(customXml\/|word\/embeddings\/)|vbaProject\.bin$|^_xmlsignatures\//i.test(
+                name,
+              ),
+          );
+          if (protectedParts.some((name) => !exported.file(name))) {
+            s.conflict = true;
+            throw Error(
+              "Word의 고급 개체를 보존하기 위해 원본 자동저장을 중단했습니다. 편집 내용은 Word 또는 PDF 사본으로 내보내세요.",
+            );
+          }
           if (blob.size > 25 * 1024 * 1024)
             throw Error("문서가 25MB를 넘어서 저장할 수 없습니다.");
           if (!s.version)
@@ -276,6 +298,7 @@ export function FullDocumentEditor({ file }: any) {
               ? '"' + response.headers.get("X-File-SHA256") + '"'
               : "");
           blob = await response.blob();
+          s.originalParts = await JSZip.loadAsync(blob);
         } catch (e) {
           if (!recovered) throw e;
           blob = recovered.blob;
@@ -417,21 +440,21 @@ export function FullDocumentEditor({ file }: any) {
         </span>
         <button
           className="keep-label"
-          disabled={!ready || detached}
-          onClick={() =>
-            session.current?.flush().catch((e: any) => setError(e.message))
-          }
-        >
-          지금 저장
-        </button>
-        <button
-          className="keep-label"
           disabled={!ready}
           onClick={() =>
             session.current?.download().catch((e: any) => setError(e.message))
           }
         >
-          사본 내려받기
+          Word 내보내기
+        </button>
+        <button
+          className="keep-label"
+          disabled={!ready}
+          onClick={() =>
+            session.current?.pdf().catch((e: any) => setError(e.message))
+          }
+        >
+          PDF 내보내기
         </button>
         <button className="keep-label" onClick={basic}>
           간단 편집
@@ -527,6 +550,9 @@ export function FullDocumentEditor({ file }: any) {
           />
         </label>
       )}
+      <p className="document-core-hint">
+        Home: 글자·문단 · Insert: 표·주석 · Layout: 쪽·여백 · Review: 검토
+      </p>
       <div className="full-editor-surface" ref={surface}>
         <iframe
           ref={frame}
