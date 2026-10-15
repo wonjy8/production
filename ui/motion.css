@@ -1,5 +1,5 @@
 :root,:host{--motion-ease:cubic-bezier(.22,1,.36,1);--motion-fast:160ms;--motion-panel:280ms}
-.layout{transition:grid-template-columns var(--motion-panel) var(--motion-ease)}
+.layout{transition:none}
 .sidebar{width:228px;transition:transform var(--motion-panel) var(--motion-ease),opacity 200ms ease,visibility 0s linear;transform:translateX(0);opacity:1;visibility:visible;z-index:30}
 .sidebar-collapsed .layout{grid-template-columns:0 minmax(0,1fr)}
 .sidebar-collapsed .sidebar{display:block!important;transform:translateX(-24px);opacity:0;pointer-events:none;visibility:hidden;transition:transform var(--motion-panel) var(--motion-ease),opacity 180ms ease,visibility 0s linear var(--motion-panel)}

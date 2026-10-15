@@ -1,6 +1,7 @@
 import { contentHeightResize, naturalModuleHeight } from "./module-resize.js";
 import { delayedPointerDrag } from "../ui/touch-drag.js";
 import { useRef, useState, useEffect, useLayoutEffect, useMemo } from "react";
+import { flushSync } from "react-dom";
 import { createAutoScroller } from "./auto-scroll.js";
 import {
   snapBoxes,
@@ -113,7 +114,12 @@ export function SnapCanvas({
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(measure);
     };
-    const observer = new ResizeObserver(schedule),
+    // Commit the new packing before paint, together with the container resize.
+    const observer = new ResizeObserver(() => {
+        cancelAnimationFrame(frame);
+        frame = 0;
+        flushSync(measure);
+      }),
       mutations = new MutationObserver(schedule);
     observer.observe(node);
     node

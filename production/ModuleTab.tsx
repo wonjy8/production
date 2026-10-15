@@ -282,7 +282,7 @@ export function ModuleTab({
       ?.source;
   }
 
-  function addTemplate(templateId: string, url = "", point: any = null) {
+  function addTemplate(templateId: string, url = "", point: any = null, linkKind = "link") {
     const template = moduleTemplates.find((item) => item.id === templateId);
     if (!template) return;
     if (template.requiresUrl && !url) {
@@ -306,7 +306,7 @@ export function ModuleTab({
     const start = dates[0] || todayLocal(),
       end = dates.at(-1) || shiftDate(start, 2);
     const module = createHubModule(templateId, {
-      ...(url ? { url } : {}),
+      ...(url ? { url, ...(templateId === "bookmark" ? {kind: linkKind, bookmarkPreview:false} : {}) } : {}),
       projectId: parentScope ? "" : defaultIds[0] || "",
       ...(template.kind === "timetable"
         ? {
@@ -939,10 +939,11 @@ export function ModuleTab({
               const input = String(
                   new FormData(e.currentTarget).get("url") || "",
                 ).trim(),
-                url = pendingKind === "figma" ? figmaModuleURL(input) : input;
+                url = figmaModuleURL(input) || input;
+              const linkKind = String(new FormData(e.currentTarget).get("display") || "link");
               try {
                 const parsed = new URL(url);
-                if (pendingKind === "figma" && !url) throw Error();
+                if (linkKind === "embed" && !embedURL(url)) throw Error();
                 if (
                   parsed.protocol !== "https:" ||
                   parsed.username ||
@@ -955,6 +956,8 @@ export function ModuleTab({
                 if (pendingPoint?.point) {
                   const module = createHubModule(pendingKind, {
                     url,
+                    kind: linkKind,
+                    bookmarkPreview: false,
                     projectId: parentScope ? "" : defaultIds[0] || "",
                   });
                   onTabChange((t) => ({
@@ -968,7 +971,7 @@ export function ModuleTab({
                       pendingPoint.point.placement,
                     ),
                   }));
-                } else addTemplate(pendingKind, url);
+                } else addTemplate(pendingKind, url, null, linkKind);
                 setPendingKind("");
                 setPendingPoint(null);
                 setError("");
@@ -981,31 +984,12 @@ export function ModuleTab({
               }
             }}
           >
-            <>
-              {pendingKind === "figma" ? (
-                <label>
-                  임베드 코드 또는 디자인 링크
-                  <textarea
-                    name="url"
-                    aria-label="Figma 임베드 코드 또는 링크"
-                    placeholder="Figma에서 복사한 <iframe …> 코드를 붙여넣으세요"
-                    defaultValue=""
-                    rows={4}
-                    required
-                    autoFocus
-                  />
-                </label>
-              ) : (
-                <input
-                  name="url"
-                  type="url"
-                  aria-label="링크 주소"
-                  placeholder="https://"
-                  required
-                  autoFocus
-                />
-              )}
-            </>
+            <input name="url" type="url" aria-label="링크 주소" placeholder="https:// (Figma·YouTube·Vimeo 등)" required autoFocus />
+            <fieldset className="link-display-options">
+              <legend>표시 방식</legend>
+              <label><input type="radio" name="display" value="link" defaultChecked />북마크</label>
+              <label><input type="radio" name="display" value="embed" />임베드</label>
+            </fieldset>
             {error && <p role="alert">{error}</p>}
             <button className="button primary">추가</button>
           </form>

@@ -206,3 +206,10 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Limit the desktop context menu to Cut/Copy/Paste, preserve rich clipboard content and retain text when clipboard writes fail or the document changes during an asynchronous operation.
 - Preserve Quote paragraph styles in DOCX save/reopen/removal and paint quote borders in selectable-text PDF export. Keep the underlying paginated document model and automatic saving.
 - NAS files, database schema and configuration: unchanged.
+
+## 0.0.23
+
+- Simplify Hub: remove the introductory description and module descriptions, remove item borders, reduce icon/row sizes and prevent category labels from shrinking into each other.
+- Combine bookmark, web embed and Figma creation under Link with bookmark/embed display choices; preserve existing embedded content.
+- Fit workspace modules and photo grids immediately when toggling the sidebar, avoiding sequential container/content resize animations while retaining sidebar entry/exit motion.
+- NAS files, database schema and configuration: unchanged.

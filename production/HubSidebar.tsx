@@ -86,7 +86,6 @@ export function HubSidebar({
         </div>
         <IconButton name="close" label="Hub 닫기" onClick={onClose} />
       </header>
-      <p>필요한 모듈과 탭을 찾아 바로 추가하세요.</p>
       <div className="hub-switch" role="tablist">
         <button
           className="keep-label"
@@ -251,7 +250,7 @@ export function HubSidebar({
                           <Icon name={item.icon} />
                           <span className="hub-card-content">
                             <strong>{item.name}</strong>
-                            <small>{item.description}</small>
+                            {view === "tabs" && <small>{item.description}</small>}
                           </span>
                           <Icon name="plus" />
                         </span>
