@@ -12,3 +12,7 @@ await writeFile('worker/ui-assets.js','export const uiJS='+JSON.stringify(ui.out
 console.log('Production UI built');
 
 await writeFile('worker/account-assets.js','export const accountJS='+JSON.stringify(await readFile('ui/account.js','utf8'))+';\n');
+
+const editor=await esbuild.build({entryPoints:['production/document-entry.tsx'],bundle:true,write:false,minify:true,format:'iife',target:['es2020'],jsx:'automatic',define:{'process.env.NODE_ENV':'"production"'}});
+const basic=await esbuild.build({entryPoints:['production/DocumentEditor.tsx'],bundle:true,write:false,minify:true,format:'iife',target:['es2020'],jsx:'automatic',define:{'process.env.NODE_ENV':'"production"'}});
+await writeFile('worker/document-assets.js','export const documentJS='+JSON.stringify(editor.outputFiles[0].text)+';\nexport const documentBasicJS='+JSON.stringify(basic.outputFiles[0].text)+';\nexport const documentCSS='+JSON.stringify(await readFile('production/document-editor.css','utf8'))+';\n');

@@ -7,7 +7,6 @@ import TextAlign from "@tiptap/extension-text-align";
 import Image from "@tiptap/extension-image";
 import { TextStyleKit } from "@tiptap/extension-text-style";
 import { documentFormat, loadDocument, saveDocument } from "./document-files";
-import { FullDocumentEditor } from "./FullDocumentEditor";
 import { Icon } from "./Icon";
 import { downloadBlob } from "./files";
 const preserve = Extension.create({
@@ -599,28 +598,4 @@ function DocumentEditor({ file }: { file: any }) {
     </main>
   );
 }
-(window as any).startDocumentEditor = () => {
-  const params = new URLSearchParams(location.search),
-    id = params.get("document");
-  if (!id || !/^[-a-f0-9]{36}$/.test(id))
-    throw Error("올바른 문서 주소를 확인하세요.");
-  document.body.classList.add("document-mode");
-  const host = document.createElement("div");
-  host.id = "document-editor-root";
-  host.dataset.permissionOwner = params.get("owner") || "";
-  host.dataset.permissionTab = params.get("tab") || "materials";
-  document.body.append(host);
-  const file = {
-    id,
-    name: params.get("name") || "문서.docx",
-    mime: params.get("mime"),
-  };
-  const basic = localStorage.getItem("production-document-editor") === "basic";
-  createRoot(host).render(
-    documentFormat(file) === "docx" && !basic ? (
-      <FullDocumentEditor file={file} />
-    ) : (
-      <DocumentEditor file={file} />
-    ),
-  );
-};
+(window as any).startBasicDocumentEditor = (file:any,host:HTMLElement) => {createRoot(host).render(<DocumentEditor file={file}/>)};

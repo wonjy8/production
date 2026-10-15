@@ -22,7 +22,7 @@ export function wordcraftBridge(
     generations: number[] = [],
     waiters: any[] = [];
   let restore = () => {};
-  const command = (key: string) => {
+  const command = (key: string, shift = false) => {
     if (!canvas || !win) return;
     const mac = /Mac|iPhone|iPad/.test(win.navigator.platform);
     for (const type of ["keydown", "keyup"])
@@ -31,6 +31,7 @@ export function wordcraftBridge(
           key,
           code: "Key" + key.toUpperCase(),
           ctrlKey: !mac,
+          shiftKey: shift,
           metaKey: mac,
           bubbles: true,
           cancelable: true,
@@ -252,6 +253,32 @@ export function wordcraftBridge(
   }, 150);
   frame.addEventListener("load", install);
   return {
+    reflow() {
+      if (!loaded || disposed || !canvas) return;
+      // Pinned 0.6.1 status-bar Web Layout control (a view-only action).
+      const r = canvas.getBoundingClientRect(),
+        x = r.right - 230,
+        y = r.bottom - 13;
+      for (const type of ["pointerdown", "pointerup"])
+        canvas.dispatchEvent(
+          new win.PointerEvent(type, {
+            pointerId: 1,
+            pointerType: "mouse",
+            button: 0,
+            buttons: type === "pointerdown" ? 1 : 0,
+            clientX: x,
+            clientY: y,
+            bubbles: true,
+          }),
+        );
+    },
+    edit(key: string, shift = false) {
+      if (!loaded || disposed) return;
+      canvas?.focus();
+      command(key, shift);
+      lastEdit = Date.now();
+      options.onDirty?.();
+    },
     snapshot() {
       if (!loaded || disposed)
         return Promise.reject(Error("문서 편집기가 아직 준비되지 않았습니다."));

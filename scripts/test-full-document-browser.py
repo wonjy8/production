@@ -32,7 +32,7 @@ with tempfile.TemporaryDirectory() as td:
  try:
   with sync_playwright() as p:
    browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH'),headless=True,args=['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-proxy-server','--host-resolver-rules=MAP pages.test 127.0.0.1, MAP nas.test 127.0.0.1','--ignore-certificate-errors-spki-list='+spki])
-   context=browser.new_context(viewport={'width':1400,'height':1000});page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+   context=browser.new_context(viewport={'width':1400,'height':1000});engine_requests=[];context.on('request',lambda request:engine_requests.append(request.url) if '.wasm' in request.url else None);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
    page.goto('https://pages.test:9443/production/')
    page.wait_for_function('window.appAccount?.localMode === true')
    import io,zipfile,json
@@ -44,7 +44,7 @@ with tempfile.TemporaryDirectory() as td:
    original=base64.b64encode(package.getvalue()).decode()
    file_id=page.evaluate("""async data=>{const id=crypto.randomUUID();const blob=await fetch('data:application/octet-stream;base64,'+data).then(r=>r.blob());const r=await fetch('/production/api/ref-files/'+id,{method:'PUT',body:blob});if(!r.ok)throw Error('fixture upload');return id}""",original)
    page.wait_for_function('typeof window.mountProduction === "function" && !!window.productionBridge')
-   page.evaluate("""async id=>{const w=window.productionBridge.read();w.productions.push({id:'documents-project',name:'문서 프로젝트',status:'진행 중',customTabs:[{id:'documents-tab',name:'기획 문서',modules:[{id:'documents-module',kind:'file',files:[{id,name:'Restored.docx',kind:'file',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]}]}],tasks:[],teams:[],memberIds:[],schedules:[]});window.productionBridge.write(w);await window.flushDocumentModules();await window.referenceBridge.create({title:'문서 자료',modules:[{id:'reference-doc',kind:'file',files:[{id,name:'Restored.docx',kind:'file',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]}]})}""",file_id)
+   page.evaluate("""async id=>{const w=window.productionBridge.read();w.productions.push({id:'documents-project',name:'문서 프로젝트',status:'진행 중',customTabs:[{id:'documents-tab',name:'기획 문서',modules:[{id:'documents-module',kind:'file',files:[{id,name:'Restored.docx',kind:'file',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]}]}],tasks:[],teams:[],memberIds:[],schedules:[{id:'geometry-timed',title:'시간 일정',date:'2099-01-01',startTime:'09:00',endTime:'10:00'},{id:'geometry-all',title:'종일 일정',date:'2099-01-02'}]});window.productionBridge.write(w);await window.flushDocumentModules();await window.referenceBridge.create({title:'문서 자료',modules:[{id:'reference-doc',kind:'file',files:[{id,name:'Restored.docx',kind:'file',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]}]})}""",file_id)
    page.locator('[data-main-space=references]').click()
    page.locator('button[data-source-section=documents]').click()
    page.locator('.document-library').wait_for()
@@ -65,12 +65,38 @@ with tempfile.TemporaryDirectory() as td:
    editor.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
    editor.close()
    print('PASS Materials Documents folders, search, scoped editor links, reload and opening',flush=True)
+   page.set_viewport_size({'width':390,'height':844})
+   page.goto('https://pages.test:9443/production/#/home/schedule')
+   page.locator('.admin-schedule-list>button').first.wait_for()
+   positions=page.locator('.admin-schedule-list>button>div').evaluate_all('(nodes)=>nodes.map(n=>n.getBoundingClientRect().left)')
+   assert len(positions)==2 and max(positions)-min(positions)<1,positions
+   def bottom_inside():
+    return page.locator('.mobile-bottom-nav').evaluate('(nav)=>{const r=nav.getBoundingClientRect();return [...nav.querySelectorAll("[data-main-space]")].every(b=>{const p=b.getBoundingClientRect();return p.left>=r.left && p.right<=r.right})}')
+   assert bottom_inside()
+   page.locator('.mobile-bottom-nav [data-main-space=settings]').click()
+   assert bottom_inside()
+   page.set_viewport_size({'width':1400,'height':1000})
+   print('PASS mobile schedule title columns and bottom navigation bounds',flush=True)
+
    url='https://pages.test:9443/production/?document='+file_id+'&name=Restored.docx'
    page.goto(url)
    page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
-   print('READY full editor',flush=True)
+   assert page.evaluate('typeof window.mountProduction === "undefined" && typeof window.startBasicDocumentEditor === "undefined"')
+   assert len(engine_requests)==1 and engine_requests[0].endswith('.wasm.gz'),engine_requests
+   page.set_viewport_size({'width':390,'height':844})
+   assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+   assert page.get_by_role('toolbar',name='문서 편집 도구').is_visible()
+   page.get_by_role('button',name='전체 도구',exact=True).click();assert page.locator('.full-document-editor').get_attribute('data-tools')=='true'
+   page.get_by_role('slider',name='전체 도구 좌우 이동',exact=True).press('End')
+   assert page.locator('.full-editor-surface').evaluate('(el)=>el.scrollLeft')>0
+   page.get_by_role('button',name='전체 도구',exact=True).click()
+   page.get_by_role('button',name='맞춤 보기',exact=True).click();page.wait_for_timeout(300)
+   assert page.get_by_role('button',name='굵게',exact=True).evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='0px'
+   page.screenshot(path='/tmp/editor-mobile-v4.png')
+   page.set_viewport_size({'width':1400,'height':1000})
+   print('READY full editor: mobile chrome, complete tools, isolated bundle and warm engine cache',flush=True)
    frame=page.frame_locator('iframe[title="WordCraft 전체 문서 편집기"]')
-   canvas=frame.locator('canvas');canvas.click(position={'x':500,'y':400});page.keyboard.press('Control+End');page.keyboard.press('Enter');page.keyboard.press('Control+b');page.keyboard.type('RESTORED BOLD FEATURES',delay=30);page.keyboard.press('Control+b')
+   canvas=frame.locator('canvas');canvas.click(position={'x':500,'y':400});page.keyboard.press('Control+End');page.keyboard.press('Enter');page.get_by_role('button',name='굵게',exact=True).click();page.keyboard.type('RESTORED BOLD FEATURES',delay=30);page.keyboard.press('Control+b')
    page.wait_for_function("document.querySelector('.document-heading [role=status]').textContent==='저장됨'",timeout=30000)
    def saved_xml():
     data=page.evaluate("async id=>{const b=await fetch('/production/api/ref-files/'+id).then(r=>r.arrayBuffer());return btoa(String.fromCharCode(...new Uint8Array(b)))}",file_id)
@@ -104,6 +130,22 @@ with tempfile.TemporaryDirectory() as td:
    with zipfile.ZipFile(download.value.path()) as z:assert 'STALE CHANGE' in z.read('word/document.xml').decode()
    assert not errors,errors
    print('PASS unchanged save, stale-original protection and edited-copy download',flush=True)
+   # Corrupt compressed bytes must never start an unverified engine.
+   import gzip
+   page.evaluate("caches.delete('production-wordcraft-0.6.1')")
+   def corrupt(route):route.fulfill(status=200,body=gzip.compress(b'untrusted engine'),content_type='application/gzip')
+   page.route('**/*.wasm.gz',corrupt)
+   original_version=page.evaluate("async id=>(await fetch('/production/api/ref-files/'+id)).headers.get('ETag')",file_id)
+   page.on('dialog',lambda dialog:dialog.accept())
+   page.reload();page.get_by_role('alert').filter(has_text='파일 검증에 실패').wait_for(timeout=120000)
+   assert page.evaluate("async id=>(await fetch('/production/api/ref-files/'+id)).headers.get('ETag')",file_id)==original_version
+   page.unroute('**/*.wasm.gz',corrupt)
+   # Older browsers without decompression support still open the original verified engine.
+   page.add_init_script("if(location.pathname.endsWith('/wordcraft/0.6.1/app.html'))window.DecompressionStream=undefined")
+   page.reload();page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
+   assert engine_requests[-1].endswith('.wasm'),engine_requests
+   assert not errors,errors
+   print('PASS compressed-engine integrity rejection and original-engine fallback',flush=True)
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

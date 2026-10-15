@@ -1,4 +1,45 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  Undo2,
+  Redo2,
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Search,
+  Settings2,
+  ChevronDown,
+  WrapText,
+} from "lucide-react";
+function Icon({ name }: { name: string }) {
+  const Component =
+    (
+      {
+        undo: Undo2,
+        redo: Redo2,
+        bold: Bold,
+        italic: Italic,
+        underline: Underline,
+        alignLeft: AlignLeft,
+        alignCenter: AlignCenter,
+        alignRight: AlignRight,
+        search: Search,
+        settings: Settings2,
+        down: ChevronDown,
+        wrap: WrapText,
+      } as any
+    )[name] || Search;
+  return (
+    <Component
+      className="ui-icon"
+      size={18}
+      strokeWidth={1.75}
+      aria-hidden="true"
+    />
+  );
+}
 import JSZip from "jszip";
 import { wordcraftBridge } from "./wordcraft-bridge";
 import { downloadBlob } from "./files";
@@ -63,7 +104,12 @@ export function FullDocumentEditor({ file }: any) {
     [ready, setReady] = useState(false),
     [detached, setDetached] = useState(false),
     [recovery, setRecovery] = useState<Blob | null>(null);
-  const url = new URL("./modules/wordcraft/0.6.1/index.html", document.baseURI)
+  const [tools, setTools] = useState(false);
+  const surface = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (surface.current) surface.current.scrollLeft = 0;
+  }, [tools]);
+  const url = new URL("./modules/wordcraft/0.6.1/app.html", document.baseURI)
     .href;
   useEffect(() => {
     let closed = false,
@@ -122,6 +168,8 @@ export function FullDocumentEditor({ file }: any) {
       return !dirty();
     }
     s.flush = flush;
+    s.edit = (key: string, shift = false) => adapter?.edit(key, shift);
+    s.reflow = () => adapter?.reflow();
     s.download = async () => {
       if (
         s.booted &&
@@ -271,6 +319,7 @@ export function FullDocumentEditor({ file }: any) {
             onReady: () => {
               clearTimeout(bootTimer);
               setReady(true);
+              if (innerWidth < 600) setTimeout(() => adapter?.reflow(), 150);
               if (restoring) {
                 s.signature = "";
                 s.generation++;
@@ -293,6 +342,17 @@ export function FullDocumentEditor({ file }: any) {
         report(e);
       }
     })();
+    const engineError = (e: MessageEvent) => {
+      if (
+        e.origin === location.origin &&
+        e.source === frame.current?.contentWindow &&
+        e.data?.type === "wordcraft-load-error"
+      ) {
+        clearTimeout(bootTimer);
+        report(Error(e.data.message));
+      }
+    };
+    window.addEventListener("message", engineError);
     const unload = (e: BeforeUnloadEvent) => {
         if (dirty() && !s.detached) {
           e.preventDefault();
@@ -322,6 +382,7 @@ export function FullDocumentEditor({ file }: any) {
       clearTimeout(s.timer);
       clearTimeout(s.max);
       adapter?.dispose();
+      window.removeEventListener("message", engineError);
       window.removeEventListener("beforeunload", unload);
       window.removeEventListener("blur", blur);
       window.removeEventListener("online", online);
@@ -343,7 +404,7 @@ export function FullDocumentEditor({ file }: any) {
     location.reload();
   }
   return (
-    <main className="full-document-editor">
+    <main className="full-document-editor" data-tools={tools}>
       <header className="document-header">
         <div className="document-heading">
           <h1>{file.name}</h1>
@@ -376,6 +437,54 @@ export function FullDocumentEditor({ file }: any) {
           간단 편집
         </button>
       </header>
+      <div
+        className="app-document-toolbar"
+        role="toolbar"
+        aria-label="문서 편집 도구"
+      >
+        {[
+          ["z", "실행 취소", "undo"],
+          ["y", "다시 실행", "redo"],
+          ["b", "굵게", "bold"],
+          ["i", "기울임", "italic"],
+          ["u", "밑줄", "underline"],
+          ["l", "왼쪽 정렬", "alignLeft"],
+          ["e", "가운데 정렬", "alignCenter"],
+          ["r", "오른쪽 정렬", "alignRight"],
+          ["f", "찾기", "search"],
+        ].map(([key, label, icon]) => (
+          <button
+            className="keep-label"
+            key={key}
+            type="button"
+            aria-label={label}
+            title={label}
+            disabled={!ready}
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => session.current?.edit(key)}
+          >
+            <Icon name={icon} />
+          </button>
+        ))}
+        <button
+          className="keep-label document-mobile-view"
+          disabled={!ready}
+          onPointerDown={(e) => e.preventDefault()}
+          onClick={() => session.current?.reflow()}
+        >
+          <Icon name="wrap" />
+          맞춤 보기
+        </button>
+        <button
+          className="keep-label document-all-tools"
+          aria-expanded={tools}
+          onClick={() => setTools(!tools)}
+        >
+          <Icon name="settings" />
+          전체 도구
+          <Icon name="down" />
+        </button>
+      </div>
       {error && (
         <div className="document-error" role="alert">
           <span>{error}</span>
@@ -399,7 +508,26 @@ export function FullDocumentEditor({ file }: any) {
           )}
         </div>
       )}
-      <div className="full-editor-surface">
+      {tools && (
+        <label className="document-native-pan">
+          전체 도구 좌우 이동
+          <input
+            type="range"
+            aria-label="전체 도구 좌우 이동"
+            min="0"
+            max="100"
+            defaultValue="0"
+            onChange={(e) => {
+              const el = surface.current;
+              if (el)
+                el.scrollLeft =
+                  ((el.scrollWidth - el.clientWidth) * Number(e.target.value)) /
+                  100;
+            }}
+          />
+        </label>
+      )}
+      <div className="full-editor-surface" ref={surface}>
         <iframe
           ref={frame}
           tabIndex={ready ? 0 : -1}
@@ -423,7 +551,7 @@ export function FullDocumentEditor({ file }: any) {
       <footer className="document-footer">
         {detached
           ? "별도로 연 문서는 파일 메뉴에서 기기에 저장하세요."
-          : "원본 파일에 자동으로 저장됩니다. · WordCraft 전체 기능"}
+          : "원본 파일에 자동으로 저장됩니다."}
       </footer>
     </main>
   );

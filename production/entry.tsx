@@ -4,7 +4,6 @@ import {CompletionReview} from './CompletionReview';
 import {ArchiveLibrary,duplicateFiles} from './ArchiveLibrary';
 import {archiveProject,completionTransitions,projectHealth} from './project-lifecycle.js';
 import {OverviewActivity} from './OverviewActivity';
-import './DocumentEditor';
 import './DocumentLibrary';
 import {HubSidebar} from './HubSidebar';
 import {createHubTab} from './module-hub.js';

@@ -25,3 +25,15 @@ Browser regression: `CHROMIUM_PATH=/usr/bin/chromium .venv/bin/python scripts/te
 This verifies the restored full editor, DOCX formatting and autosave, reopening,
 conflict protection and edited-copy download. The general Pages suite also covers
 the simpler alternative and TXT recovery. WordCraft requires WebGPU or WebGL2.
+
+The app host `app.html` is separate from the unchanged upstream `index.html`. It
+loads a gzip sidecar, checks the decompressed WASM SHA-256 against the verified
+release, and caches only the public engine in CacheStorage. No NAS responses or
+documents enter this cache. Browsers without gzip decompression support load the
+original verified WASM instead. The standalone editor bundle is separate from
+the application and lazily loads the simpler editor when needed.
+
+The app toolbar uses keyboard commands; the complete original tools remain
+available through “전체 도구”. Mobile “맞춤 보기” selects the pinned release's
+view-only Web Layout status control. The default presentation crops the native
+ribbon/status chrome, and full tools restore it without recreating the editor.

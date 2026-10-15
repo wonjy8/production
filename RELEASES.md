@@ -47,3 +47,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Keep the simpler editor as an explicit alternative and retain TXT/HTML editing.
 - Add a Documents section in Materials with project/reference folders, filename and folder search, and direct document-editor links.
 - NAS configuration and server files do not change in this release.
+
+## 0.0.4
+
+- Align timed and all-day Home schedule titles in one shared column; keep all four mobile navigation buttons inside the bar.
+- Add app-styled, touch-sized document controls while preserving the original complete tools. Provide mobile reflow, full-tool horizontal navigation and keyboard-aware editor height.
+- Load document editing separately from the main app; load the simpler editor only when selected or needed for TXT/HTML.
+- Transfer the verified engine as gzip (39,322,422 to 14,701,908 bytes) and reuse its persistent cache. Upstream files and checksum pins stay unchanged.
+- NAS configuration and server files do not change in this release.
