@@ -92,7 +92,9 @@ export function ResourceDatabase({
     return () => window.removeEventListener("resources-changed", update);
   }, []);
   const ids = new Set((module?.files || []).map((f: any) => f.id)),
-    active = rows.filter((r) => !r.deleted && r.properties?.documentFont!=="true"),
+    active = rows.filter(
+      (r) => !r.deleted && r.properties?.documentFont !== "true",
+    ),
     selected = global
       ? active
       : active.filter((r) => ids.has(r.fileId || r.id)),
@@ -200,12 +202,9 @@ export function ResourceDatabase({
             {resourceType(row) === "image" ? (
               <Photo file={resourceFile(row)} />
             ) : resourceType(row) === "video" && row.fileId ? (
-              <video
-                src={"/api/ref-files/" + row.fileId}
-                preload="metadata"
-                muted
-                playsInline
-              />
+              <div className="resource-cover-icon resource-cover-video">
+                <Icon name="video" />
+              </div>
             ) : (
               <div
                 className={

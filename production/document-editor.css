@@ -1321,3 +1321,13 @@ body.document-mode,
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+.document-image-grid .photo-preview {
+  height: 110px;
+  overflow: hidden;
+}
+.document-image-grid .photo-placeholder {
+  height: 100%;
+  background: #eee;
+  border-radius: 5px;
+}

@@ -62,6 +62,7 @@ export function resourceFile(row: any) {
         : ""),
     kind: row.fileId ? "file" : "link",
     mime: row.mime || "",
+    sha256: row.sha256 || "",
     size: row.size || 0,
     ...(!row.fileId ? { url: row.url } : {}),
   };

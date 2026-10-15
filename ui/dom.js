@@ -1,3 +1,5 @@
+import {installThumbnailImages} from '../production/thumbnail-images.js';
+installThumbnailImages(document);
 import {openAddMenu} from './action-menu.js';
 window.openAddMenu=openAddMenu;
 import {decorateReferenceFilters} from './reference-filters.js';

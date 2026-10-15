@@ -35,7 +35,7 @@ class BrowserGateway:
                 message['headers'] = list(message['headers']) + [
                     (b'access-control-allow-origin', origin.encode()),
                     (b'access-control-allow-credentials', b'true'),
-                    (b'access-control-expose-headers', b'ETag, X-Workspace-Revision, Content-Range, Content-Disposition, X-File-SHA256'),
+                    (b'access-control-expose-headers', b'ETag, X-Workspace-Revision, Content-Range, Content-Disposition, X-File-SHA256, X-Thumbnail'),
                     (b'vary', b'Origin'), (b'cache-control', b'no-store'),
                     (b'x-content-type-options', b'nosniff')]
             await send(message)

@@ -107,3 +107,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Show text formatting, table actions and image dimensions according to the selected content; keep page settings and editor preferences separate.
 - Insert independent image copies from the existing authorized Materials library with search and previews, including conversion to DOCX/PDF-compatible image formats.
 - NAS files and configuration: unchanged.
+
+## 0.0.11
+
+- Serve authorized 640px WebP image thumbnails from a bounded, lazy NAS cache without changing originals. Limit concurrent generation and reject unsupported images without downloading originals as a fallback.
+- Persist derived thumbnails on devices with account/connection/content-hash isolation, a 64MB/400-item limit and automatic expiry. Browser-local mode generates them from local files.
+- Reuse the thumbnail pipeline in Materials, reference covers, image modules and the editor image picker; defer loading outside the viewport and use file-type icons for video list covers.
+- Fetch originals for explicit details, editing, downloads and document insertion. Bound decoded-image memory and keep source/thumbnail caches separate.
+- NAS update: replace server.py, browser_gateway.py and requirements.txt; rebuild the container to install Pillow 12.2.0. No .env or database schema changes.

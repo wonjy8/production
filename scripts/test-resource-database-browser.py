@@ -51,8 +51,32 @@ with tempfile.TemporaryDirectory() as td:
     page.locator('[data-main-space=references]').first.click();page.locator('button[data-source-section=resources]').click()
     page.get_by_role('heading',name='자료',exact=True).wait_for();page.get_by_role('button',name='legacy.txt',exact=True).wait_for()
     page.wait_for_function('location.hash==="#/materials/resources"')
-    page.get_by_label('DB 파일 추가',exact=True).set_input_files({'name':'pixel.png','mimeType':'image/png','buffer':base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==')})
+    page.get_by_role('button',name='갤러리',exact=True).click()
+    from PIL import Image
+    picture=io.BytesIO();Image.new('RGB',(4000,3000),'navy').save(picture,format='PNG')
+    media_requests=[]
+    page.on('request',lambda request:media_requests.append(request.url) if '/api/ref-files/' in request.url and request.method=='GET' else None)
+    page.get_by_label('DB 파일 추가',exact=True).set_input_files({'name':'pixel.png','mimeType':'image/png','buffer':picture.getvalue()})
+    page.locator('.resource-masonry .photo-preview img').wait_for()
+    page.locator('.resource-masonry .photo-preview img').evaluate('(e)=>e.decode()')
+    assert page.locator('.resource-masonry .photo-preview img').evaluate('e=>e.naturalWidth<=640')
+    image_record=page.evaluate("async()=>{const rows=await fetch('/production/api/database/resources').then(r=>r.json());return rows.find(r=>r.title==='pixel.png')}")
+    image_reads=[url for url in media_requests if image_record['fileId'] in url]
+    if mode=='nas':assert image_reads and all('thumbnail=1' in url for url in image_reads),image_reads
+    media_requests.clear();page.reload()
+    page.locator('.resource-masonry .photo-preview img').wait_for()
+    page.locator('.resource-masonry .photo-preview img').evaluate('(e)=>e.decode()')
+    assert not [url for url in media_requests if image_record['fileId'] in url],media_requests
+    print('PASS '+mode+': 640px thumbnail, no original list download, persistent cache hit after reload',flush=True)
     page.get_by_role('button',name='pixel.png',exact=True).wait_for()
+    changed=io.BytesIO();Image.new('RGB',(4000,3000),'red').save(changed,format='PNG')
+    page.evaluate("""async ({id,sha,data})=>{const blob=await fetch('data:image/png;base64,'+data).then(r=>r.blob());const r=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'image/png','If-Match':'"'+sha+'"'},body:blob});if(!r.ok)throw Error('replace original fixture failed')}""",{'id':image_record['fileId'],'sha':image_record['sha256'],'data':base64.b64encode(changed.getvalue()).decode()})
+    media_requests.clear();page.reload();page.locator('.resource-masonry .photo-preview img').wait_for()
+    page.locator('.resource-masonry .photo-preview img').evaluate('(e)=>e.decode()')
+    color=page.locator('.resource-masonry .photo-preview img').evaluate("e=>{const c=document.createElement('canvas');c.width=c.height=1;const ctx=c.getContext('2d');ctx.drawImage(e,0,0,1,1);return [...ctx.getImageData(0,0,1,1).data]}")
+    assert color[0]>200 and color[2]<50,color
+    if mode=='nas':assert any(image_record['fileId'] in url and 'thumbnail=1' in url for url in media_requests),media_requests
+    print('PASS '+mode+': replacing original invalidates the cached thumbnail',flush=True)
     with page.expect_popup() as preview:page.get_by_role('button',name='pixel.png',exact=True).click()
     image=preview.value;image.wait_for_url('blob:**');assert image.locator('img').count()==1;image.close()
     page.get_by_role('button',name='새 문서',exact=True).click()

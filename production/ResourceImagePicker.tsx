@@ -1,28 +1,10 @@
+import { Photo } from "./Photo";
+import { resourceFile } from "./resources";
 import React, { useEffect, useRef, useState } from "react";
 import { listResources } from "./resources";
 import { readFile } from "./files";
 import { Icon } from "./Icon";
 
-function Preview({ row }: { row: any }) {
-  const [src, setSrc] = useState("");
-  useEffect(() => {
-    let active = true,
-      url = "";
-    readFile(row.fileId)
-      .then((blob) => {
-        if (active) {
-          url = URL.createObjectURL(blob);
-          setSrc(url);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [row.fileId]);
-  return src ? <img src={src} alt="" /> : <Icon name="reference" />;
-}
 export function ResourceImagePicker({
   onClose,
   onSelect,
@@ -155,8 +137,9 @@ export function ResourceImagePicker({
                 disabled={busy}
                 onClick={() => insert(row)}
                 title={row.title}
+                aria-label={row.title}
               >
-                <Preview row={row} />
+                <Photo file={resourceFile(row)} />
                 <span>{row.title}</span>
               </button>
             ))}

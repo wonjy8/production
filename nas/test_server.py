@@ -67,6 +67,45 @@ class StorageTest(unittest.TestCase):
             self.assertEqual(conn.execute('SELECT deleted FROM locations').fetchone()[0], 1)
             self.assertEqual(conn.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
 
+    def test_image_thumbnails_are_small_cached_versioned_and_authorized(self):
+        import io
+        from PIL import Image
+        def picture(color):
+            output=io.BytesIO()
+            Image.new('RGB',(4000,3000),color).save(output,format='PNG')
+            return output.getvalue()
+        client,auth=self.client,self.auth
+        ident=str(uuid4());url='/api/ref-files/'+ident
+        original=picture('navy')
+        upload=client.put(url,headers={**auth,'Content-Type':'image/png'},content=original)
+        thumb=client.get(url+'?thumbnail=1',headers=auth)
+        self.assertEqual(thumb.status_code,200)
+        self.assertEqual(thumb.headers['x-thumbnail'],'v1')
+        with Image.open(io.BytesIO(thumb.content)) as image:self.assertEqual(image.size,(640,480))
+        self.assertLess(len(thumb.content),len(original)//4)
+        cache=list((Path(self.folder.name)/'thumbnails').glob(ident+'-*.webp'))
+        self.assertEqual(len(cache),1);before=cache[0].stat().st_mtime_ns
+        self.assertEqual(client.get(url+'?thumbnail=1',headers=auth).content,thumb.content)
+        self.assertEqual(cache[0].stat().st_mtime_ns,before)
+        self.assertEqual(client.get(url,headers=auth).content,original)
+        self.assertEqual(client.get(url+'?thumbnail=1').status_code,401)
+        try:
+            with self.module.database() as conn:
+                conn.execute("UPDATE app_users SET role='viewer' WHERE id='test-user'")
+                conn.execute('DELETE FROM file_uploaders WHERE file_id=?',(ident,))
+            self.assertEqual(client.get(url+'?thumbnail=1',headers=auth).status_code,403)
+        finally:
+            with self.module.database() as conn:conn.execute("UPDATE app_users SET role='superadmin' WHERE id='test-user'")
+        changed=picture('red')
+        self.assertEqual(client.put(url,headers={**auth,'If-Match':'"'+upload.json()['sha256']+'"','Content-Type':'image/png'},content=changed).status_code,200)
+        next_thumb=client.get(url+'?thumbnail=1',headers=auth)
+        self.assertNotEqual(next_thumb.headers['etag'],thumb.headers['etag'])
+        self.assertNotEqual(next_thumb.content,thumb.content)
+        self.assertEqual(len(list((Path(self.folder.name)/'thumbnails').glob(ident+'-*.webp'))),1)
+        broken=str(uuid4())
+        client.put('/api/ref-files/'+broken,headers={**auth,'Content-Type':'image/png'},content=b'not an image')
+        self.assertEqual(client.get('/api/ref-files/'+broken+'?thumbnail=1',headers=auth).status_code,422)
+
     def test_file_autosave_versions_and_access(self):
         client,auth=self.client,self.auth
         ident=str(uuid4());url='/api/ref-files/'+ident

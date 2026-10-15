@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--output-dir', type=Path, default=root / 'dist')
 args = parser.parse_args()
 args.output_dir.mkdir(parents=True, exist_ok=True)
-files = ['UPDATE-0.0.6.md', 'resources.py', 'server.py', 'browser_gateway.py', 'access.py', 'accounts.py', 'local_auth.py',
+files = ['UPDATE-0.0.11.md', 'UPDATE-0.0.6.md', 'resources.py', 'server.py', 'browser_gateway.py', 'access.py', 'accounts.py', 'local_auth.py',
          'setup_admin.py', 'schema.sql', 'Dockerfile', 'compose.yaml', '.dockerignore', '.env.example',
          'requirements.txt', 'install.sh', 'configure.py', 'update.sh']
 for kind in ('install', 'update'):

@@ -17,6 +17,9 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
+from PIL import Image, ImageOps, UnidentifiedImageError
+import warnings
+import time
 
 DATA = Path(os.environ.get('DATA_DIR', '/data'))
 DATA.mkdir(parents=True, exist_ok=True)
@@ -92,6 +95,8 @@ def delete_reference_record(conn, ident):
         conn.execute('DELETE FROM file_uploaders WHERE file_id=?',(file_id,))
         conn.execute('DELETE FROM files WHERE id=?',(file_id,))
         (DATA/'files'/file_id).unlink(missing_ok=True)
+        for thumbnail in (DATA/'thumbnails').glob(file_id+'-*.webp'):
+            thumbnail.unlink(missing_ok=True)
 
 
 def purge_reference_trash():
@@ -396,6 +401,65 @@ async def put_file(ident: str, request: Request):
         Path(temp.name).unlink(missing_ok=True)
 
 
+# Derived images are disposable. Originals and database records are never changed.
+thumbnail_slots = threading.BoundedSemaphore(2)
+thumbnail_sweep_lock = threading.Lock()
+thumbnail_last_sweep = 0
+
+
+def image_thumbnail(ident, row):
+    global thumbnail_last_sweep
+    folder = DATA / 'thumbnails'
+    folder.mkdir(exist_ok=True)
+    target = folder / (ident + '-' + row['sha256'] + '-v1.webp')
+    if not target.exists():
+        if not thumbnail_slots.acquire(blocking=False):
+            raise HTTPException(503, 'Thumbnail queue busy', headers={'Retry-After': '2'})
+        temp_name = None
+        try:
+            if not target.exists():
+                with warnings.catch_warnings():
+                    warnings.simplefilter('error', Image.DecompressionBombWarning)
+                    with Image.open(DATA / 'files' / ident) as image:
+                        if image.width * image.height > 50_000_000:
+                            raise HTTPException(422, 'Image too large for thumbnail')
+                        image.seek(0)
+                        image.draft('RGB', (1280, 1280))
+                        image.thumbnail((640, 640), Image.Resampling.LANCZOS)
+                        result = ImageOps.exif_transpose(image).convert('RGBA' if 'A' in image.getbands() or 'transparency' in image.info else 'RGB')
+                        with tempfile.NamedTemporaryFile(dir=folder, suffix='.tmp', delete=False) as temp:
+                            temp_name = temp.name
+                            result.save(temp, format='WEBP', quality=72, method=3)
+                        os.replace(temp_name, target)
+                for previous in folder.glob(ident + '-*.webp'):
+                    if previous != target:
+                        previous.unlink(missing_ok=True)
+        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError, Image.DecompressionBombWarning):
+            raise HTTPException(422, 'Image thumbnail unavailable')
+        finally:
+            thumbnail_slots.release()
+            if temp_name:
+                Path(temp_name).unlink(missing_ok=True)
+    # Bound disposable disk use without scanning the directory for every request.
+    if time.monotonic() - thumbnail_last_sweep > 60 and thumbnail_sweep_lock.acquire(blocking=False):
+        try:
+            thumbnail_last_sweep = time.monotonic()
+            files = sorted(folder.glob('*.webp'), key=lambda path: path.stat().st_mtime)
+            total = sum(path.stat().st_size for path in files)
+            for path in files:
+                if total <= 256 * 1024 * 1024:
+                    break
+                if path != target:
+                    total -= path.stat().st_size
+                    path.unlink(missing_ok=True)
+        finally:
+            thumbnail_sweep_lock.release()
+    return FileResponse(target, media_type='image/webp', headers={
+        'X-Thumbnail': 'v1', 'X-File-SHA256': row['sha256'],
+        'ETag': '"thumb-v1-' + row['sha256'] + '"', 'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; sandbox"})
+
+
 @app.get('/api/ref-files/{ident}')
 def get_file(ident: str, request: Request):
     if not ID.fullmatch(ident):
@@ -412,6 +476,10 @@ def get_file(ident: str, request: Request):
         row = conn.execute('SELECT * FROM files WHERE id=?', (ident,)).fetchone()
     if not row or not (DATA / 'files' / ident).exists():
         raise HTTPException(404, 'Not found')
+    if request.query_params.get('thumbnail') == '1':
+        if not row['mime'].startswith('image/'):
+            raise HTTPException(415, 'Thumbnail requires an image')
+        return image_thumbnail(ident, row)
     safe = row['mime'] in ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/ogg', 'application/pdf']
     filename = (request.query_params.get('name') or 'reference')[:250]
     return FileResponse(DATA / 'files' / ident, media_type=row['mime'] if safe else 'application/octet-stream', filename=filename,
