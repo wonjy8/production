@@ -321,12 +321,12 @@ button.compact-remove.ui-icon-button:hover,button.context-remove.icon-button:hov
 .module-move-targets{display:grid;gap:8px}
 .custom-module-tab>.module-tab-heading{position:sticky;top:var(--appbar-height,72px);z-index:12;background:var(--surface,#fff);padding-block:8px}
 .hub-pinned-blank{position:sticky;top:0;z-index:2;background:#fff;padding-bottom:10px;order:-1}
-.hub-result-group{margin:8px 0 20px;display:grid;gap:8px}
+.hub-result-group{margin:6px 0 14px;display:grid;gap:4px}
 .hub-result-group>h3{margin:0 0 3px;font-size:12px;color:#888;font-weight:500}
 .hub-results{display:flex;flex-direction:column;gap:6px}
 .hub-sidebar .hub-switch>button.keep-label[aria-selected=true]{color:var(--text)!important}
 .hub-sidebar .hub-switch>button[aria-selected=true]::after{background:var(--text-muted)}
-.hub-sidebar .hub-result-group>.hub-card.keep-label{height:80px!important;min-height:80px!important;padding:10px 14px!important}
+.hub-sidebar .hub-result-group>.hub-card.keep-label{height:auto!important;min-height:44px!important;padding:10px 12px!important;justify-content:center!important;gap:0!important}
 .hub-pinned-blank>.hub-card{width:100%;justify-content:flex-start!important;gap:12px}
 .project-status-group{margin:14px 0 24px}.project-status-group>h3{font-size:13px;font-weight:600;margin:0 0 8px}
 .project-stage-row>select{width:auto;max-width:110px;flex-shrink:0}

@@ -221,3 +221,8 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Arrange text properties as Text, Font and Paragraph, with consistent section spacing.
 - Reveal editor scrollbars during interaction and hide their thumbs after one second of inactivity without changing layout.
 - NAS configuration and server files do not change in this release.
+
+## 0.0.25
+
+- Compact Hub module rows from 80px to a 44px minimum with content-sized height; reduce row and group spacing while preserving template descriptions.
+- NAS configuration and server files do not change in this release.
