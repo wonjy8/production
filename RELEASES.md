@@ -235,3 +235,9 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Hide completed tasks in Home's all-task view; default all schedules to calendar and place an icon-only back action before Home detail headings.
 - Allow schedule rows to grow with wrapped titles and notes and restore the missing circle icon.
 - NAS configuration and server files do not change in this release.
+
+## 0.0.27
+
+- Use one page heading format across Settings, database lists, Materials, Home and project/work-group pages: 24px type, a 40px minimum row and 20px spacing below.
+- Add the current collection title to database lists and remove duplicated inner padding from Materials so title and content positions align.
+- NAS configuration and server files do not change in this release.

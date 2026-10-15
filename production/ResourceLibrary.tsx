@@ -12,7 +12,9 @@ function ResourceLibrary() {
   );
   return (
     <section className="resource-library">
-      <h1>자료</h1>
+      <header className="workspace-page-heading">
+        <h1>자료</h1>
+      </header>
       <nav className="resource-type-tabs" aria-label="자료 유형">
         {[
           ["all", "전체", "projects"],

@@ -235,7 +235,7 @@ export function AdminHome({
     <section className="admin-home" data-home-view={view}>
       {view === "dashboard" ? (
         <>
-          <header className="admin-home-heading">
+          <header className="admin-home-heading workspace-page-heading">
             <div className="admin-segment">
               {[
                 ["today", "오늘"],
@@ -372,7 +372,7 @@ export function AdminHome({
         </>
       ) : (
         <>
-          <header className="admin-home-heading">
+          <header className="admin-home-heading workspace-page-heading">
             <button
               className="keep-label home-back-button"
               aria-label="뒤로가기"

@@ -360,3 +360,13 @@ button.compact-remove.ui-icon-button:hover,button.context-remove.icon-button:hov
 .task-board>[data-task-stage="완료"]>div{opacity:.65}
 
 .merge-sections .tab-context-action>.ui-icon{width:20px;height:20px}
+/* Shared page headings, including production and resources inside shadow roots. */
+:root,:host{--workspace-title-size:24px;--workspace-heading-height:40px;--workspace-heading-gap:20px}
+.workspace-page-heading{display:flex;align-items:center;gap:12px;min-width:0;min-height:var(--workspace-heading-height);margin:0 0 var(--workspace-heading-gap)!important;padding:0;box-sizing:border-box}
+.workspace-page-heading h1{margin:0!important;padding:0;font-size:var(--workspace-title-size)!important;font-weight:600;line-height:1.35;letter-spacing:-.4px;overflow-wrap:anywhere;min-width:0}
+.resource-library{padding:0!important}
+.database-page>.workspace-page-heading+.homebar{margin-top:0}
+.project-page>.workspace-page-heading+.merge-sections,.resource-library>.workspace-page-heading+.resource-type-tabs{margin-top:0!important;min-height:44px;box-sizing:border-box}
+.admin-home>.workspace-page-heading{margin-bottom:calc(var(--workspace-heading-gap) - 24px)!important}
+.admin-home>.workspace-page-heading~.home-schedule-timeline,.admin-home>.workspace-page-heading~.schedule-month,.admin-home>.workspace-page-heading~.admin-task-list{margin-top:0}
+@media(max-width:720px){.settings-page,.database-page{padding:15px}.resource-library{padding:0!important}}
