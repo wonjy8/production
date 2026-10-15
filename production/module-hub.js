@@ -1,3 +1,4 @@
+import {planningModuleTemplates,planningTabTemplates,planningInitial,populatePlanningTab} from './planning-templates.js';
 // Templates are data, so a future project template can reuse the same module definitions.
 export const hubCategories = [
  {id:'all',label:'전체'}, {id:'basic',label:'기본'}, {id:'school',label:'학교'},
@@ -5,6 +6,7 @@ export const hubCategories = [
 ];
 
 export const moduleTemplates = [
+ ...planningModuleTemplates,
  {id:'database',category:'basic',name:'데이터베이스',description:'문서·파일을 속성과 분류로 관리',icon:'table',kind:'database'},
  {id:'sermon-notes',category:'church',name:'말씀 노트',description:'예배·QT·동아리 말씀을 문서로 기록',icon:'book',kind:'database',noteTemplate:true},
  {id:'note',category:'basic',name:'메모',description:'자유롭게 작성하는 텍스트',icon:'file',kind:'text'},
@@ -27,6 +29,7 @@ export const moduleTemplates = [
 ];
 
 export const tabTemplates = [
+ ...planningTabTemplates,
  {id:'blank',category:'basic',name:'빈 탭',description:'직접 모듈을 채우는 새 화면',icon:'plus',modules:[]},
 
  {id:'school-events',category:'school',name:'학사 운영',description:'일정·준비 체크리스트',icon:'calendar',modules:['schedule-list','checklist']},
@@ -43,11 +46,12 @@ export function createHubModule(id, options={}) {
   ...(template.kind==='database'?{files:[],databaseCategories:template.noteTemplate?['예배','QT','동아리']:[],databaseFields:template.noteTemplate?[{id:'category',label:'분류',type:'select'},{id:'date',label:'날짜',type:'date'},{id:'place',label:'장소',type:'text'},{id:'speaker',label:'설교자',type:'text'},{id:'scripture',label:'본문 구절',type:'text'}]:[{id:'category',label:'분류',type:'select'},{id:'date',label:'날짜',type:'date'}],databaseView:'table'}:{}),
   ...(template.kind==='checklist'?{items:[]}:{}),
   ...(template.kind==='grade-calculator'?{gradeScale:'4.5',courses:[]}:{}),
+  ...(['section-heading','group-list','progress-table','info-cards','assignment-table'].includes(template.kind)?planningInitial(template.kind):{}),
   ...options};
 }
 
 export function createHubTab(id) {
  const template=tabTemplates.find(item=>item.id===id);
  if(!template)throw Error('알 수 없는 탭 템플릿');
- return {id:crypto.randomUUID(),name:template.name,tags:[],modules:template.modules.map(moduleId=>createHubModule(moduleId))};
+ return populatePlanningTab(id,createHubModule)||{id:crypto.randomUUID(),name:template.name,tags:[],modules:template.modules.map(moduleId=>createHubModule(moduleId))};
 }

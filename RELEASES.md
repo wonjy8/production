@@ -149,3 +149,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Add split bullet/number style controls and keyboard nesting up to five levels; show outline lines only for nonempty headings. Keep insertion menus above the canvas.
 - Reveal list removal controls only on their row hover, retaining keyboard and touch access; use red hover emphasis for member and other removal controls. Preserve module proximity reveal.
 - NAS files, database schema and configuration: unchanged.
+
+## 0.0.16
+
+- Add reusable section headings, grouped lists, progress tables, information cards and assignment modules with responsive card/table views, custom fields, arbitrary labels and groups.
+- Connect existing teams, members, equipment, resources and schedules; group assignments by real teams and scope member choices accordingly, without fixed A/B concepts. Resource links load metadata until opened.
+- Share record data between views in the same tab while preserving per-view presentation; materialize snapshots when disconnecting, deleting a data owner, importing or reusing archived candidates.
+- Add editable filming, event, lesson and travel tab templates with unique data IDs, shared list/progress records and independent copies between instances. Include new module kinds in search and Hub.
+- NAS files, database schema and configuration: unchanged.

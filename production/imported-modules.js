@@ -6,6 +6,7 @@ export function importedModule(original,placement){
 }
 export function applyImportedContent(original,copy){
  const content=JSON.parse(JSON.stringify(copy));for(const key of ['id','source','importSource','sourceCopy','sourceMetadata','x','y','width','height','span'])delete content[key];
+ if(['group-list','progress-table','info-cards','assignment-table'].includes(content.kind))content.dataModuleId=null;
  if(content.localSchedules)content.localSchedules=content.localSchedules.map(s=>({...s,moduleId:original.id}));
  return {...original,...content,updatedAt:new Date().toISOString()};
 }
