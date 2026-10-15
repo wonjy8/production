@@ -108,7 +108,7 @@ with tempfile.TemporaryDirectory() as td:
    page.keyboard.press('Control+k');page.locator('#app-search').wait_for(state='hidden')
    page.locator('[data-main-space=references]').click()
    page.wait_for_function('window.activeWorkspace === "references"')
-   assert page.locator('.sidebar-source-sections button[data-source-section]').all_text_contents()==['레퍼런스','소스','포트폴리오','문서']
+   assert page.locator('.sidebar-source-sections button[data-source-section]').all_text_contents()==['레퍼런스','소스','포트폴리오','문서','자료 DB']
    for ident,label in [('references','레퍼런스'),('sources','소스'),('portfolios','포트폴리오')]:
     page.locator('.sidebar-source-sections button[data-source-section='+ident+']').click()
     page.wait_for_function('document.querySelector(".breadcrumbs").textContent.includes('+repr(label)+')')
@@ -840,7 +840,7 @@ with tempfile.TemporaryDirectory() as td:
    assert not fresh_page.locator('#sidebar').is_visible()
    fresh_page.locator('.mobile-bottom-nav [data-main-space=references]').click()
    fresh_page.locator('.workspace-landing-card[data-workspace-section=sources]').wait_for()
-   assert fresh_page.locator('.workspace-landing-card').all_text_contents()==['레퍼런스','소스','포트폴리오','문서','아카이브','휴지통']
+   assert fresh_page.locator('.workspace-landing-card').all_text_contents()==['레퍼런스','소스','포트폴리오','문서','자료 DB','아카이브','휴지통']
    fresh_page.locator('.workspace-landing-card[data-workspace-section=archive]').click()
    fresh_page.get_by_role('dialog',name='완료 아카이브',exact=True).wait_for()
    fresh_page.get_by_role('button',name='완료 아카이브 닫기',exact=True).click()

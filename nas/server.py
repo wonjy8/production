@@ -85,7 +85,7 @@ def delete_reference_record(conn, ident):
     conn.execute('DELETE FROM reference_records WHERE id=?',(ident,))
     workspace=workspace_data(conn)
     remaining=[json.loads(row[0]) for row in conn.execute('SELECT payload FROM reference_records')]
-    retained=packed([workspace,remaining])
+    retained=packed([workspace,remaining,[json.loads(row[0]) for row in conn.execute("SELECT payload FROM resource_records WHERE json_extract(payload,'$.deleted') IS NOT 1")]])
     used={file_id for file_id in candidates if file_id in retained}
     for file_id in candidates-used:
         if not ID.fullmatch(file_id):continue
@@ -210,6 +210,7 @@ def save_workspace(conn, data):
                 else:
                     conn.execute(f'INSERT INTO {table} VALUES(?,?,?)', (p['id'], item.get('id', str(index)), packed(item)))
     conn.execute('INSERT INTO workspace VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at', (packed(data), now()))
+    if globals().get('sync_resource_catalog'):sync_resource_catalog(conn)
 
 
 @app.get('/api/health')
@@ -306,6 +307,7 @@ async def put_reference(ident: str, request: Request):
                 raise HTTPException(400, 'Missing file')
             conn.execute('INSERT INTO reference_blocks VALUES(?,?,?,?,?,?)',
                          (ident, block.get('id', str(position)), position, block.get('kind', 'file'), file_id, packed(block)))
+        if globals().get('sync_resource_catalog'):sync_resource_catalog(conn)
     return data
 
 
@@ -415,6 +417,10 @@ def get_file(ident: str, request: Request):
     return FileResponse(DATA / 'files' / ident, media_type=row['mime'] if safe else 'application/octet-stream', filename=filename,
                         content_disposition_type='attachment' if 'download' in request.query_params or not safe else 'inline',
                         headers={'Content-Security-Policy': "default-src 'none'; sandbox", 'X-File-SHA256': row['sha256'], 'ETag': '"'+row['sha256']+'"', 'Cache-Control':'no-store'})
+
+
+from resources import install_resources
+sync_resource_catalog=install_resources(app,database,write_lock,now,json_body,lambda conn,actor,ident:can_edit_file(conn,actor,ident))
 
 
 @app.get('/api/database/{collection}')

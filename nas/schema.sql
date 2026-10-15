@@ -48,3 +48,8 @@ CREATE TABLE IF NOT EXISTS local_pending(email TEXT NOT NULL,purpose TEXT NOT NU
 CREATE TABLE IF NOT EXISTS local_recovery_codes(user_id TEXT NOT NULL REFERENCES app_users(id),code_hash TEXT NOT NULL,used INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(user_id,code_hash));
 
 CREATE TABLE IF NOT EXISTS local_session_preferences(token_hash TEXT PRIMARY KEY REFERENCES local_sessions(token_hash) ON DELETE CASCADE,remembered INTEGER NOT NULL DEFAULT 0 CHECK(remembered IN (0,1)));
+
+-- Resource metadata is independent of file bytes and project placements.
+CREATE TABLE IF NOT EXISTS resource_records(id TEXT PRIMARY KEY,file_id TEXT,owner_user_id TEXT NOT NULL DEFAULT '',payload TEXT NOT NULL CHECK(json_valid(payload)),version INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS resource_file ON resource_records(file_id);
+INSERT OR IGNORE INTO schema_versions VALUES(2,datetime('now'));

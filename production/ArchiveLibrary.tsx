@@ -4,10 +4,12 @@ import {observeUI} from '../ui/decorate.js';
 import {Modal} from './Modal';
 import {completionArchives,reuseArchive,sourceInfo} from './project-lifecycle.js';
 import {readFile,storeFile} from './files';
+import {listResources,resourceFile} from './resources';
 export async function duplicateFiles(value:any,cache=new Map<string,string>()):Promise<any>{
  const copy=JSON.parse(JSON.stringify(value));
+ let resourceRows:any[]|undefined;
  async function file(item:any){if(!item?.id||item.kind==='link'||item.kind==='text'||item.kind==='youtube'||item.kind==='instagram'||item.url&&!item.url.includes('/ref-files/'))return item;if(!cache.has(item.id)){const blob=await readFile(item.id),id=crypto.randomUUID();await storeFile(id,new File([blob],item.name||'자료',{type:item.mime||blob.type}));cache.set(item.id,id)}const id=cache.get(item.id);return {...item,id,...(item.url?{url:'/api/ref-files/'+id}:{})}}
- async function module(m:any){if(m.files)m.files=await Promise.all(m.files.map(file));if(m.groups)for(const group of m.groups)group.items=await Promise.all((group.items||[]).map(file));return m}
+ async function module(m:any){if(m.kind==='database'){if(!resourceRows)resourceRows=await listResources();m.files=(m.files||[]).map((f:any)=>{const r=resourceRows!.find(r=>r.fileId===f.id);return r?{...f,name:resourceFile(r).name,resourceProperties:r.properties,resourcePropertyLabels:r.propertyLabels}:f})}if(m.files)m.files=await Promise.all(m.files.map(file));if(m.groups)for(const group of m.groups)group.items=await Promise.all((group.items||[]).map(file));return m}
  if(Array.isArray(copy))return Promise.all(copy.map(module));
  if(copy.outputs)copy.outputs=await Promise.all(copy.outputs.map(file));
  if(copy.candidates)for(const candidate of copy.candidates)candidate.module=await module(candidate.module);

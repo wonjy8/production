@@ -123,7 +123,8 @@ class StorageTest(unittest.TestCase):
             conn.execute('UPDATE reference_records SET payload=? WHERE id=?',(json.dumps(trashed),trashed['id']))
         module.purge_reference_trash()
         self.assertEqual(client.delete('/api/references/'+trashed['id'],headers=auth).status_code,404)
-        self.assertFalse((module.DATA/'files'/sole).exists())
+        self.assertTrue((module.DATA/'files'/sole).exists())
+        self.assertTrue(any(r['id']==sole for r in client.get('/api/database/resources',headers=auth).json()))
         try:
             with module.database() as conn:conn.execute("UPDATE app_users SET role='viewer' WHERE id='test-user'")
             self.assertEqual(client.delete('/api/references/'+records[1]['id'],headers=auth).status_code,403)

@@ -5,6 +5,8 @@ export const hubCategories = [
 ];
 
 export const moduleTemplates = [
+ {id:'database',category:'basic',name:'데이터베이스',description:'문서·파일을 속성과 분류로 관리',icon:'table',kind:'database'},
+ {id:'sermon-notes',category:'church',name:'말씀 노트',description:'예배·QT·동아리 말씀을 문서로 기록',icon:'book',kind:'database',noteTemplate:true},
  {id:'note',category:'basic',name:'메모',description:'자유롭게 작성하는 텍스트',icon:'file',kind:'text'},
  {id:'checklist',category:'basic',name:'체크리스트',description:'항목을 완료하며 진행 상황 확인',icon:'tasks',kind:'checklist'},
  {id:'tasks',category:'basic',name:'할 일',description:'프로젝트 할 일 연결',icon:'tasks',kind:'tasks'},
@@ -38,6 +40,7 @@ export function createHubModule(id, options={}) {
  return {id:crypto.randomUUID(),kind:template.kind,title:template.name,span:6,
   ...(template.initialText?{text:template.initialText}:{}),
   ...(template.fields?{fields:[...template.fields],states:[...template.states],rows:[]}:{}),
+  ...(template.kind==='database'?{files:[],databaseCategories:template.noteTemplate?['예배','QT','동아리']:[],databaseFields:template.noteTemplate?[{id:'category',label:'분류',type:'select'},{id:'date',label:'날짜',type:'date'},{id:'place',label:'장소',type:'text'},{id:'speaker',label:'설교자',type:'text'},{id:'scripture',label:'본문 구절',type:'text'}]:[{id:'category',label:'분류',type:'select'},{id:'date',label:'날짜',type:'date'}],databaseView:'table'}:{}),
   ...(template.kind==='checklist'?{items:[]}:{}),
   ...(template.kind==='grade-calculator'?{gradeScale:'4.5',courses:[]}:{}),
   ...options};

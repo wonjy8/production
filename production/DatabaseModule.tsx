@@ -1,0 +1,659 @@
+import { readFile, downloadBlob } from "./files";
+import { useEffect, useState } from "react";
+import { Modal } from "./Modal";
+import { Icon } from "./Icon";
+import { InlineRemove } from "./InlineRemove";
+import { documentFormat } from "./document-types";
+import { documentURL } from "./document-launch";
+import {
+  addResourceFile,
+  createNote,
+  listResources,
+  saveResource,
+  resourceFile,
+  copyResource,
+  noteFields,
+} from "./resources";
+const defaults = ["예배", "QT", "동아리"];
+const day = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+export function ResourceDatabase({ module, onChange, global = false }: any) {
+  const [rows, setRows] = useState<any[]>([]),
+    [query, setQuery] = useState(""),
+    [category, setCategory] = useState(""),
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true),
+    [available, setAvailable] = useState(false),
+    [busy, setBusy] = useState(false),
+    [editing, setEditing] = useState<any>(null),
+    [adding, setAdding] = useState(false),
+    [picking, setPicking] = useState(false),
+    [settings, setSettings] = useState(false),
+    [preview, setPreview] = useState<any>(null),
+    [view, setView] = useState(module?.databaseView || "table"),
+    [sort, setSort] = useState("date"),
+    [reverse, setReverse] = useState(true);
+  const fields = module?.databaseFields || noteFields,
+    categories = module?.databaseCategories || defaults,
+    readonly = (window as any).appAccount?.role === "viewer";
+  async function refresh() {
+    try {
+      const next = await listResources();
+      setRows((old) =>
+        next.map((row: any) => {
+          const current = old.find((r) => r.id === row.id);
+          return current && current.version > row.version ? current : row;
+        }),
+      );
+      setAvailable(true);
+      setError("");
+    } catch (e: any) {
+      setAvailable(false);
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => {
+    refresh();
+    const update = () => refresh();
+    window.addEventListener("resources-changed", update);
+    return () => window.removeEventListener("resources-changed", update);
+  }, []);
+  const ids = new Set((module?.files || []).map((f: any) => f.id)),
+    active = rows.filter((r) => !r.deleted),
+    selected = global
+      ? active
+      : active.filter((r) => ids.has(r.fileId || r.id)),
+    needle = query.trim().toLocaleLowerCase(),
+    visible = selected
+      .filter(
+        (r) =>
+          (!category || r.properties?.category === category) &&
+          (!needle ||
+            [r.title, ...(r.tags || []), ...Object.values(r.properties || {})]
+              .join(" ")
+              .toLocaleLowerCase()
+              .includes(needle)),
+      )
+      .sort((a, b) => {
+        const x = sort === "title" ? a.title : a.properties?.date || "",
+          y = sort === "title" ? b.title : b.properties?.date || "";
+        return (
+          (String(x).localeCompare(String(y), "ko") ||
+            a.id.localeCompare(b.id)) * (reverse ? -1 : 1)
+        );
+      }),
+    options = [
+      ...new Set([
+        ...categories,
+        ...selected.map((r) => r.properties?.category).filter(Boolean),
+      ]),
+    ] as string[];
+  async function attach(row: any) {
+    if (!global) {
+      onChange((old: any) => ({
+        ...old,
+        files: [
+          ...(old.files || []).filter(
+            (f: any) => f.id !== (row.fileId || row.id),
+          ),
+          {
+            ...resourceFile(row),
+            resourceProperties: row.properties,
+            resourcePropertyLabels: row.propertyLabels,
+          },
+        ],
+      }));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await (window as any).flushDocumentModules?.();
+    }
+    setRows((old) => [...old.filter((r) => r.id !== row.id), row]);
+  }
+  async function perform(fn: () => Promise<any>) {
+    setBusy(true);
+    setError("");
+    try {
+      return await fn();
+    } catch (e: any) {
+      setError(e.message);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+  function open(row: any) {
+    if (row.kind === "text") {
+      setPreview(row);
+      return;
+    }
+    const file = resourceFile(row);
+    if (row.fileId && documentFormat(file))
+      window.open(documentURL(file, null), "_blank", "noopener,noreferrer");
+    else if (row.fileId) {
+      const preview =
+        /^(image\/(png|jpeg|webp|gif)|video\/(mp4|webm)|audio\/(mpeg|mp4|wav|ogg)|application\/pdf)$/.test(
+          row.mime || "",
+        );
+      const popup = preview ? window.open("about:blank", "_blank") : null;
+      if (popup) {
+        popup.opener = null;
+        popup.document.body.textContent = "파일을 불러오는 중…";
+      }
+      perform(async () => {
+        try {
+          const blob = await readFile(row.fileId);
+          if (popup) {
+            const url = URL.createObjectURL(blob);
+            popup.location.replace(url);
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+          } else downloadBlob(blob, file.name);
+        } catch (e) {
+          popup?.close();
+          throw e;
+        }
+      });
+    } else if (/^https?:\/\//.test(row.url))
+      window.open(row.url, "_blank", "noopener,noreferrer");
+  }
+  function rowCard(row: any) {
+    return (
+      <div className="resource-card" key={row.id}>
+        <button className="keep-label resource-title" onClick={() => open(row)}>
+          <Icon name={row.fileId ? "file" : "link"} />
+          <strong>{row.title}</strong>
+        </button>
+        <div className="resource-card-properties">
+          {fields.map((f: any) => (
+            <span key={f.id}>{row.properties?.[f.id] || "—"}</span>
+          ))}
+        </div>
+        <div className="resource-row-actions">
+          {!readonly && row.canEdit && (
+            <button
+              className="keep-label"
+              aria-label={row.title + " 속성 수정"}
+              onClick={() => setEditing(row)}
+            >
+              속성
+            </button>
+          )}
+          {!global && !readonly && (
+            <InlineRemove
+              onDelete={() =>
+                onChange((old: any) => ({
+                  ...old,
+                  files: (old.files || []).filter(
+                    (f: any) => f.id !== (row.fileId || row.id),
+                  ),
+                }))
+              }
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <section
+      className="resource-database"
+      style={{ "--resource-columns": fields.length } as any}
+      aria-label={global ? "통합 자료 데이터베이스" : "데이터베이스 모듈"}
+    >
+      <header className="resource-toolbar">
+        <input
+          type="search"
+          aria-label="자료 검색"
+          placeholder="제목·태그·속성 검색"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <select
+          aria-label="자료 분류 필터"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          <option value="">모든 분류</option>
+          {options.map((c) => (
+            <option key={c}>{c}</option>
+          ))}
+        </select>
+        <select
+          aria-label="자료 정렬"
+          value={sort}
+          data-sort-direction={reverse ? "desc" : "asc"}
+          onChange={(e) => {
+            if (e.target.value === sort) setReverse(!reverse);
+            else {
+              setSort(e.target.value);
+              setReverse(e.target.value === "date");
+            }
+          }}
+        >
+          <option value="date">
+            날짜 {sort === "date" ? (reverse ? "최신순" : "오래된순") : ""}
+          </option>
+          <option value="title">
+            제목 {sort === "title" ? (reverse ? "Z→A" : "A→Z") : ""}
+          </option>
+        </select>
+        <div className="resource-view-switch">
+          <button
+            className="keep-label"
+            aria-pressed={view === "table"}
+            onClick={() => {
+              setView("table");
+              onChange?.((old: any) => ({ ...old, databaseView: "table" }));
+            }}
+          >
+            표
+          </button>
+          <button
+            className="keep-label"
+            aria-pressed={view === "board"}
+            onClick={() => {
+              setView("board");
+              onChange?.((old: any) => ({ ...old, databaseView: "board" }));
+            }}
+          >
+            보드
+          </button>
+        </div>
+        <button className="keep-label" onClick={refresh}>
+          새로고침
+        </button>
+        {!readonly && (
+          <>
+            <button
+              className="keep-label"
+              disabled={busy || !available}
+              onClick={() => setAdding(true)}
+            >
+              <Icon name="plus" />새 문서
+            </button>
+            <label className="button keep-label material-upload">
+              파일 추가
+              <input
+                type="file"
+                multiple
+                aria-label="DB 파일 추가"
+                disabled={busy || !available}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  e.target.value = "";
+                  perform(async () => {
+                    for (const file of files)
+                      await attach(await addResourceFile(file));
+                    await refresh();
+                  });
+                }}
+              />
+            </label>
+            {!global && (
+              <>
+                <button
+                  className="keep-label"
+                  onClick={() => {
+                    refresh();
+                    setPicking(true);
+                  }}
+                >
+                  기존 자료 연결
+                </button>
+                <button
+                  className="keep-label"
+                  onClick={() => setSettings(true)}
+                  aria-label="데이터베이스 속성 설정"
+                >
+                  <Icon name="settings" />
+                </button>
+              </>
+            )}
+          </>
+        )}
+      </header>
+      {error && (
+        <p role="alert" className="form-error">
+          {error}
+        </p>
+      )}
+      {loading ? (
+        <p role="status">자료를 불러오는 중…</p>
+      ) : view === "board" ? (
+        <div className="resource-board">
+          {[...options, "미분류"].map((c) => (
+            <section key={c}>
+              <h3>{c}</h3>
+              {visible
+                .filter((r) => (r.properties?.category || "미분류") === c)
+                .map(rowCard)}
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div className="resource-table-scroll">
+          <div className="resource-table" role="table" aria-label="자료 목록">
+            <div className="resource-table-head" role="row">
+              <span>제목</span>
+              <div>
+                {fields.map((f: any) => (
+                  <span key={f.id}>{f.label}</span>
+                ))}
+              </div>
+              <span>관리</span>
+            </div>
+            {visible.map(rowCard)}
+          </div>
+        </div>
+      )}
+      {!loading && !visible.length && (
+        <p className="group-empty">
+          등록된 자료가 없습니다. 새 문서를 만들거나 기존 자료를 연결하세요.
+        </p>
+      )}
+      {!global && (
+        <small className="resource-explanation">
+          연결한 자료는 같은 원본을 사용합니다. 이 모듈에서 제거해도 자료 DB와
+          파일은 유지됩니다.
+        </small>
+      )}
+      {preview && (
+        <Modal title={preview.title} onClose={() => setPreview(null)}>
+          <p style={{ whiteSpace: "pre-wrap" }}>{preview.content}</p>
+          {!readonly && (
+            <button
+              className="button keep-label"
+              disabled={busy}
+              onClick={() =>
+                perform(async () => {
+                  await attach(await copyResource(preview));
+                  setPreview(null);
+                })
+              }
+            >
+              문서 파일 사본으로 추가
+            </button>
+          )}
+        </Modal>
+      )}
+      {(adding || editing) && (
+        <ResourceEditor
+          row={editing}
+          fields={
+            global
+              ? [
+                  ...fields,
+                  ...Object.entries(editing?.propertyLabels || {})
+                    .filter(([id]) => !fields.some((f: any) => f.id === id))
+                    .map(([id, label]) => ({ id, label, type: "text" })),
+                ]
+              : fields
+          }
+          categories={options}
+          busy={busy}
+          onClose={() => {
+            setAdding(false);
+            setEditing(null);
+          }}
+          onSave={async (draft: any) => {
+            let popup: Window | null = null;
+            if (!editing) {
+              popup = window.open("about:blank", "_blank");
+              if (popup) {
+                popup.opener = null;
+                popup.document.body.textContent = "문서를 준비하는 중…";
+              }
+            }
+            const result = await perform(async () => {
+              const row = editing
+                ? await saveResource({ ...editing, ...draft })
+                : await createNote(draft);
+              await attach(row);
+              if (popup)
+                popup.location.replace(documentURL(resourceFile(row), null));
+              return row;
+            });
+            if (result) {
+              setAdding(false);
+              setEditing(null);
+            } else popup?.close();
+          }}
+        />
+      )}
+      {picking && (
+        <Modal title="기존 자료 연결" onClose={() => setPicking(false)}>
+          <p>
+            연결하면 같은 원본을 사용합니다. 따로 편집하려면 사본으로
+            추가하세요.
+          </p>
+          <input
+            aria-label="연결할 자료 검색"
+            placeholder="자료 검색"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <div className="resource-picker">
+            {active
+              .filter(
+                (r) =>
+                  !ids.has(r.fileId || r.id) &&
+                  (!needle ||
+                    [r.title, ...Object.values(r.properties || {})]
+                      .join(" ")
+                      .toLocaleLowerCase()
+                      .includes(needle)),
+              )
+              .map((row) => (
+                <div key={row.id}>
+                  <span>
+                    {row.title}
+                    <small>{row.properties?.category}</small>
+                  </span>
+                  <button
+                    className="keep-label"
+                    disabled={busy || row.kind === "text"}
+                    onClick={() => perform(() => attach(row))}
+                  >
+                    연결
+                  </button>
+                  <button
+                    className="keep-label"
+                    disabled={busy || (!row.fileId && row.kind !== "text")}
+                    title={
+                      !row.fileId && row.kind !== "text"
+                        ? "외부 링크는 연결하여 사용하세요"
+                        : undefined
+                    }
+                    onClick={() =>
+                      perform(async () => attach(await copyResource(row)))
+                    }
+                  >
+                    사본으로 추가
+                  </button>
+                </div>
+              ))}
+          </div>
+        </Modal>
+      )}
+      {settings && (
+        <DatabaseSettings
+          module={module}
+          onClose={() => setSettings(false)}
+          onSave={(data: any) => {
+            onChange((old: any) => ({ ...old, ...data }));
+            setSettings(false);
+          }}
+        />
+      )}
+    </section>
+  );
+}
+function ResourceEditor({
+  row,
+  fields,
+  categories,
+  busy,
+  onSave,
+  onClose,
+}: any) {
+  const [title, setTitle] = useState(row?.title || ""),
+    [props, setProps] = useState(row?.properties || { date: day() }),
+    [tags, setTags] = useState((row?.tags || []).join(", "));
+  return (
+    <Modal title={row ? "자료 속성" : "새 문서"} onClose={onClose}>
+      <form
+        className="merge-form resource-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave({
+            title: title.trim(),
+            properties: props,
+            propertyLabels: {
+              ...(row?.propertyLabels || {}),
+              ...Object.fromEntries(fields.map((f: any) => [f.id, f.label])),
+            },
+            tags: [
+              ...new Set(
+                tags
+                  .split(",")
+                  .map((t) => t.trim())
+                  .filter(Boolean),
+              ),
+            ],
+          });
+        }}
+      >
+        <label>
+          제목
+          <input
+            aria-label="자료 제목"
+            placeholder="말씀 노트 제목"
+            value={title}
+            required
+            maxLength={200}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </label>
+        {fields.map((field: any) => (
+          <label key={field.id}>
+            {field.label}
+            <input
+              aria-label={field.label}
+              type={field.type === "date" ? "date" : "text"}
+              list={field.id === "category" ? "resource-categories" : undefined}
+              placeholder={field.label + " 입력"}
+              value={props[field.id] || ""}
+              maxLength={2000}
+              onChange={(e) =>
+                setProps({ ...props, [field.id]: e.target.value })
+              }
+            />
+          </label>
+        ))}
+        <datalist id="resource-categories">
+          {categories.map((c: string) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
+        <label>
+          태그
+          <input
+            aria-label="자료 태그"
+            placeholder="쉼표로 구분"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+          />
+        </label>
+        <button
+          className="button primary keep-label"
+          disabled={busy || !title.trim()}
+        >
+          {busy ? "저장 중…" : row ? "적용" : "만들고 문서 열기"}
+        </button>
+      </form>
+    </Modal>
+  );
+}
+function DatabaseSettings({ module, onSave, onClose }: any) {
+  const [categories, setCategories] = useState(
+      (module.databaseCategories || defaults).join(", "),
+    ),
+    [fields, setFields] = useState(module.databaseFields || noteFields),
+    [name, setName] = useState("");
+  return (
+    <Modal title="데이터베이스 속성 설정" onClose={onClose}>
+      <form
+        className="merge-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave({
+            databaseCategories: [
+              ...new Set(
+                categories
+                  .split(",")
+                  .map((c) => c.trim())
+                  .filter(Boolean),
+              ),
+            ],
+            databaseFields: fields,
+          });
+        }}
+      >
+        <label>
+          분류 선택지
+          <input
+            aria-label="분류 선택지"
+            value={categories}
+            onChange={(e) => setCategories(e.target.value)}
+            placeholder="예배, QT, 동아리"
+          />
+        </label>
+        {fields.map((f: any) => (
+          <div className="resource-field-setting" key={f.id}>
+            <span>{f.label}</span>
+            {!["category", "date"].includes(f.id) && (
+              <button
+                type="button"
+                className="keep-label danger"
+                onClick={() =>
+                  setFields(fields.filter((x: any) => x.id !== f.id))
+                }
+              >
+                속성 숨기기
+              </button>
+            )}
+          </div>
+        ))}
+        <label>
+          새 속성 이름
+          <input
+            aria-label="새 속성 이름"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+          />
+        </label>
+        <button
+          type="button"
+          className="keep-label"
+          disabled={!name.trim() || fields.length >= 20}
+          onClick={() => {
+            setFields([
+              ...fields,
+              { id: crypto.randomUUID(), label: name.trim(), type: "text" },
+            ]);
+            setName("");
+          }}
+        >
+          텍스트 속성 추가
+        </button>
+        <button className="button primary keep-label">적용</button>
+      </form>
+    </Modal>
+  );
+}
+export function DatabaseModule(props: any) {
+  return <ResourceDatabase {...props} />;
+}

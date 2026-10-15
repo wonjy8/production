@@ -2,7 +2,11 @@ import { referenceTabs } from "./shared-modules.js";
 import { sourceGallery } from "./source-gallery-model.js";
 const types =
   /\.(docx?|docm|dotx?|dotm|odt|rtf|txt|md|markdown|html?|pdf|hwp|hwpx|xlsx?|xlsm|ods|csv|pptx?|odp)$/i;
-export function documentLibrary(workspace, references) {
+export function documentLibrary(workspace, references, resources=[]) {
+  if(resources.length){
+    const categories=[...new Set(resources.map(r=>r.properties?.category||'미분류'))];
+    references=[...references,{id:'catalog-library',title:'자료 DB',recordType:'source',tabs:categories.map(category=>({id:'catalog-'+category,name:category,modules:[{id:'catalog-module-'+category,kind:'file',files:resources.filter(r=>(r.properties?.category||'미분류')===category).map(r=>r.file)}]}))}];
+  }
   const current = (o) => ({ ...o, archives: undefined }),
     data = {
       ...workspace,

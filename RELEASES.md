@@ -64,3 +64,12 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Show full document formatting, table, page layout and review tools by default. Remove the manual save button and add explicit Word and engine-rendered PDF exports.
 - Stop original-file autosaving if an export drops custom XML, embedded objects, macro or signature package parts; keep the edited recovery copy available. This does not establish complete Microsoft Word fidelity.
 - NAS configuration and server files do not change in this release.
+
+## 0.0.6
+
+- Add an independent resource catalog in SQLite and browser IndexedDB. Register existing and newly placed files, images, links and text notes without moving file bytes or rewriting project/reference content.
+- Keep catalog metadata separate from placements; retain registered originals when a project/reference/module connection is removed. Enforce existing visibility/edit permissions and version checks on metadata updates.
+- Add Materials → Resource DB, including document creation, file uploads, search, property editing, classification filters, table/board views and document-library integration.
+- Add Database and Sermon Notes modules. New entries are real DOCX files opened in the document editor; support worship/QT/club classifications, date/place/speaker/scripture and custom text properties.
+- Existing-resource connections share the original; explicit copy creates an independent file. Database module copies retain current property values and labels.
+- NAS update required: replace `server.py`, `schema.sql`, `Dockerfile`, and add `resources.py`; rebuild the existing container. Keep `.env` and `data` unchanged. See `nas/UPDATE-0.0.6.md`.
