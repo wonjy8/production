@@ -1,6 +1,14 @@
-import { PDFDocument, rgb, degrees } from "pdf-lib";
+import {
+  PDFDocument,
+  rgb,
+  degrees,
+  pushGraphicsState,
+  popGraphicsState,
+  concatTransformationMatrix,
+} from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { documentLayout } from "./document-layout";
+import type { CustomFont } from "./custom-fonts";
 import { fontURL } from "./document-fonts";
 import { pageGap } from "./document-layout";
 const cached = new Map<string, Promise<ArrayBuffer>>();
@@ -27,8 +35,27 @@ const color = (value: string) => {
 };
 const mm = 72 / 25.4;
 /** Vector text is positioned using the paginated editor's measured glyph positions. */
-export async function documentPDF(sheet: HTMLElement, value: any) {
+export async function documentPDF(
+  sheet: HTMLElement,
+  value: any,
+  sources: {
+    fonts: CustomFont[];
+    bytes: (font: CustomFont) => Promise<ArrayBuffer>;
+  } = {
+    fonts: [],
+    bytes: async () => {
+      throw Error("글꼴을 불러올 수 없습니다.");
+    },
+  },
+) {
   await document.fonts.ready;
+  sheet
+    .querySelector(".tiptap")
+    ?.dispatchEvent(new Event("document-layout-change"));
+  await new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve)),
+  );
+
   const layout = documentLayout(value),
     doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
@@ -56,12 +83,55 @@ export async function documentPDF(sheet: HTMLElement, value: any) {
   const fonts = new Map<string, any>();
   async function fontFor(style: CSSStyleDeclaration, char: string) {
     const primary = style.fontFamily.split(",")[0];
+    const custom = sources.fonts
+      .filter((f) => f.family === primary.replace(/^["']|["']$/g, "").trim())
+      .sort(
+        (a, b) =>
+          (a.style === style.fontStyle ? 0 : 1) -
+            (b.style === style.fontStyle ? 0 : 1) ||
+          Math.abs(Number(a.weight) - Number(style.fontWeight)) -
+            Math.abs(Number(b.weight) - Number(style.fontWeight)),
+      )[0];
+    if (
+      !custom &&
+      ![
+        "Arial",
+        "Calibri",
+        "Times New Roman",
+        "맑은 고딕",
+        "Noto Sans KR",
+        "바탕",
+        "sans-serif",
+        "serif",
+      ].includes(primary.replace(/^["']|["']$/g, "").trim())
+    )
+      throw Error(
+        "PDF에 사용할 " +
+          primary +
+          " 글꼴을 추가하거나 다른 글꼴을 선택하세요.",
+      );
+    if (custom) {
+      if (!fonts.has(custom.id))
+        fonts.set(
+          custom.id,
+          await doc.embedFont(await sources.bytes(custom), { subset: false }),
+        );
+      const font = fonts.get(custom.id);
+      if (
+        Array.from(char).every((c) =>
+          font.getCharacterSet().includes(c.codePointAt(0)),
+        )
+      )
+        return { font, korean: false, italic: false };
+    }
+
     const serif =
+      !custom &&
       /Times|바탕|Myeongjo|serif/i.test(primary) &&
       !/sans-serif/i.test(primary);
     const korean =
       !/^[\u0000-\u024f\u1e00-\u1eff\u2000-\u206f]*$/.test(char) ||
-      /맑은|Noto Sans KR|바탕|Nanum/.test(primary);
+      (!custom && /맑은|Noto Sans KR|바탕|Nanum/.test(primary));
     const bold = Number(style.fontWeight) >= 600,
       italic = style.fontStyle === "italic";
     const family = korean
@@ -97,7 +167,7 @@ export async function documentPDF(sheet: HTMLElement, value: any) {
           char +
           " (문자를 바꾸거나 이미지로 넣어주세요.)",
       );
-    return { font, korean, italic };
+    return { font, korean, italic: italic && style.fontSynthesis !== "none" };
   }
   // Paint table cells, highlights and borders as vectors, then actual text above them.
   for (const el of Array.from(
@@ -204,14 +274,22 @@ export async function documentPDF(sheet: HTMLElement, value: any) {
         d = glyphMetrics.fontBoundingBoxDescent || descent;
       const baseline =
         p.y - ((rect.height / zoom - a - d) / 2 + a) * zoom * scale;
+      const advance = font.widthOfTextAtSize(char, size),
+        measured = rect.width * scale;
+      const horizontal = advance > 0 ? measured / advance : 1;
+      p.page.pushOperators(
+        pushGraphicsState(),
+        concatTransformationMatrix(horizontal, 0, 0, 1, p.x, baseline),
+      );
       p.page.drawText(char, {
-        x: p.x,
-        y: baseline,
+        x: 0,
+        y: 0,
         font,
         size,
         color: color(style.color),
         ...(korean && italic ? { xSkew: degrees(12) } : {}),
       });
+      p.page.pushOperators(popGraphicsState());
       const decoration =
         style.textDecorationLine ||
         getComputedStyle(parent.closest("u,s,a") || parent).textDecorationLine;
@@ -252,7 +330,9 @@ export async function documentPDF(sheet: HTMLElement, value: any) {
       color: color(style.color),
     });
   }
-  for (const img of Array.from(sheet.querySelectorAll("img[src]:not(.ProseMirror-separator)"))) {
+  for (const img of Array.from(
+    sheet.querySelectorAll("img[src]:not(.ProseMirror-separator)"),
+  )) {
     await img.decode();
     const rect = img.getBoundingClientRect(),
       p = point(rect);
@@ -279,4 +359,27 @@ export async function documentPDF(sheet: HTMLElement, value: any) {
   }
   return new Blob([await doc.save()], { type: "application/pdf" });
 }
+async function inspectFont(data: ArrayBuffer) {
+  try {
+    const parsed = (fontkit as any).create(new Uint8Array(data));
+    const doc = await PDFDocument.create();
+    doc.registerFontkit(fontkit);
+    const font = await doc.embedFont(data, { subset: false });
+    const text = font.getCharacterSet().includes(65)
+      ? "A"
+      : String.fromCodePoint(font.getCharacterSet()[0]);
+    doc.addPage().drawText(text, { font });
+    await doc.save();
+    return {
+      family: parsed.familyName,
+      weight: /bold|heavy|black/i.test(parsed.subfamilyName) ? "700" : "400",
+      style: /italic|oblique/i.test(parsed.subfamilyName) ? "italic" : "normal",
+    };
+  } catch {
+    throw Error(
+      "이 글꼴은 PDF에 포함할 수 없습니다. 다른 TTF·OTF 파일을 선택하세요.",
+    );
+  }
+}
+(documentPDF as any).inspectFont = inspectFont;
 (window as any).productionDocumentPDF = documentPDF;

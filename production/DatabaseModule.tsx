@@ -92,7 +92,7 @@ export function ResourceDatabase({
     return () => window.removeEventListener("resources-changed", update);
   }, []);
   const ids = new Set((module?.files || []).map((f: any) => f.id)),
-    active = rows.filter((r) => !r.deleted),
+    active = rows.filter((r) => !r.deleted && r.properties?.documentFont!=="true"),
     selected = global
       ? active
       : active.filter((r) => ids.has(r.fileId || r.id)),

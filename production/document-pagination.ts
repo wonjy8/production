@@ -179,6 +179,8 @@ export const documentPagination = Extension.create({
           };
           view.dom.addEventListener("compositionstart", start);
           view.dom.addEventListener("compositionend", end);
+          view.dom.addEventListener("document-layout-change", clear);
+          view.dom.addEventListener("load", clear, true);
           document.fonts.ready.then(clear);
           document.fonts.addEventListener("loadingdone", clear);
           schedule();
@@ -189,6 +191,8 @@ export const documentPagination = Extension.create({
             destroy() {
               closed = true;
               document.fonts.removeEventListener("loadingdone", clear);
+              view.dom.removeEventListener("document-layout-change", clear);
+              view.dom.removeEventListener("load", clear, true);
               cancelAnimationFrame(frame);
               observer.disconnect();
               view.dom.removeEventListener("compositionstart", start);

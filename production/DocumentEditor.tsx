@@ -1,3 +1,11 @@
+import { FontManager } from "./FontManager";
+import {
+  currentCustomFonts,
+  prepareCustomFonts,
+  watchCustomFonts,
+  customFontBytes,
+  usedFontFamilies,
+} from "./custom-fonts";
 import { documentPagination } from "./document-pagination";
 import {
   listResources,
@@ -20,6 +28,35 @@ import { TextStyleKit } from "@tiptap/extension-text-style";
 import { documentFormat, loadDocument, saveDocument } from "./document-files";
 import { Icon } from "./Icon";
 import { downloadBlob } from "./files";
+const documentFontRendering = Extension.create({
+  name: "documentFontRendering",
+  addGlobalAttributes() {
+    return [
+      {
+        types: ["textStyle"],
+        attributes: {
+          fontFamily: {
+            default: null,
+            parseHTML: (el) =>
+              el.style.fontFamily
+                ?.split(",")[0]
+                .replace(/^["']|["']$/g, "")
+                .trim() || null,
+            renderHTML: (attrs) =>
+              attrs.fontFamily
+                ? {
+                    style:
+                      "font-family:" +
+                      JSON.stringify(attrs.fontFamily) +
+                      ',Arial,"Noto Sans KR"',
+                  }
+                : {},
+          },
+        },
+      },
+    ];
+  },
+});
 const preserve = Extension.create({
   name: "docxProperties",
   addGlobalAttributes() {
@@ -156,18 +193,63 @@ function DocumentEditor({ file }: { file: any }) {
     [error, setError] = useState(""),
     [active, setActive] = useState(0),
     [comment, setComment] = useState<any>(null),
-    [showComments, setShowComments] = useState(false),
     [showLayout, setShowLayout] = useState(false),
+    [panel, setPanel] = useState("page"),
+    [customFonts, setCustomFonts] = useState(currentCustomFonts()),
     [name, setName] = useState(file.name),
     [titleDraft, setTitleDraft] = useState(file.name.replace(/\.[^.]+$/, "")),
     [editingTitle, setEditingTitle] = useState(false),
     [exporting, setExporting] = useState(false),
     [zoom, setZoom] = useState("fit"),
     [fitScale, setFitScale] = useState(1);
+  useEffect(() => {
+    let alive = true;
+    const refresh = () =>
+      prepareCustomFonts(usedFontFamilies(host.current))
+        .then((rows) => {
+          if (alive) {
+            setCustomFonts(rows);
+            setActive((v) => v + 1);
+            editor.current?.view.dom.dispatchEvent(
+              new Event("document-layout-change"),
+            );
+          }
+        })
+        .catch((e) => {
+          if (alive) setError(e.message);
+        });
+    refresh();
+    const stop = watchCustomFonts(refresh);
+    return () => {
+      alive = false;
+      stop();
+    };
+  }, [ready]);
+  function openPanel(tab: string) {
+    setPanel(tab);
+    setShowLayout(true);
+  }
   const layout = documentLayout(editor.current?.getJSON().attrs?.docxLayout);
   const scroll = useRef<HTMLDivElement>(null),
     titleInput = useRef<HTMLInputElement>(null);
   const resource = useRef<any>(null);
+  useEffect(() => {
+    editor.current?.view.dom.dispatchEvent(new Event("document-layout-change"));
+  }, [ready, zoom, fitScale, showLayout]);
+
+  useEffect(() => {
+    document
+      .querySelectorAll<HTMLElement>(
+        ".document-editor button,.document-editor select,.document-editor label,.document-editor summary",
+      )
+      .forEach((el) => {
+        if (!el.title) {
+          const label = el.getAttribute("aria-label") || el.textContent?.trim();
+          if (label) el.title = label;
+        }
+      });
+  }, [active, ready, showLayout, panel, comment, customFonts.length]);
+
   useEffect(() => {
     listResources()
       .then((rows) => {
@@ -260,6 +342,7 @@ function DocumentEditor({ file }: { file: any }) {
     setError("");
     editor.current?.setEditable(false);
     try {
+      await prepareCustomFonts(usedFontFamilies(host.current));
       await document.fonts.ready;
       await new Promise((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(resolve)),
@@ -268,6 +351,7 @@ function DocumentEditor({ file }: { file: any }) {
       const blob = await exportPDF(
         host.current!,
         editor.current?.getJSON().attrs?.docxLayout,
+        { fonts: currentCustomFonts(), bytes: customFontBytes },
       );
       downloadBlob(blob, file.name.replace(/\.[^.]+$/, "") + ".pdf");
     } catch (e: any) {
@@ -320,6 +404,7 @@ function DocumentEditor({ file }: { file: any }) {
       return;
     }
     setComment({ from, to, text: "" });
+    openPanel("comments");
   }
 
   const [sessionId] = useState(documentSession);
@@ -517,6 +602,7 @@ function DocumentEditor({ file }: { file: any }) {
               link: { openOnClick: false, protocols: ["https", "http"] },
             }),
             TextStyleKit,
+            documentFontRendering,
             TextAlign.configure({ types: ["heading", "paragraph"] }),
             TableKit,
             Image.configure({ inline: true, allowBase64: true }),
@@ -614,6 +700,18 @@ function DocumentEditor({ file }: { file: any }) {
       <button
         className={
           "keep-label document-tool" +
+          ([
+            "표 삽입",
+            "행 추가",
+            "열 추가",
+            "행 삭제",
+            "열 삭제",
+            "셀 병합",
+            "셀 분할",
+            "표 삭제",
+          ].includes(name)
+            ? " document-tool-text"
+            : "") +
           (editor.current?.isActive(name) ? " selected" : "")
         }
         disabled={!ready}
@@ -674,13 +772,23 @@ function DocumentEditor({ file }: { file: any }) {
             )[name] || "settings"
           }
         />
+        {[
+          "표 삽입",
+          "행 추가",
+          "열 추가",
+          "행 삭제",
+          "열 삭제",
+          "셀 병합",
+          "셀 분할",
+          "표 삭제",
+        ].includes(name) && <span>{name}</span>}
       </button>
     );
   }
   return (
     <main className="document-editor" data-selection={active}>
       <header className="document-header">
-        <span className="document-logo">
+        <span className="document-logo" title="문서 편집기">
           <Icon name="file" />
         </span>
         <div className="document-heading">
@@ -713,11 +821,18 @@ function DocumentEditor({ file }: { file: any }) {
               </button>
             </h1>
           )}
-          <span role="status" aria-live="polite">
-            {status}
-          </span>
         </div>
-        <span className="document-autosave-label">자동저장</span>
+        <button
+          className="keep-label document-title-edit"
+          aria-label="문서 제목 편집"
+          title="문서 제목 편집"
+          onClick={() => setEditingTitle(true)}
+        >
+          <Icon name="edit" />
+        </button>
+        <span className="document-save-status" role="status" aria-live="polite">
+          {status}
+        </span>
         <details className="document-export document-menu">
           <summary aria-label="내보내기">
             <Icon name="download" />
@@ -751,241 +866,29 @@ function DocumentEditor({ file }: { file: any }) {
             </button>
           </div>
         </details>
+        <button
+          className="keep-label document-settings-toggle"
+          aria-label="문서 설정"
+          title="문서 설정"
+          aria-expanded={showLayout}
+          onClick={() => setShowLayout(!showLayout)}
+        >
+          <Icon name="settings" />
+        </button>
       </header>
-      <nav className="document-menubar" aria-label="문서 메뉴">
-        <details className="document-menu">
-          <summary>파일</summary>
-          <div role="menu">
-            <button
-              className="keep-label"
-              role="menuitem"
-              onClick={(e) => menuAction(e, newDocument)}
-            >
-              <Icon name="plus" />새 문서
-            </button>
-            <button
-              className="keep-label"
-              role="menuitem"
-              onClick={(e) => menuAction(e, () => setEditingTitle(true))}
-            >
-              <Icon name="edit" />
-              이름 바꾸기
-            </button>
-            <hr />
-            <button
-              className="keep-label"
-              role="menuitem"
-              onClick={(e) => menuAction(e, () => setShowLayout(true))}
-            >
-              <Icon name="settings" />
-              페이지 설정
-            </button>
-            <button
-              className="keep-label"
-              role="menuitem"
-              disabled={!ready || exporting}
-              onClick={(e) => menuAction(e, exportPDF)}
-            >
-              <Icon name="download" />
-              PDF 내보내기
-            </button>
-            <button
-              className="keep-label"
-              role="menuitem"
-              disabled={!ready}
-              onClick={(e) => menuAction(e, () => session.current?.download())}
-            >
-              <Icon name="download" />
-              Word 내보내기
-            </button>
-          </div>
-        </details>
-        <details className="document-menu">
-          <summary>수정</summary>
-          <div role="menu">
-            {[
-              [
-                "실행 취소",
-                "undo",
-                () => editor.current?.chain().focus().undo().run(),
-              ],
-              [
-                "다시 실행",
-                "redo",
-                () => editor.current?.chain().focus().redo().run(),
-              ],
-              [
-                "전체 선택",
-                "text",
-                () => editor.current?.chain().focus().selectAll().run(),
-              ],
-            ].map(([label, icon, run]) => (
-              <button
-                className="keep-label"
-                key={label as string}
-                role="menuitem"
-                onClick={(e) => menuAction(e, run as any)}
-              >
-                <Icon name={icon as string} />
-                {label as string}
-              </button>
-            ))}
-          </div>
-        </details>
-        <details className="document-menu">
-          <summary>삽입</summary>
-          <div role="menu">
-            <button
-              className="keep-label"
-              role="menuitem"
-              onClick={(e) =>
-                menuAction(e, () =>
-                  editor.current
-                    ?.chain()
-                    .focus()
-                    .insertTable({ rows: 3, cols: 3, withHeaderRow: false })
-                    .run(),
-                )
-              }
-            >
-              <Icon name="table" />표
-            </button>
-            <button
-              className="keep-label"
-              role="menuitem"
-              onClick={(e) =>
-                menuAction(e, () =>
-                  document
-                    .querySelector<HTMLInputElement>(
-                      '[aria-label="문서 이미지 추가"]',
-                    )
-                    ?.click(),
-                )
-              }
-            >
-              <Icon name="reference" />
-              이미지
-            </button>
-            <button
-              className="keep-label"
-              role="menuitem"
-              onClick={(e) => menuAction(e, addComment)}
-            >
-              <Icon name="feedback" />
-              주석
-            </button>
-          </div>
-        </details>
-        <details className="document-menu">
-          <summary>서식</summary>
-          <div role="menu">
-            <button
-              className="keep-label"
-              role="menuitem"
-              onClick={(e) =>
-                menuAction(e, () =>
-                  editor.current
-                    ?.chain()
-                    .focus()
-                    .unsetAllMarks()
-                    .clearNodes()
-                    .run(),
-                )
-              }
-            >
-              <Icon name="text" />
-              서식 지우기
-            </button>
-            <button
-              className="keep-label"
-              role="menuitem"
-              onClick={(e) => menuAction(e, () => setShowLayout(true))}
-            >
-              <Icon name="settings" />
-              쪽·여백
-            </button>
-          </div>
-        </details>
-        <details className="document-menu">
-          <summary>보기</summary>
-          <div role="menu">
-            <button
-              className="keep-label"
-              role="menuitem"
-              onClick={(e) => menuAction(e, () => setZoom("fit"))}
-            >
-              <Icon name="eye" />창 너비에 맞춤
-            </button>
-            <button
-              className="keep-label"
-              role="menuitem"
-              onClick={(e) => menuAction(e, () => setZoom("100"))}
-            >
-              <Icon name="search" />
-              실제 크기 (100%)
-            </button>
-            <button
-              className="keep-label"
-              role="menuitem"
-              onClick={(e) =>
-                menuAction(e, () => setShowComments(!showComments))
-              }
-            >
-              <Icon name="feedback" />
-              주석 보기
-            </button>
-          </div>
-        </details>
-      </nav>
       <div className="document-toolbar" role="toolbar" aria-label="문서 서식">
+        <button
+          className="keep-label document-tool-text"
+          title="새 문서"
+          onClick={newDocument}
+        >
+          <Icon name="plus" />새 문서
+        </button>
+        <span className="document-tool-divider" />
+
         {command("실행 취소", (ed) => ed.chain().focus().undo().run())}
         {command("다시 실행", (ed) => ed.chain().focus().redo().run())}
-        <select
-          className="keep-label document-zoom"
-          aria-label="문서 배율"
-          value={zoom}
-          onChange={(e) => setZoom(e.target.value)}
-        >
-          <option value="fit">너비 맞춤</option>
-          {[50, 75, 100, 125, 150, 200].map((n) => (
-            <option key={n} value={n}>
-              {n}%
-            </option>
-          ))}
-        </select>
         <span className="document-tool-divider" />
-        {format === "docx" && (
-          <>
-            <button
-              className="document-tool keep-label"
-              disabled={!ready}
-              aria-expanded={showLayout}
-              onClick={() => setShowLayout(!showLayout)}
-            >
-              <Icon name="settings" />
-              <span className="sr-only">쪽·여백</span>
-            </button>
-            <button
-              className="document-tool keep-label"
-              disabled={!ready}
-              onPointerDown={(e) => e.preventDefault()}
-              onClick={addComment}
-            >
-              <Icon name="feedback" />
-              <span className="sr-only">주석 추가</span>
-            </button>
-            <button
-              className="document-tool keep-label"
-              disabled={!ready}
-              aria-expanded={showComments}
-              onClick={() => setShowComments(!showComments)}
-            >
-              <Icon name="feedback" />
-              {comments.size}
-            </button>
-          </>
-        )}
-
         <select
           className="keep-label"
           aria-label="문단 스타일"
@@ -1030,20 +933,40 @@ function DocumentEditor({ file }: { file: any }) {
                   .focus()
                   .setFontFamily(e.target.value)
                   .run();
+                prepareCustomFonts([e.target.value])
+                  .then((rows) => {
+                    setCustomFonts(rows);
+                    editor.current?.view.dom.dispatchEvent(
+                      new Event("document-layout-change"),
+                    );
+                  })
+                  .catch((err) => setError(err.message));
                 setActive((v) => v + 1);
               }}
             >
               {[
-                "Arial",
-                "맑은 고딕",
-                "Noto Sans KR",
-                "바탕",
-                "Times New Roman",
-                "Calibri",
+                ...new Set([
+                  ...customFonts.map((font) => font.family),
+                  editor.current?.getAttributes("textStyle").fontFamily ||
+                    "Arial",
+                  "Arial",
+                  "맑은 고딕",
+                  "Noto Sans KR",
+                  "바탕",
+                  "Times New Roman",
+                  "Calibri",
+                ]),
               ].map((font) => (
                 <option key={font}>{font}</option>
               ))}
             </select>
+            <button
+              className="keep-label document-tool-text"
+              title="글꼴 추가·관리"
+              onClick={() => openPanel("fonts")}
+            >
+              글꼴 추가
+            </button>
             <select
               aria-label="글자 크기"
               className="keep-label"
@@ -1065,6 +988,7 @@ function DocumentEditor({ file }: { file: any }) {
                 </option>
               ))}
             </select>
+            <span className="document-tool-divider" />
             {command("링크", (ed) => {
               const href = window.prompt(
                 "HTTPS 링크",
@@ -1087,7 +1011,7 @@ function DocumentEditor({ file }: { file: any }) {
               ed.chain().focus().toggleUnderline().run(),
             )}
             {command("strike", (ed) => ed.chain().focus().toggleStrike().run())}
-            <label className="document-color">
+            <label className="document-color" title="글자색">
               <Icon name="text" />
               <input
                 type="color"
@@ -1128,7 +1052,8 @@ function DocumentEditor({ file }: { file: any }) {
             {command("orderedList", (ed) =>
               ed.chain().focus().toggleOrderedList().run(),
             )}
-            <label className="document-tool keep-label">
+            <span className="document-tool-divider" />
+            <label className="document-tool keep-label" title="이미지 추가">
               <Icon name="reference" />
               <span className="sr-only">이미지 추가</span>
               <input
@@ -1180,6 +1105,17 @@ function DocumentEditor({ file }: { file: any }) {
                 }}
               />
             </label>
+            <button
+              className="keep-label document-tool-text"
+              aria-label="주석"
+              title="주석 보기·추가"
+              aria-expanded={showLayout && panel === "comments"}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => openPanel("comments")}
+            >
+              <Icon name="feedback" />
+              주석{comments.size > 0 ? " " + comments.size : ""}
+            </button>
             {command("표 삽입", (ed) =>
               ed
                 .chain()
@@ -1227,184 +1163,6 @@ function DocumentEditor({ file }: { file: any }) {
           </button>
         </div>
       )}
-      {showLayout && format === "docx" && (
-        <fieldset className="document-layout-controls">
-          <legend>페이지 설정 · mm</legend>
-          <label>
-            용지 크기
-            <select
-              className="keep-label"
-              aria-label="용지 크기"
-              value={
-                (layout.width === 210 && layout.height === 297) ||
-                (layout.width === 297 && layout.height === 210)
-                  ? "a4"
-                  : (layout.width === 148 && layout.height === 210) ||
-                      (layout.width === 210 && layout.height === 148)
-                    ? "a5"
-                    : (layout.width === 215.9 && layout.height === 279.4) ||
-                        (layout.width === 279.4 && layout.height === 215.9)
-                      ? "letter"
-                      : "custom"
-              }
-              onChange={(e) => {
-                const sizes: any = {
-                  a4: [210, 297],
-                  a5: [148, 210],
-                  letter: [215.9, 279.4],
-                };
-                if (sizes[e.target.value]) {
-                  const [width, height] = sizes[e.target.value];
-                  editor.current?.commands.command(({ tr }: any) => {
-                    tr.setDocAttribute("docxLayout", {
-                      ...layout,
-                      width,
-                      height,
-                    });
-                    return true;
-                  });
-                  setActive((v) => v + 1);
-                }
-              }}
-            >
-              <option value="a4">A4 (210 × 297)</option>
-              <option value="a5">A5 (148 × 210)</option>
-              <option value="letter">Letter (215.9 × 279.4)</option>
-              <option value="custom">사용자 지정</option>
-            </select>
-          </label>
-          <button
-            className="keep-label"
-            aria-label="용지 방향 전환"
-            onClick={() => {
-              editor.current?.commands.command(({ tr }: any) => {
-                tr.setDocAttribute("docxLayout", {
-                  ...layout,
-                  width: layout.height,
-                  height: layout.width,
-                });
-                return true;
-              });
-              setActive((v) => v + 1);
-            }}
-          >
-            <Icon name="refresh" />
-            가로·세로 전환
-          </button>
-          <button
-            className="keep-label"
-            aria-label="페이지 설정 닫기"
-            onClick={() => setShowLayout(false)}
-          >
-            <Icon name="close" />
-          </button>
-          {[
-            ["width", "쪽 너비"],
-            ["height", "쪽 높이"],
-            ["top", "위 여백"],
-            ["right", "오른쪽 여백"],
-            ["bottom", "아래 여백"],
-            ["left", "왼쪽 여백"],
-          ].map(([key, label]) => (
-            <label key={key}>
-              {label}
-              <input
-                type="number"
-                aria-label={label}
-                min={["width", "height"].includes(key) ? 100 : 0}
-                max={["width", "height"].includes(key) ? 600 : 80}
-                step="0.1"
-                value={Math.round((layout as any)[key] * 10) / 10}
-                onChange={(e) => applyLayout(key, e.target.value)}
-              />
-            </label>
-          ))}
-        </fieldset>
-      )}
-      {comment && (
-        <form
-          className="document-comment-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const id = String(
-              crypto.getRandomValues(new Uint32Array(1))[0] & 0x3fffffff,
-            );
-            editor.current
-              ?.chain()
-              .focus()
-              .setTextSelection({ from: comment.from, to: comment.to })
-              .setMark("docxComment", {
-                id,
-                text: comment.text,
-                author: (window as any).appAccount?.profile?.name || "사용자",
-                date: new Date().toISOString(),
-              })
-              .run();
-            setComment(null);
-            setShowComments(true);
-            setActive((v) => v + 1);
-          }}
-        >
-          <label>
-            주석
-            <input
-              aria-label="주석 내용"
-              autoFocus
-              required
-              maxLength={2000}
-              value={comment.text}
-              onChange={(e) => setComment({ ...comment, text: e.target.value })}
-            />
-          </label>
-          <button className="keep-label">주석 적용</button>
-          <button
-            type="button"
-            className="keep-label"
-            onClick={() => setComment(null)}
-          >
-            취소
-          </button>
-        </form>
-      )}
-      {showComments && (
-        <aside className="document-comments" aria-label="문서 주석">
-          {[...comments.values()].map((c) => (
-            <div key={c.id}>
-              <button
-                className="keep-label"
-                onClick={() =>
-                  editor.current?.chain().focus().setTextSelection(c.pos).run()
-                }
-              >
-                {c.author}: {c.text}
-              </button>
-              <button
-                className="keep-label danger"
-                aria-label={"주석 삭제 " + c.text}
-                onClick={() => {
-                  const ed = editor.current;
-                  if (!ed) return;
-                  ed.commands.command(({ tr, doc }: any) => {
-                    doc.descendants((n: any, pos: number) => {
-                      for (const m of n.marks)
-                        if (
-                          m.type.name === "docxComment" &&
-                          m.attrs.id === c.id
-                        )
-                          tr.removeMark(pos, pos + n.nodeSize, m);
-                    });
-                    return true;
-                  });
-                  setActive((v) => v + 1);
-                }}
-              >
-                삭제
-              </button>
-            </div>
-          ))}
-          {!comments.size && <p>선택한 텍스트에 주석을 추가할 수 있습니다.</p>}
-        </aside>
-      )}
       {error && (
         <div className="document-error" role="alert">
           <span>{error}</span>
@@ -1432,25 +1190,293 @@ function DocumentEditor({ file }: { file: any }) {
           )}
         </div>
       )}
-      <div className="document-scroll" ref={scroll}>
-        <div
-          className="document-sheet"
-          ref={host}
-          style={{
-            width: layout.width + "mm",
-            maxWidth: "none",
-            zoom: zoom === "fit" ? fitScale : Number(zoom) / 100,
-            "--page-height": (layout.height * 96) / 25.4 + "px",
-            "--page-top": layout.top + "mm",
-            "--page-bottom": layout.bottom + "mm",
-            "--page-body-height":
-              layout.height - layout.top - layout.bottom + "mm",
-            paddingTop: layout.top + "mm",
-            paddingRight: layout.right + "mm",
-            paddingBottom: layout.bottom + "mm",
-            paddingLeft: layout.left + "mm",
-          }}
-        />
+      <div className="document-workspace">
+        <div className="document-scroll" ref={scroll}>
+          <div
+            className="document-sheet"
+            ref={host}
+            style={{
+              width: layout.width + "mm",
+              maxWidth: "none",
+              zoom: zoom === "fit" ? fitScale : Number(zoom) / 100,
+              "--page-height": (layout.height * 96) / 25.4 + "px",
+              "--page-top": layout.top + "mm",
+              "--page-bottom": layout.bottom + "mm",
+              "--page-body-height":
+                layout.height - layout.top - layout.bottom + "mm",
+              paddingTop: layout.top + "mm",
+              paddingRight: layout.right + "mm",
+              paddingBottom: layout.bottom + "mm",
+              paddingLeft: layout.left + "mm",
+            }}
+          />
+        </div>
+        {showLayout && (
+          <aside className="document-settings" aria-label="문서 설정 패널">
+            <header>
+              <h2>문서 설정</h2>
+              <button
+                className="keep-label"
+                aria-label="페이지 설정 닫기"
+                title="설정 닫기"
+                onClick={() => setShowLayout(false)}
+              >
+                <Icon name="close" />
+              </button>
+            </header>
+            <nav aria-label="문서 설정 종류">
+              {[
+                ["page", "페이지"],
+                ["comments", "주석"],
+                ["fonts", "글꼴"],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  className="keep-label"
+                  aria-pressed={panel === id}
+                  onClick={() => setPanel(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+            {panel === "page" && (
+              <fieldset className="document-layout-controls">
+                <legend>페이지 설정 · mm</legend>
+                <label>
+                  용지 크기
+                  <select
+                    className="keep-label"
+                    aria-label="용지 크기"
+                    value={
+                      (layout.width === 210 && layout.height === 297) ||
+                      (layout.width === 297 && layout.height === 210)
+                        ? "a4"
+                        : (layout.width === 148 && layout.height === 210) ||
+                            (layout.width === 210 && layout.height === 148)
+                          ? "a5"
+                          : (layout.width === 215.9 &&
+                                layout.height === 279.4) ||
+                              (layout.width === 279.4 &&
+                                layout.height === 215.9)
+                            ? "letter"
+                            : "custom"
+                    }
+                    onChange={(e) => {
+                      const sizes: any = {
+                        a4: [210, 297],
+                        a5: [148, 210],
+                        letter: [215.9, 279.4],
+                      };
+                      if (sizes[e.target.value]) {
+                        const [width, height] = sizes[e.target.value];
+                        editor.current?.commands.command(({ tr }: any) => {
+                          tr.setDocAttribute("docxLayout", {
+                            ...layout,
+                            width,
+                            height,
+                          });
+                          return true;
+                        });
+                        setActive((v) => v + 1);
+                      }
+                    }}
+                  >
+                    <option value="a4">A4 (210 × 297)</option>
+                    <option value="a5">A5 (148 × 210)</option>
+                    <option value="letter">Letter (215.9 × 279.4)</option>
+                    <option value="custom">사용자 지정</option>
+                  </select>
+                </label>
+                <button
+                  className="keep-label"
+                  aria-label="용지 방향 전환"
+                  onClick={() => {
+                    editor.current?.commands.command(({ tr }: any) => {
+                      tr.setDocAttribute("docxLayout", {
+                        ...layout,
+                        width: layout.height,
+                        height: layout.width,
+                      });
+                      return true;
+                    });
+                    setActive((v) => v + 1);
+                  }}
+                >
+                  <Icon name="refresh" />
+                  가로·세로 전환
+                </button>
+                {[
+                  ["width", "쪽 너비"],
+                  ["height", "쪽 높이"],
+                  ["top", "위 여백"],
+                  ["right", "오른쪽 여백"],
+                  ["bottom", "아래 여백"],
+                  ["left", "왼쪽 여백"],
+                ].map(([key, label]) => (
+                  <label key={key}>
+                    {label}
+                    <input
+                      type="number"
+                      aria-label={label}
+                      min={["width", "height"].includes(key) ? 100 : 0}
+                      max={["width", "height"].includes(key) ? 600 : 80}
+                      step="0.1"
+                      value={Math.round((layout as any)[key] * 10) / 10}
+                      onChange={(e) => applyLayout(key, e.target.value)}
+                    />
+                  </label>
+                ))}
+              </fieldset>
+            )}
+            {panel === "comments" && comment && (
+              <form
+                className="document-comment-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const id = String(
+                    crypto.getRandomValues(new Uint32Array(1))[0] & 0x3fffffff,
+                  );
+                  editor.current
+                    ?.chain()
+                    .focus()
+                    .setTextSelection({ from: comment.from, to: comment.to })
+                    .setMark("docxComment", {
+                      id,
+                      text: comment.text,
+                      author:
+                        (window as any).appAccount?.profile?.name || "사용자",
+                      date: new Date().toISOString(),
+                    })
+                    .run();
+                  setComment(null);
+                  setActive((v) => v + 1);
+                }}
+              >
+                <label>
+                  주석
+                  <input
+                    aria-label="주석 내용"
+                    autoFocus
+                    required
+                    maxLength={2000}
+                    value={comment.text}
+                    onChange={(e) =>
+                      setComment({ ...comment, text: e.target.value })
+                    }
+                  />
+                </label>
+                <button className="keep-label">주석 적용</button>
+                <button
+                  type="button"
+                  className="keep-label"
+                  onClick={() => setComment(null)}
+                >
+                  취소
+                </button>
+              </form>
+            )}
+            {panel === "comments" && (
+              <section className="document-comments" aria-label="문서 주석">
+                <button
+                  className="keep-label document-tool-text"
+                  title="선택한 텍스트에 주석 추가"
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={addComment}
+                >
+                  <Icon name="plus" />
+                  주석 추가
+                </button>
+                {[...comments.values()].map((c) => (
+                  <div key={c.id}>
+                    <button
+                      className="keep-label"
+                      onClick={() =>
+                        editor.current
+                          ?.chain()
+                          .focus()
+                          .setTextSelection(c.pos)
+                          .run()
+                      }
+                    >
+                      {c.author}: {c.text}
+                    </button>
+                    <button
+                      className="keep-label danger"
+                      aria-label={"주석 삭제 " + c.text}
+                      onClick={() => {
+                        const ed = editor.current;
+                        if (!ed) return;
+                        ed.commands.command(({ tr, doc }: any) => {
+                          doc.descendants((n: any, pos: number) => {
+                            for (const m of n.marks)
+                              if (
+                                m.type.name === "docxComment" &&
+                                m.attrs.id === c.id
+                              )
+                                tr.removeMark(pos, pos + n.nodeSize, m);
+                          });
+                          return true;
+                        });
+                        setActive((v) => v + 1);
+                      }}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ))}
+                {!comments.size && (
+                  <p>선택한 텍스트에 주석을 추가할 수 있습니다.</p>
+                )}
+              </section>
+            )}
+            {panel === "fonts" && <FontManager />}
+            {panel === "page" && (
+              <section className="document-view-controls">
+                <h3>보기</h3>
+                <label>
+                  확대·축소
+                  <select
+                    className="keep-label document-zoom"
+                    aria-label="문서 배율"
+                    value={zoom}
+                    onChange={(e) => setZoom(e.target.value)}
+                  >
+                    <option value="fit">너비 맞춤</option>
+                    {[50, 75, 100, 125, 150, 200].map((n) => (
+                      <option key={n} value={n}>
+                        {n}%
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="keep-label"
+                  title="전체 선택"
+                  onClick={() =>
+                    editor.current?.chain().focus().selectAll().run()
+                  }
+                >
+                  전체 선택
+                </button>
+                <button
+                  className="keep-label"
+                  title="선택 영역 서식 지우기"
+                  onClick={() =>
+                    editor.current
+                      ?.chain()
+                      .focus()
+                      .unsetAllMarks()
+                      .clearNodes()
+                      .run()
+                  }
+                >
+                  서식 지우기
+                </button>
+              </section>
+            )}
+          </aside>
+        )}
       </div>
       <footer className="document-footer">
         원본 파일에 자동으로 저장됩니다.

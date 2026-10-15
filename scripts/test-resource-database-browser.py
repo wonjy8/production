@@ -41,6 +41,12 @@ with tempfile.TemporaryDirectory() as td:
     if mode=='nas':
      page.locator('#account-form [name=email]').fill('admin@example.com');page.locator('#account-form [name=password]').fill('StrongPassword2026!');page.locator('#account-form button').click()
     page.wait_for_function('!!window.productionBridge && typeof window.mountProduction === "function"')
+    page.locator('.sidebar-main-spaces [data-main-space=settings]').first.click()
+    page.locator('[data-settings-category=fonts]').click()
+    page.get_by_label('글꼴 파일 추가',exact=True).set_input_files(str(root/'assets/document-fonts/LiberationSans-Regular.ttf'))
+    page.locator('.font-list>div',has_text='Liberation Sans').wait_for()
+    page.reload();page.locator('.font-list>div',has_text='Liberation Sans').wait_for()
+
     fixture=page.evaluate("""async()=>{const id=crypto.randomUUID();await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'text/plain'},body:'legacy original'});await window.referenceBridge.create({title:'기존 자료',modules:[{id:crypto.randomUUID(),kind:'file',files:[{id,name:'legacy.txt',kind:'file',mime:'text/plain'}]}]});return id}""")
     page.locator('[data-main-space=references]').first.click();page.locator('button[data-source-section=resources]').click()
     page.get_by_role('heading',name='자료',exact=True).wait_for();page.get_by_role('button',name='legacy.txt',exact=True).wait_for()
@@ -55,7 +61,13 @@ with tempfile.TemporaryDirectory() as td:
     with page.expect_popup() as popup:page.get_by_role('button',name='만들고 문서 열기',exact=True).click()
     editor=popup.value;editor.get_by_role('textbox',name='문서 본문',exact=True).wait_for(timeout=60000)
     editor.get_by_role('textbox',name='문서 본문',exact=True).click();editor.keyboard.press('Control+End');editor.keyboard.press('Enter');editor.keyboard.type('Saved sermon content',delay=20)
-    editor.wait_for_timeout(1200);editor.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent.endsWith('저장됨')",timeout=30000);editor.close()
+    editor.keyboard.press('Control+a');editor.get_by_label('글꼴',exact=True).select_option('Liberation Sans')
+    editor.wait_for_timeout(1200);editor.wait_for_function("document.querySelector('.document-header [role=status]')?.textContent.endsWith('저장됨')",timeout=30000)
+    editor.get_by_label('내보내기',exact=True).click()
+    with editor.expect_download(timeout=60000) as pdf_export:editor.get_by_role('menuitem',name='PDF (.pdf)',exact=True).click()
+    fontinfo=subprocess.run(['pdffonts',pdf_export.value.path()],check=True,capture_output=True,text=True).stdout
+    assert 'LiberationSans' in fontinfo,fontinfo
+    editor.close()
     # Restore masonry browsing alongside list mode; tabs filter the same catalog.
     page.get_by_role('button',name='갤러리',exact=True).click();page.locator('.resource-masonry').wait_for()
     page.locator('.resource-masonry .photo-preview img').wait_for()
@@ -84,7 +96,7 @@ with tempfile.TemporaryDirectory() as td:
     if mode=='local':
      full=context.new_page();full.add_init_script("localStorage.setItem('production-document-editor','full')")
      full.goto(base+'?document='+note['fileId']+'&name=Note.docx&mime='+note['mime'])
-     full.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent.endsWith('저장됨')",timeout=120000);full.close()
+     full.wait_for_function("document.querySelector('.document-header [role=status]')?.textContent.endsWith('저장됨')",timeout=120000);full.close()
     page.reload();page.get_by_role('button',name='주일 말씀 '+mode,exact=True).wait_for()
     page.get_by_role('button',name='주일 말씀 '+mode+' 속성 수정',exact=True).click();page.get_by_label('분류',exact=True).fill('QT');page.get_by_role('button',name='적용',exact=True).click();page.get_by_role('dialog',name='자료 속성',exact=True).wait_for(state='detached')
     page.get_by_role('combobox',name='자료 분류 필터',exact=True).select_option('QT');assert page.locator('.resource-card').count()==1
@@ -114,6 +126,10 @@ with tempfile.TemporaryDirectory() as td:
     page.locator('[data-main-space=references]').first.click();page.locator('button[data-source-section=documents]').click();page.get_by_role('searchbox',name='문서 검색',exact=True).fill('자료');page.locator('.document-library-row',has_text='주일 말씀').wait_for()
     page.locator('button[data-source-section=resources]').click();page.set_viewport_size({'width':390,'height':844});page.get_by_role('heading',name='자료',exact=True).wait_for();assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.set_viewport_size({'width':1400,'height':1000})
+    page.locator('.sidebar-main-spaces [data-main-space=settings]').first.click();page.locator('[data-settings-category=fonts]').click()
+    font=page.locator('.font-list>div',has_text='Liberation Sans')
+    font.get_by_role('button',name='Liberation Sans 글꼴 제거',exact=True).click();font.get_by_role('button',name='글꼴 제거 확인',exact=True).click();font.wait_for(state='detached')
+    page.reload();assert page.locator('.font-list>div',has_text='Liberation Sans').count()==0
     assert not errors,errors
     print('PASS '+mode+': migration, independent DOCX creation/edit/reload, category/filter/board, Hub database, links/copies, custom properties, conflicts, document browser and mobile',flush=True)
    browser.close()

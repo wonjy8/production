@@ -753,3 +753,427 @@ body.document-mode,
   max-height: var(--page-body-height);
   object-fit: contain;
 }
+/* Compact application chrome with one settings drawer. */
+.document-editor {
+  font-family: "DM Sans", "Noto Sans KR", system-ui, sans-serif;
+}
+.document-header {
+  padding: 8px 14px !important;
+  gap: 9px !important;
+  min-height: 48px;
+  box-sizing: border-box;
+  border-bottom: 1px solid #eee;
+}
+.document-heading {
+  flex: 0 1 auto;
+  max-width: min(55vw, 700px);
+}
+.document-heading h1 {
+  margin: 0 !important;
+}
+.document-title.keep-label {
+  font-family: inherit !important;
+  font-size: 16px !important;
+  font-weight: 600;
+}
+.document-title-input {
+  font-family: inherit;
+  font-size: 16px;
+}
+.document-header .document-title-edit,
+.document-header .document-settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 7px !important;
+  background: transparent !important;
+  width: 32px;
+  height: 32px;
+}
+.document-title-edit .ui-icon,
+.document-settings-toggle .ui-icon {
+  width: 18px;
+  height: 18px;
+}
+.document-save-status {
+  margin-left: auto;
+  font: 11px/1.4 inherit;
+  color: #888;
+  white-space: nowrap;
+}
+.document-export {
+  margin-left: 0;
+}
+.document-menu [role="menuitem"] {
+  justify-content: flex-start !important;
+  text-align: left !important;
+  gap: 9px !important;
+}
+.document-menu [role="menuitem"] > .ui-icon {
+  flex: none;
+}
+.document-menu > summary {
+  font-size: 12px;
+}
+.document-toolbar {
+  padding: 5px 12px !important;
+  gap: 5px !important;
+  min-height: 44px !important;
+  border-bottom: 1px solid #e7e7e7;
+}
+.document-toolbar button.keep-label {
+  font-family: inherit !important;
+}
+.document-toolbar .document-tool-text.keep-label {
+  width: auto !important;
+  min-width: 0 !important;
+  padding: 0 8px !important;
+  gap: 5px;
+  font-size: 12px !important;
+}
+.document-toolbar .document-tool-text > .ui-icon {
+  width: 17px;
+  height: 17px;
+}
+.document-toolbar [aria-label="문단 스타일"] {
+  max-width: 90px;
+}
+.document-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.document-scroll {
+  flex: 1;
+  min-width: 0;
+  padding: 14px !important;
+}
+.document-settings {
+  flex: 0 0 290px;
+  width: 290px;
+  min-width: 0;
+  background: #fff;
+  border-left: 1px solid #e7e7e7;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px;
+  box-sizing: border-box;
+}
+.document-settings > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.document-settings h2 {
+  font-size: 14px;
+  margin: 0;
+  font-weight: 600;
+}
+.document-settings > header > button {
+  display: flex;
+  border: 0;
+  padding: 5px;
+  background: transparent;
+  color: inherit;
+}
+.document-settings > header .ui-icon {
+  width: 18px;
+  height: 18px;
+}
+.document-settings > nav {
+  display: flex;
+  gap: 4px;
+  padding-bottom: 14px;
+}
+.document-settings > nav button {
+  flex: 1;
+  padding: 8px;
+  border: 0;
+  border-radius: 7px;
+  background: #f4f4f4;
+  font-family: inherit;
+  font-size: 12px;
+}
+.document-settings > nav button[aria-pressed="true"] {
+  color: var(--accent, #2563eb);
+  background: var(--accent-soft, #eef5ff);
+}
+.document-settings .document-layout-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  max-height: none;
+  overflow: visible;
+}
+.document-settings .document-layout-controls > label:first-of-type,
+.document-settings .document-layout-controls > button {
+  grid-column: 1/-1;
+}
+.document-settings legend {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 12px;
+}
+.document-settings label {
+  font: 12px/1.4 inherit;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.document-settings .document-layout-controls input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  font-family: inherit;
+}
+.document-settings .document-layout-controls select {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 36px;
+  font: inherit;
+  padding: 7px 24px 7px 8px;
+}
+.document-settings .document-layout-controls button {
+  font-family: inherit;
+  font-size: 12px;
+}
+.document-view-controls {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #eee;
+  display: grid;
+  gap: 9px;
+}
+.document-view-controls h3 {
+  font-size: 12px;
+  margin: 0;
+}
+.document-view-controls select {
+  padding: 8px;
+  border: 0;
+  background: #f4f4f4;
+  border-radius: 7px;
+  font: inherit;
+}
+.document-view-controls > button {
+  padding: 8px;
+  border: 0;
+  border-radius: 7px;
+  text-align: left;
+  background: #f5f5f5;
+  font: inherit;
+}
+.document-settings .document-comments {
+  padding: 0;
+  border: 0;
+  max-height: none;
+  overflow: visible;
+}
+.document-settings .document-comments > button {
+  border: 0;
+  background: #eef5ff;
+  padding: 9px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font: inherit;
+  font-size: 12px;
+}
+.document-comments .ui-icon {
+  width: 16px;
+  height: 16px;
+}
+.document-settings .document-comments > div {
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+.document-settings .document-comments > div > button {
+  font: 12px/1.5 inherit;
+  overflow-wrap: anywhere;
+}
+.document-settings .document-comment-form {
+  padding: 0 0 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.document-comment-form > label {
+  grid-column: 1/-1;
+}
+.document-settings .document-comment-form button {
+  border: 0;
+  border-radius: 7px;
+  padding: 7px;
+  font: inherit;
+  font-size: 12px;
+  background: #f3f3f3;
+}
+.document-footer {
+  padding: 5px 14px;
+  font-family: inherit;
+  font-size: 10px;
+}
+@media (max-width: 720px) {
+  .document-header {
+    padding: 7px 9px !important;
+    flex-wrap: wrap;
+    gap: 5px !important;
+  }
+  .document-heading {
+    max-width: calc(100% - 170px);
+    flex: 1;
+  }
+  .document-logo {
+    width: 26px;
+    height: 30px;
+  }
+  .document-title.keep-label {
+    font-size: 14px !important;
+  }
+  .document-save-status {
+    order: 5;
+    flex-basis: 100%;
+    text-align: right;
+    font-size: 10px;
+  }
+  .document-export > summary {
+    padding: 6px;
+    font-size: 11px;
+  }
+  .document-header .document-settings-toggle,
+  .document-header .document-title-edit {
+    width: 26px;
+    height: 28px;
+    padding: 4px !important;
+  }
+  .document-toolbar {
+    padding: 4px 7px !important;
+    min-height: 42px !important;
+  }
+  .document-settings {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 40;
+    width: min(310px, 92vw);
+    box-shadow: -5px 0 20px #0001;
+  }
+  .document-workspace {
+    position: relative;
+  }
+  .document-settings .document-layout-controls {
+    max-height: none;
+  }
+  .document-scroll {
+    padding: 10px !important;
+  }
+  .document-toolbar .document-tool-text.keep-label {
+    font-size: 11px !important;
+    padding: 0 6px !important;
+  }
+}
+.document-editor {
+  font-family: inherit !important;
+}
+.document-save-status {
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.document-settings label {
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.document-settings .document-view-controls > button {
+  font-family: inherit;
+  font-size: 12px;
+}
+.document-settings .font-manager {
+  font-family: inherit;
+}
+.document-settings .inline-remove-confirm {
+  display: flex;
+  background: #fff;
+  box-shadow: 0 3px 14px #0002;
+  padding: 4px;
+  border-radius: 8px;
+  position: absolute;
+  right: 0;
+  z-index: 3;
+}
+.document-settings .inline-remove {
+  position: relative;
+}
+.document-settings .inline-remove button {
+  min-height: 30px;
+}
+.document-toolbar .document-tool-divider {
+  flex: 0 0 1px !important;
+}
+.document-header {
+  height: 52px;
+  min-height: 52px !important;
+}
+.document-logo {
+  width: 32px;
+  height: 32px;
+}
+.document-header .document-title.keep-label {
+  height: 28px !important;
+  min-height: 28px !important;
+}
+.document-heading h1 {
+  line-height: 1.2 !important;
+}
+@media (max-width: 720px) {
+  .document-header {
+    height: auto;
+    min-height: 0 !important;
+  }
+}
+.document-header .document-title-edit,
+.document-header .document-settings-toggle {
+  min-height: 32px !important;
+  height: 32px !important;
+}
+.document-export > summary {
+  min-height: 32px;
+  box-sizing: border-box;
+}
+@media (max-width: 720px) {
+  .document-header {
+    height: 66px !important;
+    row-gap: 3px !important;
+    align-content: flex-start;
+  }
+  .document-heading {
+    flex: 0 1 auto;
+    max-width: calc(100% - 170px);
+  }
+  .document-header .document-title-edit {
+    margin-right: auto;
+    min-height: 28px !important;
+    height: 28px !important;
+  }
+  .document-header .document-settings-toggle {
+    min-height: 28px !important;
+    height: 28px !important;
+  }
+  .document-save-status {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+  .document-logo {
+    height: 28px;
+    width: 26px;
+  }
+}

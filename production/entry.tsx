@@ -1,3 +1,4 @@
+import './FontManager';
 import {DueField} from './OverviewFields';
 import {ProjectIconPicker} from './ProjectIconPicker';
 import {CompletionReview} from './CompletionReview';

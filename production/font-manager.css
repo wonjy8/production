@@ -1,0 +1,73 @@
+.font-manager {
+  font: inherit;
+  min-width: 0;
+}
+.font-manager p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted, #777);
+}
+.font-hint {
+  font-size: 11px !important;
+}
+.font-upload {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--accent-soft, #eef5ff);
+  color: var(--accent, #2563eb);
+  font-size: 13px;
+}
+.font-upload .ui-icon {
+  width: 18px;
+  height: 18px;
+}
+.font-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+.font-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border, #eee);
+}
+.font-list span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.font-list strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.font-list small {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted, #777);
+  margin-top: 4px;
+}
+.font-list button {
+  border: 0 !important;
+  color: inherit;
+  white-space: nowrap;
+  font: inherit;
+  padding: 6px;
+  background: transparent;
+}
+.font-empty {
+  padding: 14px 0;
+}
+
+.font-list button.danger,
+.font-list button[aria-label$="글꼴 제거"] {
+  color: #ce3434 !important;
+}

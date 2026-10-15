@@ -315,7 +315,7 @@ with tempfile.TemporaryDirectory() as td:
    with doc_page.expect_response(lambda r:'/api/ref-files/'+file_id in r.url and r.request.method=='PUT') as saved:
     doc_page.keyboard.type('Autosaved DOCX paragraph',delay=20)
    assert saved.value.status==200
-   doc_page.wait_for_function("document.querySelector('.document-heading [role=status]').textContent === '모든 변경사항 저장됨'")
+   doc_page.wait_for_function("document.querySelector('.document-header [role=status]').textContent === '모든 변경사항 저장됨'")
    def document_bytes(tab,id):return base64.b64decode(tab.evaluate("async id=>btoa(String.fromCharCode(...new Uint8Array(await (await fetch('/production/api/ref-files/'+id)).arrayBuffer())))",id))
    content=document_bytes(doc_page,file_id)
    with __import__('zipfile').ZipFile(__import__('io').BytesIO(content)) as document:
@@ -338,6 +338,7 @@ with tempfile.TemporaryDirectory() as td:
     assert 'Latest owner edit' in document_xml and 'Stale overwrite' not in document_xml
    conflict_page.close()
    doc_page.set_viewport_size({'width':390,'height':844})
+   doc_page.wait_for_function("document.querySelector('.document-sheet').getBoundingClientRect().width<=innerWidth")
    assert doc_page.locator('.document-sheet').bounding_box()['width']<=390
    doc_page.screenshot(path='/tmp/production-document-mobile.png')
    doc_page.close()
@@ -831,7 +832,7 @@ with tempfile.TemporaryDirectory() as td:
    with local_doc.expect_response(lambda r:'/api/ref-files/'+local_file_id in r.url and r.request.method=='PUT') as saved:
     local_doc.get_by_role('button',name='저장 다시 시도',exact=True).click()
    assert saved.value.status==200
-   local_doc.wait_for_function("document.querySelector('.document-heading [role=status]').textContent === '모든 변경사항 저장됨'")
+   local_doc.wait_for_function("document.querySelector('.document-header [role=status]').textContent === '모든 변경사항 저장됨'")
    assert local_doc.evaluate("async id=>(await fetch('/production/api/ref-files/'+id)).text()",local_file_id)=='Local unsaved recovery text'
    local_doc.close()
    fresh_page.set_viewport_size({'width':390,'height':844})

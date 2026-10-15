@@ -90,3 +90,12 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Restore masonry resource browsing alongside list/board views, rename 자료 DB to 자료, add type tabs and a sidebar document-editor shortcut, and align folder/file row heights.
 - Default home to today; limit schedule previews to five unended events and separate today's complete schedule group with rules.
 - NAS files and configuration: unchanged from 0.0.6.
+
+## 0.0.9
+
+- Replace the file/edit/insert/format/view menu bar with compact, grouped tools and a right settings drawer for pages, comments, fonts and view controls.
+- Left-align export choices; mirror undo/redo icons, label ambiguous tools, provide control titles, and consolidate comments and save status.
+- Add a pencil beside the editable document title and match editor chrome to the application's system font.
+- Manage TTF/OTF fonts from app settings or the document editor, storing them through the existing authorized resource/file API. Load only used faces and embed the selected font in searchable PDFs.
+- Recalculate pagination when zoom, drawer width, images or fonts change, including mobile PDF page boundaries.
+- NAS files and configuration: unchanged; existing 0.0.6+ resource APIs are reused.
