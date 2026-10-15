@@ -226,3 +226,12 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 
 - Compact Hub module rows from 80px to a 44px minimum with content-sized height; reduce row and group spacing while preserving template descriptions.
 - NAS configuration and server files do not change in this release.
+
+## 0.0.26
+
+- Match tab add/hidden-tab actions at 32px, remove their borders and reveal them near the tab strip or on keyboard focus; keep them available on touch screens.
+- Reduce overview bottom padding and omit empty status/date facts.
+- Place task entry in the Not Started group in list and board views; collapse Completed by default and mute completed rows.
+- Hide completed tasks in Home's all-task view; default all schedules to calendar and place an icon-only back action before Home detail headings.
+- Allow schedule rows to grow with wrapped titles and notes and restore the missing circle icon.
+- NAS configuration and server files do not change in this release.

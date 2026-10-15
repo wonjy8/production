@@ -331,7 +331,32 @@ button.compact-remove.ui-icon-button:hover,button.context-remove.icon-button:hov
 .project-status-group{margin:14px 0 24px}.project-status-group>h3{font-size:13px;font-weight:600;margin:0 0 8px}
 .project-stage-row>select{width:auto;max-width:110px;flex-shrink:0}
 #project-stage-add{flex-wrap:wrap}#project-stage-add>select{width:105px}
-.task-list-group>section>h4{font-size:12px;color:var(--text-muted);margin:14px 0 6px}
+.task-list-group>div>section>h4{font-size:12px;color:var(--text-muted);margin:14px 0 6px}
 @media(max-width:600px){.project-stage-row>select{max-width:88px;font-size:11px}}
 .task-board-subgroup>h4{font-size:12px;color:var(--text-muted);margin:16px 0 8px}
 .schedule-month{min-width:0}.schedule-month>header{display:flex;align-items:center;gap:10px;margin-bottom:18px}.schedule-month h2{font-size:18px;margin:0}.schedule-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--border);border-left:1px solid var(--border)}.schedule-weekday{text-align:center;font-size:12px;padding:9px;background:#fafafa}.schedule-month-day{min-height:120px;padding:7px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-width:0}.schedule-month-day>span{display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;font-size:12px}.schedule-month-day>[aria-current=date]{border-radius:50%;background:var(--accent);color:white}.outside-month{background:#fafafa;color:#aaa}.schedule-month-event.keep-label{display:flex!important;flex-direction:column;align-items:flex-start!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;padding:4px!important;margin-top:4px;text-align:left;background:#f1f5f9!important;border:0!important;border-radius:5px!important;font-size:12px!important;gap:0!important}.schedule-month-event span{overflow-wrap:anywhere}.schedule-month-event small{font-size:10px;color:#888}.schedule-month-event.is-done{opacity:.4}@media(max-width:600px){.schedule-month-day{padding:3px;min-height:92px}.schedule-month-event.keep-label{font-size:10px!important}.schedule-month h2{font-size:15px}}
+/* Quiet tab actions share one target size and reveal from the nearby tab strip. */
+.merge-sections button.tab-context-action{width:32px!important;min-width:32px!important;height:32px!important;min-height:32px!important;padding:6px!important;border:0!important;background:transparent!important;box-shadow:none!important;opacity:0;transition:opacity .15s ease;flex:none}
+.merge-sections:hover .tab-context-action,.merge-sections:focus-within .tab-context-action{opacity:1!important}
+.merge-sections .tab-context-action:hover{background:var(--control-hover)!important}
+@media(hover:none){.merge-sections .tab-context-action{opacity:1!important}}
+.production-overview.project-overview-home,.project-overview.project-overview-home{padding-bottom:12px!important}
+.project-overview-home>.overview-health:last-child{margin-bottom:0}
+.project-overview-home>.overview-facts:last-child,.project-overview-home>.overview-current-stage:last-child{margin-bottom:0}
+.admin-home .admin-schedule-entry{display:grid;grid-template-columns:24px minmax(0,1fr);align-items:center;gap:10px;min-height:0;height:auto}
+.admin-home .admin-schedule-entry>.admin-schedule-open{display:grid!important;grid-template-columns:minmax(90px,auto) minmax(0,1fr) 14px;align-items:center;gap:14px!important;height:auto!important;min-height:48px!important;padding:8px 0!important;white-space:normal!important;text-align:left!important;width:100%!important}
+.admin-home .admin-schedule-open>div{display:grid;gap:3px;min-width:0;line-height:1.5}
+.admin-home .admin-schedule-open strong,.admin-home .admin-schedule-open small{display:block;position:static;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+.admin-home .admin-schedule-entry>.admin-schedule-check{width:20px!important;height:20px!important;min-height:20px!important;padding:0!important;align-self:center;flex:none}
+.home-back-button{display:inline-flex!important;align-items:center;justify-content:center;width:32px!important;height:32px!important;min-height:32px!important;padding:6px!important;background:transparent!important;border:0!important;flex:none}
+.admin-home-heading>.home-back-button+h1{margin-right:auto}
+.admin-home-heading>.home-back-button .ui-icon{width:18px;height:18px}
+.task-completed-toggle{display:inline-flex!important;align-items:center;gap:6px;min-height:24px!important;height:auto!important;padding:0!important;background:transparent!important;border:0!important;color:var(--text-muted)!important;font:inherit}
+.task-list-group[data-task-status="완료"]>div,.task-board>[data-task-stage="완료"]{color:var(--text-muted);opacity:.65}
+.task-list-group[data-task-status="완료"]>div[hidden]{display:none!important}
+@media(max-width:600px){.admin-home .admin-schedule-entry>.admin-schedule-open{grid-template-columns:85px minmax(0,1fr) 12px;gap:8px!important}}
+.task-board>[data-task-stage="완료"]>div[hidden]{display:none!important}
+.task-board>[data-task-stage="완료"]{opacity:1}
+.task-board>[data-task-stage="완료"]>div{opacity:.65}
+
+.merge-sections .tab-context-action>.ui-icon{width:20px;height:20px}

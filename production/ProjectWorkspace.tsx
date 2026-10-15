@@ -131,6 +131,7 @@ export function ProjectWorkspace({
   onChange: Change;
   onSectionChange: (s: ProjectSection) => void;
 }) {
+  const [completedTasksOpen, setCompletedTasksOpen] = useState(false);
   const [taskEditor, setTaskEditor] = useState<Task | null>(null);
   const [taskTools, setTaskTools] = useState(false),
     [taskSource, setTaskSource] = useState("전체"),
@@ -814,42 +815,66 @@ export function ProjectWorkspace({
                   key={group}
                 >
                   <h3>
-                    {group}
+                    {group === "완료" ? (
+                      <button
+                        className="keep-label task-completed-toggle"
+                        aria-expanded={completedTasksOpen}
+                        onClick={() =>
+                          setCompletedTasksOpen(!completedTasksOpen)
+                        }
+                      >
+                        <span aria-hidden="true">
+                          {completedTasksOpen ? "⌄" : "›"}
+                        </span>{" "}
+                        완료
+                      </button>
+                    ) : (
+                      group
+                    )}
                     <span className="count">
                       {tasks.filter((t) => parentGroup(t) === group).length}
                     </span>
                   </h3>
-                  {taskGroup === "없음" || taskGroup === "상태"
-                    ? tasks.filter((t) => parentGroup(t) === group).map(taskRow)
-                    : [
-                        ...new Set(
-                          tasks
-                            .filter((t) => parentGroup(t) === group)
-                            .map(groupLabel),
-                        ),
-                      ].map((label) => (
-                        <section key={label}>
-                          <h4>{label}</h4>
-                          {tasks
-                            .filter(
-                              (t) =>
-                                parentGroup(t) === group &&
-                                groupLabel(t) === label,
-                            )
-                            .map(taskRow)}
-                        </section>
-                      ))}
+                  <div hidden={group === "완료" && !completedTasksOpen}>
+                    {taskGroup === "없음" || taskGroup === "상태"
+                      ? tasks
+                          .filter((t) => parentGroup(t) === group)
+                          .map(taskRow)
+                      : [
+                          ...new Set(
+                            tasks
+                              .filter((t) => parentGroup(t) === group)
+                              .map(groupLabel),
+                          ),
+                        ].map((label) => (
+                          <section key={label}>
+                            <h4>{label}</h4>
+                            {tasks
+                              .filter(
+                                (t) =>
+                                  parentGroup(t) === group &&
+                                  groupLabel(t) === label,
+                              )
+                              .map(taskRow)}
+                          </section>
+                        ))}
+                  </div>
+                  {group === "시작 전" && (
+                    <>
+                      {" "}
+                      <TaskComposer
+                        key={project.id}
+                        members={members}
+                        allowMemberAdd={allowMemberAdd}
+                        stageOptions={stageOptions}
+                        stageGroups={stageGroups}
+                        onAddMember={onAddMember}
+                        onAdd={saveTask}
+                      />
+                    </>
+                  )}
                 </section>
               ))}
-              <TaskComposer
-                key={project.id}
-                members={members}
-                allowMemberAdd={allowMemberAdd}
-                stageOptions={stageOptions}
-                stageGroups={stageGroups}
-                onAddMember={onAddMember}
-                onAdd={saveTask}
-              />
             </div>
           ) : (
             <div className="task-board">
@@ -870,32 +895,51 @@ export function ProjectWorkspace({
                   }}
                 >
                   <h3>
-                    {stage}
+                    {stage === "완료" ? (
+                      <button
+                        className="keep-label task-completed-toggle"
+                        aria-expanded={completedTasksOpen}
+                        onClick={() =>
+                          setCompletedTasksOpen(!completedTasksOpen)
+                        }
+                      >
+                        <span aria-hidden="true">
+                          {completedTasksOpen ? "⌄" : "›"}
+                        </span>{" "}
+                        완료
+                      </button>
+                    ) : (
+                      stage
+                    )}
                     <span className="count">
                       {tasks.filter((t) => parentGroup(t) === stage).length}
                     </span>
                   </h3>
-                  {taskGroup === "없음" || taskGroup === "상태"
-                    ? tasks.filter((t) => parentGroup(t) === stage).map(taskRow)
-                    : [
-                        ...new Set(
-                          tasks
-                            .filter((t) => parentGroup(t) === stage)
-                            .map(groupLabel),
-                        ),
-                      ].map((label) => (
-                        <section className="task-board-subgroup" key={label}>
-                          <h4>{label}</h4>
-                          {tasks
-                            .filter(
-                              (t) =>
-                                parentGroup(t) === stage &&
-                                groupLabel(t) === label,
-                            )
-                            .map(taskRow)}
-                        </section>
-                      ))}
-                  {
+                  <div hidden={stage === "완료" && !completedTasksOpen}>
+                    {taskGroup === "없음" || taskGroup === "상태"
+                      ? tasks
+                          .filter((t) => parentGroup(t) === stage)
+                          .map(taskRow)
+                      : [
+                          ...new Set(
+                            tasks
+                              .filter((t) => parentGroup(t) === stage)
+                              .map(groupLabel),
+                          ),
+                        ].map((label) => (
+                          <section className="task-board-subgroup" key={label}>
+                            <h4>{label}</h4>
+                            {tasks
+                              .filter(
+                                (t) =>
+                                  parentGroup(t) === stage &&
+                                  groupLabel(t) === label,
+                              )
+                              .map(taskRow)}
+                          </section>
+                        ))}
+                  </div>
+                  {stage === "시작 전" && (
                     <TaskComposer
                       members={members}
                       allowMemberAdd={allowMemberAdd}
@@ -909,7 +953,7 @@ export function ProjectWorkspace({
                         ) || stage
                       }
                     />
-                  }
+                  )}
                 </section>
               ))}
             </div>

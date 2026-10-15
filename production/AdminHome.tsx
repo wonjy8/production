@@ -26,7 +26,7 @@ export function AdminHome({
     [detail, setDetail] = useState<any>(null),
     [attention, setAttention] = useState("overdue"),
     [showPast, setShowPast] = useState(false);
-  const [scheduleView, setScheduleView] = useState("list");
+  const [scheduleView, setScheduleView] = useState("calendar");
   const previousHeight = useRef(0);
   function revealPast() {
     if (!showPast) {
@@ -373,6 +373,14 @@ export function AdminHome({
       ) : (
         <>
           <header className="admin-home-heading">
+            <button
+              className="keep-label home-back-button"
+              aria-label="뒤로가기"
+              title="뒤로가기"
+              onClick={() => onNavigate("dashboard")}
+            >
+              <Icon name="chevronLeft" />
+            </button>
             <h1>
               {view === "tasks"
                 ? "모든 할 일"
@@ -402,15 +410,9 @@ export function AdminHome({
                 </button>
               </div>
             )}
-            <button
-              className="button keep-label"
-              onClick={() => onNavigate("dashboard")}
-            >
-              홈
-            </button>
           </header>
           {view === "tasks" ? (
-            taskRows(data.allTasks)
+            taskRows(data.allTasks.filter((task: any) => !task.done))
           ) : view === "schedule" ? (
             scheduleView === "calendar" ? (
               <ScheduleCalendar
