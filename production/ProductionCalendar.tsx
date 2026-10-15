@@ -23,5 +23,5 @@ export function updateProductionCalendar(w:Workspace,id:string,fn:(p:Project)=>P
 }
 export function ProductionCalendar({workspace:w,productionId:id,onChange,onAddMember}:{workspace:Workspace;productionId:string;onChange:(fn:(w:Workspace)=>Workspace)=>void;onAddMember:(name:string)=>void}){
  const view=productionCalendarView(w,id),production=w.productions.find(g=>g.id===id)!;
- return <ProjectWorkspace key={id} project={view.project} members={productionMembers(w,production)} allowMemberAdd={false} taskStageOptions={view.stageOptions} taskMemberOptions={view.memberOptions} stageOptions={['기획','진행','검토','완료']} taskSources={view.sources} hideNavigation section="schedule" onSectionChange={()=>{}} onAddMember={onAddMember} onChange={fn=>onChange(w=>updateProductionCalendar(w,id,fn))}/>;
+ return <ProjectWorkspace key={id} project={view.project} members={productionMembers(w,production)} allowMemberAdd={false} taskStageOptions={view.stageOptions} taskStageGroups={view.stageGroups} taskMemberOptions={view.memberOptions} stageOptions={['기획','진행','검토','완료']} taskSources={view.sources} hideNavigation section="schedule" onSectionChange={()=>{}} onAddMember={onAddMember} onChange={fn=>onChange(w=>updateProductionCalendar(w,id,fn))}/>;
 }

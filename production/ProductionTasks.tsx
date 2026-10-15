@@ -13,7 +13,7 @@ export function ProductionTasks({
   onChange: (update: (w: Workspace) => Workspace) => void;
   onAddMember: (name: string) => void;
 }) {
-  const { project, sources,stageOptions,memberOptions } = productionTaskView(workspace, productionId);
+  const { project, sources,stageOptions,stageGroups,memberOptions } = productionTaskView(workspace, productionId);
   return (
     <>
       <ProjectWorkspace
@@ -22,7 +22,7 @@ export function ProductionTasks({
         members={productionMembers(workspace,workspace.productions.find(g=>g.id===productionId))}
         allowMemberAdd={false}
         stageOptions={['기획','진행','검토','완료']}
-        taskStageOptions={stageOptions}
+        taskStageOptions={stageOptions} taskStageGroups={stageGroups}
         taskMemberOptions={memberOptions}
         onAddMember={onAddMember}
         section="tasks"

@@ -1,17 +1,381 @@
-const defaultProjectCategories=[{id:'design',name:'디자인',stages:['기획','디자인','검토','수정','납품']},{id:'video',name:'영상',stages:['기획','프리프로덕션','촬영','편집','납품']},{id:'photo',name:'사진',stages:['기획','촬영 준비','촬영','셀렉','보정','납품']}];
-function currentProjectCatalog(){return JSON.parse(JSON.stringify(Array.isArray(state.projectCatalog)&&state.projectCatalog.length?state.projectCatalog:defaultProjectCategories))}
-let projectCatalogCategory='design';
-function renameProjectStage(categoryId,index,name){const catalog=currentProjectCatalog(),category=catalog.find(c=>c.id===categoryId),old=category.stages[index];if(!name||category.stages.some((s,i)=>i!==index&&s===name))throw Error('다른 이름을 입력해주세요');category.stages[index]=name;state.projectCatalog=catalog;for(const p of state.projects){const id=p.categoryId||'video';if(id===categoryId)for(const task of p.tasks||[])if(task.stage===old)task.stage=name}changed();}
-function drawProjectCatalogSettings(container){const catalog=currentProjectCatalog();if(!catalog.some(c=>c.id===projectCatalogCategory))projectCatalogCategory=catalog[0].id;const current=catalog.find(c=>c.id===projectCatalogCategory);container.innerHTML='<div class="project-catalog-layout catalog-manager"><div class="project-category-list catalog-brand-list"><div class="project-catalog-section-head"><span>구분</span><span class="project-catalog-count">'+catalog.length+'</span></div>'+catalog.map(c=>'<button type="button" class="keep-label catalog-brand-option project-category-row '+(c.id===current.id?'active':'')+'" data-category="'+esc(c.id)+'" aria-label="'+esc(c.name)+' 단계" aria-pressed="'+(c.id===current.id)+'"><span>'+esc(c.name)+'</span><small>'+c.stages.length+'</small></button>').join('')+'<form id="project-category-add" class="catalog-brand-add"><input name="name" aria-label="새 구분 이름" placeholder="구분 추가" required maxlength="80"><button aria-label="구분 추가">'+packIcon('plus')+'</button></form></div><div class="project-stage-list catalog-brand-detail"><div class="project-catalog-section-head"><input class="catalog-category-title" data-category-name="'+esc(current.id)+'" aria-label="구분 이름" value="'+esc(current.name)+'" maxlength="80"><button class="keep-label catalog-delete" data-delete-category="'+esc(current.id)+'" aria-label="구분 삭제">'+packIcon('trash')+'</button><span class="project-catalog-count" aria-label="'+current.stages.length+'개 단계">'+current.stages.length+'</span></div><div class="project-stage-rows">'+current.stages.map((name,i)=>'<div class="project-stage-row catalog-item" data-stage-index="'+i+'"><button type="button" class="project-stage-drag catalog-drag keep-label" aria-label="'+esc(name)+' 순서 변경">'+packIcon('drag')+'</button><input class="catalog-name" data-stage-name="'+i+'" aria-label="할 일 단계 이름" value="'+esc(name)+'" maxlength="80"><button class="catalog-delete" data-delete-stage="'+i+'" aria-label="단계 삭제">'+packIcon('trash')+'</button></div>').join('')+'</div><form id="project-stage-add" class="catalog-add"><input name="name" aria-label="새 단계 이름" placeholder="단계 추가" required maxlength="80"><button aria-label="단계 추가">'+packIcon('plus')+'</button></form><div class="project-catalog-status" role="status"></div></div></div>';
- const message=text=>container.querySelector('.project-catalog-status').textContent=text;
- function commit(next){state.projectCatalog=next;changed();drawProjectCatalogSettings(container)}
- container.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{projectCatalogCategory=b.dataset.category;drawProjectCatalogSettings(container)});
- container.querySelectorAll('[data-category-name]').forEach(input=>{const update=()=>{const name=input.value.trim(),id=input.dataset.categoryName;if(!name||catalog.some(c=>c.id!==id&&c.name===name)){input.value=catalog.find(c=>c.id===id).name;message('다른 이름을 입력해주세요');return}if(name===catalog.find(c=>c.id===id).name)return;const next=currentProjectCatalog();next.find(c=>c.id===id).name=name;commit(next)};input.onblur=update;input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();input.blur()}}});
- container.querySelectorAll('[data-delete-category]').forEach(b=>b.onclick=()=>{const id=b.dataset.deleteCategory;if(catalog.length===1){message('구분을 하나 이상 남겨주세요');return}if(state.projects.some(p=>!p.deleted&&(p.categoryIds||[p.categoryId||'video']).includes(id))){message('프로젝트에서 사용 중입니다');return}commit(currentProjectCatalog().filter(c=>c.id!==id))});
- container.querySelector('#project-category-add').onsubmit=e=>{e.preventDefault();const name=String(new FormData(e.currentTarget).get('name')||'').trim();if(!name||catalog.some(c=>c.name===name)){message('다른 이름을 입력해주세요');return}projectCatalogCategory=uid();commit([...currentProjectCatalog(),{id:projectCatalogCategory,name,stages:['기획','진행','검토','완료']}])};
- container.querySelectorAll('[data-stage-name]').forEach(input=>{const update=()=>{const i=Number(input.dataset.stageName),name=input.value.trim();if(name===current.stages[i])return;try{renameProjectStage(current.id,i,name);drawProjectCatalogSettings(container)}catch(e){input.value=current.stages[i];message(e.message)}};input.onblur=update;input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();input.blur()}}});
- container.querySelectorAll('[data-delete-stage]').forEach(b=>b.onclick=()=>{if(current.stages.length===1){message('단계를 하나 이상 남겨주세요');return}const i=Number(b.dataset.deleteStage),next=currentProjectCatalog(),c=next.find(c=>c.id===current.id),old=c.stages[i];c.stages.splice(i,1);for(const p of state.projects)if((p.categoryIds||[p.categoryId||'video']).includes(c.id))for(const t of p.tasks||[])if(t.stage===old)t.stage=c.stages[0];commit(next)});
- container.querySelector('#project-stage-add').onsubmit=e=>{e.preventDefault();const name=String(new FormData(e.currentTarget).get('name')||'').trim();if(!name||current.stages.includes(name)){message('다른 이름을 입력해주세요');return}const next=currentProjectCatalog();next.find(c=>c.id===current.id).stages.push(name);commit(next)};
- container.querySelectorAll('.project-stage-drag').forEach(handle=>{let target,origin;handle.onpointerdown=e=>{e.preventDefault();origin=Number(handle.parentElement.dataset.stageIndex);target=origin;handle.setPointerCapture(e.pointerId)};handle.onpointermove=e=>{if(origin==null)return;const rows=[...container.querySelectorAll('.project-stage-row')];const index=rows.findIndex(row=>{const r=row.getBoundingClientRect();return e.clientY>=r.top&&e.clientY<=r.bottom});if(index>=0){target=index;rows.forEach((row,i)=>row.classList.toggle('drag-target',i===target))}};handle.onpointerup=()=>{if(origin!=null&&target!==origin){const next=currentProjectCatalog(),stages=next.find(c=>c.id===current.id).stages;stages.splice(target,0,stages.splice(origin,1)[0]);commit(next)}origin=null;container.querySelectorAll('.drag-target').forEach(r=>r.classList.remove('drag-target'))};handle.onpointercancel=()=>{origin=null};handle.onkeydown=e=>{if(!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const from=Number(handle.parentElement.dataset.stageIndex),to=Math.max(0,Math.min(current.stages.length-1,from+(e.key==='ArrowUp'?-1:1)));if(from===to)return;const next=currentProjectCatalog(),stages=next.find(c=>c.id===current.id).stages;stages.splice(to,0,stages.splice(from,1)[0]);commit(next)};window.installDelayedPointerDrag?.(handle)});
+const projectTaskGroups = ["시작 전", "진행 중", "완료"];
+function projectStageGroup(category, name) {
+  return (
+    category.stageGroups?.[name] ||
+    (["완료", "납품", "종료"].includes(name)
+      ? "완료"
+      : ["기획", "준비", "촬영 준비", "프리프로덕션", "대기"].includes(name)
+        ? "시작 전"
+        : projectTaskGroups.includes(name)
+          ? name
+          : "진행 중")
+  );
 }
-async function renderProjectCatalogSettings(){const container=document.createElement('section');container.className='project-catalog-settings';settingsPanel.querySelector('.settings-page-body').append(container);try{await flushWorkspace();const response=await fetch('/api/data');if(!response.ok)throw Error('불러오기 실패');const data=await response.json();if(!container.isConnected)return;state=data;storageRevision=response.headers.get('X-Workspace-Revision')||response.headers.get('ETag')||'';drawProjectCatalogSettings(container)}catch(e){container.textContent=e.message}}
+const defaultProjectCategories = [
+  {
+    id: "design",
+    name: "디자인",
+    stages: ["기획", "디자인", "검토", "수정", "납품"],
+  },
+  {
+    id: "video",
+    name: "영상",
+    stages: ["기획", "프리프로덕션", "촬영", "편집", "납품"],
+  },
+  {
+    id: "photo",
+    name: "사진",
+    stages: ["기획", "촬영 준비", "촬영", "셀렉", "보정", "납품"],
+  },
+];
+function currentProjectCatalog() {
+  return JSON.parse(
+    JSON.stringify(
+      Array.isArray(state.projectCatalog) && state.projectCatalog.length
+        ? state.projectCatalog
+        : defaultProjectCategories,
+    ),
+  );
+}
+let projectCatalogCategory = "design";
+function renameProjectStage(categoryId, index, name) {
+  const catalog = currentProjectCatalog(),
+    category = catalog.find((c) => c.id === categoryId),
+    old = category.stages[index];
+  if (!name || category.stages.some((s, i) => i !== index && s === name))
+    throw Error("다른 이름을 입력해주세요");
+  category.stageGroups = {
+    ...category.stageGroups,
+    [name]: projectStageGroup(category, old),
+  };
+  delete category.stageGroups[old];
+  category.stages[index] = name;
+  state.projectCatalog = catalog;
+  for (const p of state.projects) {
+    const ids = p.categoryIds || [p.categoryId || "video"];
+    if (ids.includes(categoryId))
+      for (const task of p.tasks || [])
+        if (task.stage === old) task.stage = name;
+  }
+  changed();
+}
+function drawProjectCatalogSettings(container) {
+  const catalog = currentProjectCatalog();
+  if (!catalog.some((c) => c.id === projectCatalogCategory))
+    projectCatalogCategory = catalog[0].id;
+  const current = catalog.find((c) => c.id === projectCatalogCategory);
+  container.innerHTML =
+    '<div class="project-catalog-layout catalog-manager"><div class="project-category-list catalog-brand-list"><div class="project-catalog-section-head"><span>구분</span><span class="project-catalog-count">' +
+    catalog.length +
+    "</span></div>" +
+    catalog
+      .map(
+        (c) =>
+          '<button type="button" class="keep-label catalog-brand-option project-category-row ' +
+          (c.id === current.id ? "active" : "") +
+          '" data-category="' +
+          esc(c.id) +
+          '" aria-label="' +
+          esc(c.name) +
+          ' 단계" aria-pressed="' +
+          (c.id === current.id) +
+          '"><span>' +
+          esc(c.name) +
+          "</span><small>" +
+          c.stages.length +
+          "</small></button>",
+      )
+      .join("") +
+    '<form id="project-category-add" class="catalog-brand-add"><input name="name" aria-label="새 구분 이름" placeholder="구분 추가" required maxlength="80"><button aria-label="구분 추가">' +
+    packIcon("plus") +
+    '</button></form></div><div class="project-stage-list catalog-brand-detail"><div class="project-catalog-section-head"><input class="catalog-category-title" data-category-name="' +
+    esc(current.id) +
+    '" aria-label="구분 이름" value="' +
+    esc(current.name) +
+    '" maxlength="80"><button class="keep-label catalog-delete" data-delete-category="' +
+    esc(current.id) +
+    '" aria-label="구분 삭제">' +
+    packIcon("trash") +
+    '</button><span class="project-catalog-count" aria-label="' +
+    current.stages.length +
+    '개 단계">' +
+    current.stages.length +
+    '</span></div><div class="project-stage-rows">' +
+    projectTaskGroups
+      .map(
+        (group) =>
+          '<section class="project-status-group"><h3>' +
+          group +
+          "</h3>" +
+          current.stages
+            .map((name, i) =>
+              projectStageGroup(current, name) !== group
+                ? ""
+                : '<div class="project-stage-row catalog-item" data-stage-index="' +
+                  i +
+                  '"><button type="button" class="project-stage-drag catalog-drag keep-label" aria-label="' +
+                  esc(name) +
+                  ' 순서 변경">' +
+                  packIcon("drag") +
+                  '</button><input class="catalog-name" data-stage-name="' +
+                  i +
+                  '" aria-label="할 일 단계 이름" value="' +
+                  esc(name) +
+                  '" maxlength="80"><select data-stage-group="' +
+                  i +
+                  '" aria-label="' +
+                  esc(name) +
+                  ' 상위 그룹">' +
+                  projectTaskGroups
+                    .map(
+                      (g) =>
+                        "<option" +
+                        (g === group ? " selected" : "") +
+                        ">" +
+                        g +
+                        "</option>",
+                    )
+                    .join("") +
+                  '</select><button class="catalog-delete" data-delete-stage="' +
+                  i +
+                  '" aria-label="단계 삭제">' +
+                  packIcon("trash") +
+                  "</button></div>",
+            )
+            .join("") +
+          "</section>",
+      )
+      .join("") +
+    '</div><form id="project-stage-add" class="catalog-add"><select name="group" aria-label="추가할 단계 상위 그룹">' +
+    projectTaskGroups.map((g) => "<option>" + g + "</option>").join("") +
+    ' </select><input name="name" aria-label="새 단계 이름" placeholder="단계 추가" required maxlength="80"><button aria-label="단계 추가">' +
+    packIcon("plus") +
+    '</button></form><div class="project-catalog-status" role="status"></div></div></div>';
+  container.querySelectorAll("[data-stage-group]").forEach(
+    (select) =>
+      (select.onchange = () => {
+        const next = currentProjectCatalog(),
+          c = next.find((c) => c.id === current.id);
+        c.stageGroups = {
+          ...c.stageGroups,
+          [c.stages[Number(select.dataset.stageGroup)]]: select.value,
+        };
+        if (select.value === "완료")
+          for (const p of state.projects || [])
+            if ((p.categoryIds || [p.categoryId || "video"]).includes(c.id))
+              for (const task of p.tasks || [])
+                if (task.stage === c.stages[Number(select.dataset.stageGroup)])
+                  task.done = true;
+        commit(next);
+      }),
+  );
+  const message = (text) =>
+    (container.querySelector(".project-catalog-status").textContent = text);
+  function commit(next) {
+    state.projectCatalog = next;
+    changed();
+    drawProjectCatalogSettings(container);
+  }
+  container.querySelectorAll("[data-category]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        projectCatalogCategory = b.dataset.category;
+        drawProjectCatalogSettings(container);
+      }),
+  );
+  container.querySelectorAll("[data-category-name]").forEach((input) => {
+    const update = () => {
+      const name = input.value.trim(),
+        id = input.dataset.categoryName;
+      if (!name || catalog.some((c) => c.id !== id && c.name === name)) {
+        input.value = catalog.find((c) => c.id === id).name;
+        message("다른 이름을 입력해주세요");
+        return;
+      }
+      if (name === catalog.find((c) => c.id === id).name) return;
+      const next = currentProjectCatalog();
+      next.find((c) => c.id === id).name = name;
+      commit(next);
+    };
+    input.onblur = update;
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      }
+    };
+  });
+  container.querySelectorAll("[data-delete-category]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const id = b.dataset.deleteCategory;
+        if (catalog.length === 1) {
+          message("구분을 하나 이상 남겨주세요");
+          return;
+        }
+        if (
+          state.projects.some(
+            (p) =>
+              !p.deleted &&
+              (p.categoryIds || [p.categoryId || "video"]).includes(id),
+          )
+        ) {
+          message("프로젝트에서 사용 중입니다");
+          return;
+        }
+        commit(currentProjectCatalog().filter((c) => c.id !== id));
+      }),
+  );
+  container.querySelector("#project-category-add").onsubmit = (e) => {
+    e.preventDefault();
+    const name = String(new FormData(e.currentTarget).get("name") || "").trim();
+    if (!name || catalog.some((c) => c.name === name)) {
+      message("다른 이름을 입력해주세요");
+      return;
+    }
+    projectCatalogCategory = uid();
+    commit([
+      ...currentProjectCatalog(),
+      {
+        id: projectCatalogCategory,
+        name,
+        stages: ["기획", "진행", "검토", "완료"],
+      },
+    ]);
+  };
+  container.querySelectorAll("[data-stage-name]").forEach((input) => {
+    const update = () => {
+      const i = Number(input.dataset.stageName),
+        name = input.value.trim();
+      if (name === current.stages[i]) return;
+      try {
+        renameProjectStage(current.id, i, name);
+        drawProjectCatalogSettings(container);
+      } catch (e) {
+        input.value = current.stages[i];
+        message(e.message);
+      }
+    };
+    input.onblur = update;
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      }
+    };
+  });
+  container.querySelectorAll("[data-delete-stage]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        if (current.stages.length === 1) {
+          message("단계를 하나 이상 남겨주세요");
+          return;
+        }
+        const i = Number(b.dataset.deleteStage),
+          next = currentProjectCatalog(),
+          c = next.find((c) => c.id === current.id),
+          old = c.stages[i];
+        c.stages.splice(i, 1);
+        for (const p of state.projects)
+          if ((p.categoryIds || [p.categoryId || "video"]).includes(c.id))
+            for (const t of p.tasks || [])
+              if (t.stage === old) t.stage = c.stages[0];
+        commit(next);
+      }),
+  );
+  container.querySelector("#project-stage-add").onsubmit = (e) => {
+    e.preventDefault();
+    const name = String(new FormData(e.currentTarget).get("name") || "").trim();
+    if (!name || current.stages.includes(name)) {
+      message("다른 이름을 입력해주세요");
+      return;
+    }
+    const next = currentProjectCatalog();
+    const c = next.find((c) => c.id === current.id);
+    c.stages.push(name);
+    c.stageGroups = {
+      ...c.stageGroups,
+      [name]: String(new FormData(e.currentTarget).get("group") || "시작 전"),
+    };
+    commit(next);
+  };
+  container.querySelectorAll(".project-stage-drag").forEach((handle) => {
+    let target, origin;
+    handle.onpointerdown = (e) => {
+      e.preventDefault();
+      origin = Number(handle.parentElement.dataset.stageIndex);
+      target = origin;
+      handle.setPointerCapture(e.pointerId);
+    };
+    handle.onpointermove = (e) => {
+      if (origin == null) return;
+      const rows = [...container.querySelectorAll(".project-stage-row")];
+      const index = rows.findIndex((row) => {
+        const r = row.getBoundingClientRect();
+        return e.clientY >= r.top && e.clientY <= r.bottom;
+      });
+      if (index >= 0) {
+        target = Number(rows[index].dataset.stageIndex);
+        rows.forEach((row) =>
+          row.classList.toggle(
+            "drag-target",
+            Number(row.dataset.stageIndex) === target,
+          ),
+        );
+      }
+    };
+    handle.onpointerup = () => {
+      if (origin != null && target !== origin) {
+        const next = currentProjectCatalog(),
+          stages = next.find((c) => c.id === current.id).stages;
+        stages.splice(target, 0, stages.splice(origin, 1)[0]);
+        commit(next);
+      }
+      origin = null;
+      container
+        .querySelectorAll(".drag-target")
+        .forEach((r) => r.classList.remove("drag-target"));
+    };
+    handle.onpointercancel = () => {
+      origin = null;
+    };
+    handle.onkeydown = (e) => {
+      if (!["ArrowUp", "ArrowDown"].includes(e.key)) return;
+      e.preventDefault();
+      const from = Number(handle.parentElement.dataset.stageIndex),
+        to = Math.max(
+          0,
+          Math.min(
+            current.stages.length - 1,
+            from + (e.key === "ArrowUp" ? -1 : 1),
+          ),
+        );
+      if (from === to) return;
+      const next = currentProjectCatalog(),
+        stages = next.find((c) => c.id === current.id).stages;
+      stages.splice(to, 0, stages.splice(from, 1)[0]);
+      commit(next);
+    };
+    window.installDelayedPointerDrag?.(handle);
+  });
+}
+async function renderProjectCatalogSettings() {
+  const container = document.createElement("section");
+  container.className = "project-catalog-settings";
+  settingsPanel.querySelector(".settings-page-body").append(container);
+  try {
+    await flushWorkspace();
+    const response = await fetch("/api/data");
+    if (!response.ok) throw Error("불러오기 실패");
+    const data = await response.json();
+    if (!container.isConnected) return;
+    state = data;
+    storageRevision =
+      response.headers.get("X-Workspace-Revision") ||
+      response.headers.get("ETag") ||
+      "";
+    drawProjectCatalogSettings(container);
+  } catch (e) {
+    container.textContent = e.message;
+  }
+}

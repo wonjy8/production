@@ -175,3 +175,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Install multiple TTF/OTF fonts sequentially with progress and per-file failures, continuing after invalid or duplicate files.
 - Align imported media's Save to Original control with upload/tag actions at the right edge, retaining the blue confirmation and removing the separate footer gap.
 - NAS files, database schema and configuration: unchanged.
+
+## 0.0.19
+
+- Add module-title context actions for renaming, tab transfer and confirmed deletion. Preserve pointer dragging while restoring context menu handling; use red deletion confirmation and neutral import/original-save controls.
+- Keep Add Module accessible at the top while scrolling. Pin Blank Tab in Hub template results, group modules by reusable types and put specialized presets after general modules.
+- Customize project, work-group and reference tab icons through the shared icon/emoji/photo picker, with persisted built-in and custom tab choices.
+- Keep three fixed task parent groups (Not Started, In Progress, Completed) in list and board views. Add category-specific stages inside these groups in Settings, preserve existing stages, move checked tasks into Completed and support reopening and cross-group dragging.
+- NAS files, database schema and configuration: unchanged.

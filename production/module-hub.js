@@ -1,9 +1,12 @@
 import {planningModuleTemplates,planningTabTemplates,planningInitial,populatePlanningTab} from './planning-templates.js';
 // Templates are data, so a future project template can reuse the same module definitions.
 export const hubCategories = [
- {id:'all',label:'전체'}, {id:'basic',label:'기본'}, {id:'school',label:'학교'},
- {id:'work',label:'업무'}, {id:'church',label:'교회·사역'}, {id:'media',label:'미디어'},
+ {id:'all',label:'전체'}, {id:'basic',label:'기본 구성'}, {id:'media',label:'미디어'},
+ {id:'schedule',label:'일정·할 일'}, {id:'data',label:'자료·데이터'}, {id:'planning',label:'구성·운영'},
+ {id:'school',label:'학교'}, {id:'work',label:'업무'}, {id:'church',label:'교회·사역'},
 ];
+const moduleCategory={tasks:'schedule',schedule:'schedule',timetable:'schedule','schedule-list':'schedule',checklist:'schedule',files:'media',photos:'media',materials:'data',database:'data','group-list':'planning','progress-table':'planning','info-cards':'planning','assignment-table':'planning'};
+export function hubGroup(item){return moduleCategory[item.id]||item.category;}
 
 export const moduleTemplates = [
  ...planningModuleTemplates,
@@ -29,8 +32,8 @@ export const moduleTemplates = [
 ];
 
 export const tabTemplates = [
- ...planningTabTemplates,
  {id:'blank',category:'basic',name:'빈 탭',description:'직접 모듈을 채우는 새 화면',icon:'plus',modules:[]},
+ ...planningTabTemplates,
 
  {id:'school-events',category:'school',name:'학사 운영',description:'일정·준비 체크리스트',icon:'calendar',modules:['schedule-list','checklist']},
  {id:'work-board',category:'work',name:'업무 운영',description:'할 일·메모·일정',icon:'tasks',modules:['tasks','note','work-timeline']},

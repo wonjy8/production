@@ -8,13 +8,14 @@ export function productionTaskView(workspace: Workspace, productionId: string) {
     { projectId: string | null; taskId: string }
   >();
   const tasks: Task[] = [];
+  const stageGroups:Record<string,Record<string,string>>={};
   const stageOptions:Record<string,readonly string[]>={},memberOptions:Record<string,Workspace["members"]>={};
   function append(task: Task, projectId: string | null, label: string) {
     const id = JSON.stringify([projectId, task.id]);
     origins.set(id, { projectId, taskId: task.id });
     sources[id] = label;
     tasks.push({ ...task, id });
-    const origin=workspace.projects.find(p=>p.id===projectId);stageOptions[id]=origin?categoryFor(workspace,origin).stages:["기획","진행","검토","완료"];memberOptions[id]=origin?projectMembers(workspace,origin):productionMembers(workspace,production);
+    const origin=workspace.projects.find(p=>p.id===projectId);stageOptions[id]=origin?categoryFor(workspace,origin).stages:["기획","진행","검토","완료"];stageGroups[id]=origin?categoryFor(workspace,origin).stageGroups||{}:{};memberOptions[id]=origin?projectMembers(workspace,origin):productionMembers(workspace,production);
   }
   production.tasks.forEach((t) => append(t, null, "Production 직접 등록"));
   workspace.projects
@@ -36,7 +37,7 @@ export function productionTaskView(workspace: Workspace, productionId: string) {
     assets: [],
     feedback: [],
   };
-  return { project, sources, origins,stageOptions,memberOptions };
+  return { project, sources, origins,stageOptions,stageGroups,memberOptions };
 }
 export function updateProductionTasks(
   workspace: Workspace,

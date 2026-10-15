@@ -147,8 +147,8 @@ function leaveProduction(){productionPage=false;productionHost.hidden=true;produ
 function detachOperations(){returnPaper();$('#paper').hidden=true;$('#nav').innerHTML='';}
 function selectProduction(id,section='overview'){if(section!=='assets')detachOperations();selected=id;productionSection=section;localStorage.setItem('pn-project',id);localStorage.setItem('pn-production-view','project');localStorage.setItem('pn-production-section',section);$('#paper').hidden=section!=='assets';setTopTitle(state.projects.find(p=>p.id===id)?.title||'홈');$('#nav').innerHTML='';syncSidebar();}
 function renderOperations(id){selectProduction(id,'assets');const paper=$('#paper');paper.slot='operations';productionHost.append(paper);render();productionButton.classList.add('active');$('#workspace').classList.remove('active');$('#nav').innerHTML='';}
-function productionData(){return {schemaVersion:2,resourceSchema:state.resourceSchema,equipment:(state.equipment||[]).filter(e=>!e.deleted),timetableSchedules:state.timetableSchedules||[],projectCatalog:state.projectCatalog,members:(state.members||[]).filter(m=>!m.deleted),productions:(state.productions||[]).filter(g=>!g.deleted),projects:state.projects.filter(p=>!p.deleted).map(p=>({id:p.id,name:p.title,categoryId:p.categoryId||'video',categoryIds:p.categoryIds||[p.categoryId||'video'],teamIds:p.teamIds||[],productionId:p.productionId||'',format:p.format||'',status:p.status||'기획 중',owner:p.owner||'',due:p.due||'',description:p.description||'',tasks:p.tasks||[],schedules:p.schedules||[],assets:p.productionAssets||[],feedback:p.feedback||[],updatedAt:p.updatedAt||p.createdAt||'',archives:p.archives||[],icon:p.icon,customTabs:p.customTabs||[],tabOrder:p.tabOrder||[],tabLabels:p.tabLabels||{},tabTags:p.tabTags||{},hiddenTabs:p.hiddenTabs||[]}))}}
-function writeProduction(w){snapshot();if(Array.isArray(w.timetableSchedules))state.timetableSchedules=w.timetableSchedules;if(Array.isArray(w.projectCatalog))state.projectCatalog=w.projectCatalog;const people=state.members||=[];for(const member of w.members){const existing=people.find(m=>m.id===member.id);if(existing)Object.assign(existing,member);else people.push({...member,kind:member.kind||'personal',deleted:false})}const groups=state.productions||[];groups.forEach(g=>{if(!w.productions.some(x=>x.id===g.id))g.deleted=true});w.productions.forEach(g=>{const old=groups.find(x=>x.id===g.id);if(old){const before=JSON.stringify(old);Object.assign(old,g,{deleted:false});if(JSON.stringify(old)!==before)old.updatedAt=new Date().toISOString()}else groups.push({...g,deleted:false,updatedAt:new Date().toISOString()})});state.productions=groups;state.projects.forEach(p=>{if(!w.projects.some(x=>x.id===p.id))p.deleted=true});for(const p of w.projects){let existing=state.projects.find(x=>x.id===p.id);if(!existing){existing=makeProject(p.name);existing.id=p.id;state.projects.push(existing)}const stampBefore=JSON.stringify(existing);Object.assign(existing,{deleted:false,title:p.name,archives:p.archives||[],icon:p.icon,productionId:p.productionId,categoryId:p.categoryId||'video',categoryIds:p.categoryIds||[p.categoryId||'video'],teamIds:p.teamIds||[],format:p.format,status:p.status,owner:p.owner,due:p.due,description:p.description,tasks:p.tasks,schedules:p.schedules,productionAssets:p.assets,feedback:p.feedback,customTabs:p.customTabs||[],tabOrder:p.tabOrder||[],tabLabels:p.tabLabels||{},tabTags:p.tabTags||{},hiddenTabs:p.hiddenTabs||[]});if(JSON.stringify(existing)!==stampBefore)existing.updatedAt=new Date().toISOString()}window.productionWriting=true;try{changed()}finally{window.productionWriting=false}syncSidebar();}
+function productionData(){return {schemaVersion:2,resourceSchema:state.resourceSchema,equipment:(state.equipment||[]).filter(e=>!e.deleted),timetableSchedules:state.timetableSchedules||[],projectCatalog:state.projectCatalog,members:(state.members||[]).filter(m=>!m.deleted),productions:(state.productions||[]).filter(g=>!g.deleted),projects:state.projects.filter(p=>!p.deleted).map(p=>({id:p.id,name:p.title,categoryId:p.categoryId||'video',categoryIds:p.categoryIds||[p.categoryId||'video'],teamIds:p.teamIds||[],productionId:p.productionId||'',format:p.format||'',status:p.status||'기획 중',owner:p.owner||'',due:p.due||'',description:p.description||'',tasks:p.tasks||[],schedules:p.schedules||[],assets:p.productionAssets||[],feedback:p.feedback||[],updatedAt:p.updatedAt||p.createdAt||'',archives:p.archives||[],icon:p.icon,customTabs:p.customTabs||[],tabOrder:p.tabOrder||[],tabLabels:p.tabLabels||{},tabIcons:p.tabIcons||{},tabTags:p.tabTags||{},hiddenTabs:p.hiddenTabs||[]}))}}
+function writeProduction(w){snapshot();if(Array.isArray(w.timetableSchedules))state.timetableSchedules=w.timetableSchedules;if(Array.isArray(w.projectCatalog))state.projectCatalog=w.projectCatalog;const people=state.members||=[];for(const member of w.members){const existing=people.find(m=>m.id===member.id);if(existing)Object.assign(existing,member);else people.push({...member,kind:member.kind||'personal',deleted:false})}const groups=state.productions||[];groups.forEach(g=>{if(!w.productions.some(x=>x.id===g.id))g.deleted=true});w.productions.forEach(g=>{const old=groups.find(x=>x.id===g.id);if(old){const before=JSON.stringify(old);Object.assign(old,g,{deleted:false});if(JSON.stringify(old)!==before)old.updatedAt=new Date().toISOString()}else groups.push({...g,deleted:false,updatedAt:new Date().toISOString()})});state.productions=groups;state.projects.forEach(p=>{if(!w.projects.some(x=>x.id===p.id))p.deleted=true});for(const p of w.projects){let existing=state.projects.find(x=>x.id===p.id);if(!existing){existing=makeProject(p.name);existing.id=p.id;state.projects.push(existing)}const stampBefore=JSON.stringify(existing);Object.assign(existing,{deleted:false,title:p.name,archives:p.archives||[],icon:p.icon,productionId:p.productionId,categoryId:p.categoryId||'video',categoryIds:p.categoryIds||[p.categoryId||'video'],teamIds:p.teamIds||[],format:p.format,status:p.status,owner:p.owner,due:p.due,description:p.description,tasks:p.tasks,schedules:p.schedules,productionAssets:p.assets,feedback:p.feedback,customTabs:p.customTabs||[],tabOrder:p.tabOrder||[],tabLabels:p.tabLabels||{},tabIcons:p.tabIcons||{},tabTags:p.tabTags||{},hiddenTabs:p.hiddenTabs||[]});if(JSON.stringify(existing)!==stampBefore)existing.updatedAt=new Date().toISOString()}window.productionWriting=true;try{changed()}finally{window.productionWriting=false}syncSidebar();}
 window.productionBridge={read:productionData,setResourceSchema:schema=>{snapshot();state.resourceSchema=schema;changed()},member:async id=>{await openDatabase('members');const member=databaseRows.find(m=>m.id===id);if(member)databaseForm(member)},write:writeProduction,title:title=>setTopTitle(title),production:id=>{detachOperations();productionSection='overview';selected='';localStorage.setItem('pn-production-view','production');localStorage.setItem('pn-active-production',id);setTopTitle(state.productions.find(g=>g.id===id)?.name||'홈');syncSidebar()},select:selectProduction,operations:renderOperations,detachOperations,home:()=>{detachOperations();localStorage.setItem('pn-production-view','home');selected='';productionSection='overview';$('#paper').hidden=true;$('#nav').innerHTML='';setTopTitle('홈');syncSidebar()},references:id=>{selected=id;openRefs()},saveReference:async(title,assets)=>{if(!refLoaded){refs=await refApi('');refLoaded=true}await persistRef({id:uid(),title,category:'제작 자료',tags:[],favorite:false,deleted:false,blocks:assets.map(a=>a.kind==='link'?{id:uid(),kind:'link',url:a.url,title:a.name}:{id:uid(),kind:a.mime.startsWith('image/')?'image':a.mime.startsWith('video/')?'video':a.mime.startsWith('audio/')?'audio':a.mime==='application/pdf'?'pdf':'file',fileId:a.id,originalName:a.name,mime:a.mime,size:a.size})});toast('레퍼런스 저장 완료')}};
 async function openProduction(id,section='overview',create=false,productionId){if(section==='operations'||section==='feedback')section='assets';if(!loaded)return;try{if(typeof flushWorkspace==='function')await prepareWorkspaceNavigation()}catch(e){toast(e.message);return}if(typeof dismissMobileWorkspaceHome==='function')dismissMobileWorkspaceHome();if(typeof closeSettings==='function')closeSettings();const request=++productionRequest;productionPage=true;refPage=false;productionSection=section;$('#paper').hidden=true;$('#refpanel').hidden=true;$('#loading').hidden=true;productionHost.hidden=false;$('#sidebar').classList.remove('open');sidebarScrim.classList.remove('active');$('#workspace').classList.remove('active');$('#references').classList.remove('active');productionButton.classList.add('active');if(id)selectProduction(id,section);else if(productionId)window.productionBridge.production(productionId);else{window.productionBridge.home();if(section==='dashboard'||section.startsWith('home-')){productionSection=section;localStorage.setItem('pn-production-view','dashboard');setTopTitle('홈')}}syncSidebar();try{if(!productionAssets){const r=await fetch('/production-style');if(!r.ok)throw Error();productionAssets=await r.text()}if(!window.mountProduction){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='/production-app';s.onload=resolve;s.onerror=reject;document.head.append(s)})}if(productionPage&&request===productionRequest)window.mountProduction(productionHost,productionAssets,id,section,create,productionId)}catch{productionHost.textContent='불러오기 실패';toast('제작 관리 불러오기 실패')}}
 window.openHomeSection=section=>openProduction(undefined,section==='dashboard'?'dashboard':'home-'+section);
@@ -447,23 +447,387 @@ function syncBreadcrumbs(){if(!loaded)return;const settings=!settingsPanel.hidde
 breadcrumbNav.onclick=e=>{const b=e.target.closest('[data-location]');if(!b)return;const action=b.dataset.location;if(isMobileViewport()&&['home','references','database','settings'].includes(action)){openMobileWorkspaceHome(action);return}if(action==='database'){openDatabase();return}if(action==='reference-section'){sourceSection=b.dataset.section;localStorage.setItem('pn-source-section',sourceSection);refFavorite=false;refTrash=false;refCategory='';refTagFilter='';openRefs();return}if(action==='settings'){openSettings();return}if($('#dialog').open)$('#dialog').close();if(action==='home')openProduction(undefined,'dashboard');else if(action==='references')openRefs();else if(action==='production')openProduction(undefined,'overview',false,b.dataset.id);else if(action==='project')openProduction(b.dataset.id);else if(action==='section')openProduction(b.dataset.id,b.dataset.section);};
 new ResizeObserver(entries=>{document.documentElement.style.setProperty('--appbar-height',entries[0].target.getBoundingClientRect().height+'px')}).observe(document.querySelector('.topbar'));
 async function renderStorageSettings(){const row=document.createElement('div');row.className='settings-row';row.innerHTML='<span>데이터 저장소</span><span id="storage-state">확인 중</span>';settingsPanel.querySelector('.settings-page-body').append(row);try{const info=await(await fetch('/api/storage')).json();$('#storage-state').textContent=info.mode==='nas'?'NAS':info.configured?'NAS 연결 준비됨':'NAS 연결 필요';if(info.configured){const actions=document.createElement('div');actions.className='settings-row';actions.innerHTML='<span>NAS</span><div class="tools"><button id="nas-check" aria-label="연결 확인">'+packIcon('refresh')+'</button>'+(info.mode!=='nas'?'<button id="nas-copy" aria-label="기존 데이터 NAS에 복사">'+packIcon('copy')+'</button>':'')+'</div>';settingsPanel.querySelector('.settings-page-body').append(actions);$('#nas-check').onclick=async()=>{const r=await fetch('/api/storage/check');toast(r.ok?'연결됨':'연결 실패')};if($('#nas-copy'))$('#nas-copy').onclick=async()=>{const button=$('#nas-copy');button.disabled=true;try{await flushWorkspace();let phase='files',cursor=null,done=false;while(!done){const response=await fetch('/api/storage/copy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase,cursor})});if(!response.ok)throw Error();const result=await response.json();phase=result.phase;cursor=result.cursor;done=result.done;$('#storage-state').textContent=phase==='files'?'파일 복사 중':phase==='references'?'레퍼런스 복사 중':'프로젝트 복사 중'}$('#storage-state').textContent='복사 완료 · 연결 전환 필요';toast('NAS 복사 완료')}catch{toast('복사 실패 · 기존 데이터는 유지됩니다.')}finally{button.disabled=false}}}}catch{$('#storage-state').textContent='확인 실패'}}
-const defaultProjectCategories=[{id:'design',name:'디자인',stages:['기획','디자인','검토','수정','납품']},{id:'video',name:'영상',stages:['기획','프리프로덕션','촬영','편집','납품']},{id:'photo',name:'사진',stages:['기획','촬영 준비','촬영','셀렉','보정','납품']}];
-function currentProjectCatalog(){return JSON.parse(JSON.stringify(Array.isArray(state.projectCatalog)&&state.projectCatalog.length?state.projectCatalog:defaultProjectCategories))}
-let projectCatalogCategory='design';
-function renameProjectStage(categoryId,index,name){const catalog=currentProjectCatalog(),category=catalog.find(c=>c.id===categoryId),old=category.stages[index];if(!name||category.stages.some((s,i)=>i!==index&&s===name))throw Error('다른 이름을 입력해주세요');category.stages[index]=name;state.projectCatalog=catalog;for(const p of state.projects){const id=p.categoryId||'video';if(id===categoryId)for(const task of p.tasks||[])if(task.stage===old)task.stage=name}changed();}
-function drawProjectCatalogSettings(container){const catalog=currentProjectCatalog();if(!catalog.some(c=>c.id===projectCatalogCategory))projectCatalogCategory=catalog[0].id;const current=catalog.find(c=>c.id===projectCatalogCategory);container.innerHTML='<div class="project-catalog-layout catalog-manager"><div class="project-category-list catalog-brand-list"><div class="project-catalog-section-head"><span>구분</span><span class="project-catalog-count">'+catalog.length+'</span></div>'+catalog.map(c=>'<button type="button" class="keep-label catalog-brand-option project-category-row '+(c.id===current.id?'active':'')+'" data-category="'+esc(c.id)+'" aria-label="'+esc(c.name)+' 단계" aria-pressed="'+(c.id===current.id)+'"><span>'+esc(c.name)+'</span><small>'+c.stages.length+'</small></button>').join('')+'<form id="project-category-add" class="catalog-brand-add"><input name="name" aria-label="새 구분 이름" placeholder="구분 추가" required maxlength="80"><button aria-label="구분 추가">'+packIcon('plus')+'</button></form></div><div class="project-stage-list catalog-brand-detail"><div class="project-catalog-section-head"><input class="catalog-category-title" data-category-name="'+esc(current.id)+'" aria-label="구분 이름" value="'+esc(current.name)+'" maxlength="80"><button class="keep-label catalog-delete" data-delete-category="'+esc(current.id)+'" aria-label="구분 삭제">'+packIcon('trash')+'</button><span class="project-catalog-count" aria-label="'+current.stages.length+'개 단계">'+current.stages.length+'</span></div><div class="project-stage-rows">'+current.stages.map((name,i)=>'<div class="project-stage-row catalog-item" data-stage-index="'+i+'"><button type="button" class="project-stage-drag catalog-drag keep-label" aria-label="'+esc(name)+' 순서 변경">'+packIcon('drag')+'</button><input class="catalog-name" data-stage-name="'+i+'" aria-label="할 일 단계 이름" value="'+esc(name)+'" maxlength="80"><button class="catalog-delete" data-delete-stage="'+i+'" aria-label="단계 삭제">'+packIcon('trash')+'</button></div>').join('')+'</div><form id="project-stage-add" class="catalog-add"><input name="name" aria-label="새 단계 이름" placeholder="단계 추가" required maxlength="80"><button aria-label="단계 추가">'+packIcon('plus')+'</button></form><div class="project-catalog-status" role="status"></div></div></div>';
- const message=text=>container.querySelector('.project-catalog-status').textContent=text;
- function commit(next){state.projectCatalog=next;changed();drawProjectCatalogSettings(container)}
- container.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{projectCatalogCategory=b.dataset.category;drawProjectCatalogSettings(container)});
- container.querySelectorAll('[data-category-name]').forEach(input=>{const update=()=>{const name=input.value.trim(),id=input.dataset.categoryName;if(!name||catalog.some(c=>c.id!==id&&c.name===name)){input.value=catalog.find(c=>c.id===id).name;message('다른 이름을 입력해주세요');return}if(name===catalog.find(c=>c.id===id).name)return;const next=currentProjectCatalog();next.find(c=>c.id===id).name=name;commit(next)};input.onblur=update;input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();input.blur()}}});
- container.querySelectorAll('[data-delete-category]').forEach(b=>b.onclick=()=>{const id=b.dataset.deleteCategory;if(catalog.length===1){message('구분을 하나 이상 남겨주세요');return}if(state.projects.some(p=>!p.deleted&&(p.categoryIds||[p.categoryId||'video']).includes(id))){message('프로젝트에서 사용 중입니다');return}commit(currentProjectCatalog().filter(c=>c.id!==id))});
- container.querySelector('#project-category-add').onsubmit=e=>{e.preventDefault();const name=String(new FormData(e.currentTarget).get('name')||'').trim();if(!name||catalog.some(c=>c.name===name)){message('다른 이름을 입력해주세요');return}projectCatalogCategory=uid();commit([...currentProjectCatalog(),{id:projectCatalogCategory,name,stages:['기획','진행','검토','완료']}])};
- container.querySelectorAll('[data-stage-name]').forEach(input=>{const update=()=>{const i=Number(input.dataset.stageName),name=input.value.trim();if(name===current.stages[i])return;try{renameProjectStage(current.id,i,name);drawProjectCatalogSettings(container)}catch(e){input.value=current.stages[i];message(e.message)}};input.onblur=update;input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();input.blur()}}});
- container.querySelectorAll('[data-delete-stage]').forEach(b=>b.onclick=()=>{if(current.stages.length===1){message('단계를 하나 이상 남겨주세요');return}const i=Number(b.dataset.deleteStage),next=currentProjectCatalog(),c=next.find(c=>c.id===current.id),old=c.stages[i];c.stages.splice(i,1);for(const p of state.projects)if((p.categoryIds||[p.categoryId||'video']).includes(c.id))for(const t of p.tasks||[])if(t.stage===old)t.stage=c.stages[0];commit(next)});
- container.querySelector('#project-stage-add').onsubmit=e=>{e.preventDefault();const name=String(new FormData(e.currentTarget).get('name')||'').trim();if(!name||current.stages.includes(name)){message('다른 이름을 입력해주세요');return}const next=currentProjectCatalog();next.find(c=>c.id===current.id).stages.push(name);commit(next)};
- container.querySelectorAll('.project-stage-drag').forEach(handle=>{let target,origin;handle.onpointerdown=e=>{e.preventDefault();origin=Number(handle.parentElement.dataset.stageIndex);target=origin;handle.setPointerCapture(e.pointerId)};handle.onpointermove=e=>{if(origin==null)return;const rows=[...container.querySelectorAll('.project-stage-row')];const index=rows.findIndex(row=>{const r=row.getBoundingClientRect();return e.clientY>=r.top&&e.clientY<=r.bottom});if(index>=0){target=index;rows.forEach((row,i)=>row.classList.toggle('drag-target',i===target))}};handle.onpointerup=()=>{if(origin!=null&&target!==origin){const next=currentProjectCatalog(),stages=next.find(c=>c.id===current.id).stages;stages.splice(target,0,stages.splice(origin,1)[0]);commit(next)}origin=null;container.querySelectorAll('.drag-target').forEach(r=>r.classList.remove('drag-target'))};handle.onpointercancel=()=>{origin=null};handle.onkeydown=e=>{if(!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const from=Number(handle.parentElement.dataset.stageIndex),to=Math.max(0,Math.min(current.stages.length-1,from+(e.key==='ArrowUp'?-1:1)));if(from===to)return;const next=currentProjectCatalog(),stages=next.find(c=>c.id===current.id).stages;stages.splice(to,0,stages.splice(from,1)[0]);commit(next)};window.installDelayedPointerDrag?.(handle)});
+const projectTaskGroups = ["시작 전", "진행 중", "완료"];
+function projectStageGroup(category, name) {
+  return (
+    category.stageGroups?.[name] ||
+    (["완료", "납품", "종료"].includes(name)
+      ? "완료"
+      : ["기획", "준비", "촬영 준비", "프리프로덕션", "대기"].includes(name)
+        ? "시작 전"
+        : projectTaskGroups.includes(name)
+          ? name
+          : "진행 중")
+  );
 }
-async function renderProjectCatalogSettings(){const container=document.createElement('section');container.className='project-catalog-settings';settingsPanel.querySelector('.settings-page-body').append(container);try{await flushWorkspace();const response=await fetch('/api/data');if(!response.ok)throw Error('불러오기 실패');const data=await response.json();if(!container.isConnected)return;state=data;storageRevision=response.headers.get('X-Workspace-Revision')||response.headers.get('ETag')||'';drawProjectCatalogSettings(container)}catch(e){container.textContent=e.message}}
+const defaultProjectCategories = [
+  {
+    id: "design",
+    name: "디자인",
+    stages: ["기획", "디자인", "검토", "수정", "납품"],
+  },
+  {
+    id: "video",
+    name: "영상",
+    stages: ["기획", "프리프로덕션", "촬영", "편집", "납품"],
+  },
+  {
+    id: "photo",
+    name: "사진",
+    stages: ["기획", "촬영 준비", "촬영", "셀렉", "보정", "납품"],
+  },
+];
+function currentProjectCatalog() {
+  return JSON.parse(
+    JSON.stringify(
+      Array.isArray(state.projectCatalog) && state.projectCatalog.length
+        ? state.projectCatalog
+        : defaultProjectCategories,
+    ),
+  );
+}
+let projectCatalogCategory = "design";
+function renameProjectStage(categoryId, index, name) {
+  const catalog = currentProjectCatalog(),
+    category = catalog.find((c) => c.id === categoryId),
+    old = category.stages[index];
+  if (!name || category.stages.some((s, i) => i !== index && s === name))
+    throw Error("다른 이름을 입력해주세요");
+  category.stageGroups = {
+    ...category.stageGroups,
+    [name]: projectStageGroup(category, old),
+  };
+  delete category.stageGroups[old];
+  category.stages[index] = name;
+  state.projectCatalog = catalog;
+  for (const p of state.projects) {
+    const ids = p.categoryIds || [p.categoryId || "video"];
+    if (ids.includes(categoryId))
+      for (const task of p.tasks || [])
+        if (task.stage === old) task.stage = name;
+  }
+  changed();
+}
+function drawProjectCatalogSettings(container) {
+  const catalog = currentProjectCatalog();
+  if (!catalog.some((c) => c.id === projectCatalogCategory))
+    projectCatalogCategory = catalog[0].id;
+  const current = catalog.find((c) => c.id === projectCatalogCategory);
+  container.innerHTML =
+    '<div class="project-catalog-layout catalog-manager"><div class="project-category-list catalog-brand-list"><div class="project-catalog-section-head"><span>구분</span><span class="project-catalog-count">' +
+    catalog.length +
+    "</span></div>" +
+    catalog
+      .map(
+        (c) =>
+          '<button type="button" class="keep-label catalog-brand-option project-category-row ' +
+          (c.id === current.id ? "active" : "") +
+          '" data-category="' +
+          esc(c.id) +
+          '" aria-label="' +
+          esc(c.name) +
+          ' 단계" aria-pressed="' +
+          (c.id === current.id) +
+          '"><span>' +
+          esc(c.name) +
+          "</span><small>" +
+          c.stages.length +
+          "</small></button>",
+      )
+      .join("") +
+    '<form id="project-category-add" class="catalog-brand-add"><input name="name" aria-label="새 구분 이름" placeholder="구분 추가" required maxlength="80"><button aria-label="구분 추가">' +
+    packIcon("plus") +
+    '</button></form></div><div class="project-stage-list catalog-brand-detail"><div class="project-catalog-section-head"><input class="catalog-category-title" data-category-name="' +
+    esc(current.id) +
+    '" aria-label="구분 이름" value="' +
+    esc(current.name) +
+    '" maxlength="80"><button class="keep-label catalog-delete" data-delete-category="' +
+    esc(current.id) +
+    '" aria-label="구분 삭제">' +
+    packIcon("trash") +
+    '</button><span class="project-catalog-count" aria-label="' +
+    current.stages.length +
+    '개 단계">' +
+    current.stages.length +
+    '</span></div><div class="project-stage-rows">' +
+    projectTaskGroups
+      .map(
+        (group) =>
+          '<section class="project-status-group"><h3>' +
+          group +
+          "</h3>" +
+          current.stages
+            .map((name, i) =>
+              projectStageGroup(current, name) !== group
+                ? ""
+                : '<div class="project-stage-row catalog-item" data-stage-index="' +
+                  i +
+                  '"><button type="button" class="project-stage-drag catalog-drag keep-label" aria-label="' +
+                  esc(name) +
+                  ' 순서 변경">' +
+                  packIcon("drag") +
+                  '</button><input class="catalog-name" data-stage-name="' +
+                  i +
+                  '" aria-label="할 일 단계 이름" value="' +
+                  esc(name) +
+                  '" maxlength="80"><select data-stage-group="' +
+                  i +
+                  '" aria-label="' +
+                  esc(name) +
+                  ' 상위 그룹">' +
+                  projectTaskGroups
+                    .map(
+                      (g) =>
+                        "<option" +
+                        (g === group ? " selected" : "") +
+                        ">" +
+                        g +
+                        "</option>",
+                    )
+                    .join("") +
+                  '</select><button class="catalog-delete" data-delete-stage="' +
+                  i +
+                  '" aria-label="단계 삭제">' +
+                  packIcon("trash") +
+                  "</button></div>",
+            )
+            .join("") +
+          "</section>",
+      )
+      .join("") +
+    '</div><form id="project-stage-add" class="catalog-add"><select name="group" aria-label="추가할 단계 상위 그룹">' +
+    projectTaskGroups.map((g) => "<option>" + g + "</option>").join("") +
+    ' </select><input name="name" aria-label="새 단계 이름" placeholder="단계 추가" required maxlength="80"><button aria-label="단계 추가">' +
+    packIcon("plus") +
+    '</button></form><div class="project-catalog-status" role="status"></div></div></div>';
+  container.querySelectorAll("[data-stage-group]").forEach(
+    (select) =>
+      (select.onchange = () => {
+        const next = currentProjectCatalog(),
+          c = next.find((c) => c.id === current.id);
+        c.stageGroups = {
+          ...c.stageGroups,
+          [c.stages[Number(select.dataset.stageGroup)]]: select.value,
+        };
+        if (select.value === "완료")
+          for (const p of state.projects || [])
+            if ((p.categoryIds || [p.categoryId || "video"]).includes(c.id))
+              for (const task of p.tasks || [])
+                if (task.stage === c.stages[Number(select.dataset.stageGroup)])
+                  task.done = true;
+        commit(next);
+      }),
+  );
+  const message = (text) =>
+    (container.querySelector(".project-catalog-status").textContent = text);
+  function commit(next) {
+    state.projectCatalog = next;
+    changed();
+    drawProjectCatalogSettings(container);
+  }
+  container.querySelectorAll("[data-category]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        projectCatalogCategory = b.dataset.category;
+        drawProjectCatalogSettings(container);
+      }),
+  );
+  container.querySelectorAll("[data-category-name]").forEach((input) => {
+    const update = () => {
+      const name = input.value.trim(),
+        id = input.dataset.categoryName;
+      if (!name || catalog.some((c) => c.id !== id && c.name === name)) {
+        input.value = catalog.find((c) => c.id === id).name;
+        message("다른 이름을 입력해주세요");
+        return;
+      }
+      if (name === catalog.find((c) => c.id === id).name) return;
+      const next = currentProjectCatalog();
+      next.find((c) => c.id === id).name = name;
+      commit(next);
+    };
+    input.onblur = update;
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      }
+    };
+  });
+  container.querySelectorAll("[data-delete-category]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const id = b.dataset.deleteCategory;
+        if (catalog.length === 1) {
+          message("구분을 하나 이상 남겨주세요");
+          return;
+        }
+        if (
+          state.projects.some(
+            (p) =>
+              !p.deleted &&
+              (p.categoryIds || [p.categoryId || "video"]).includes(id),
+          )
+        ) {
+          message("프로젝트에서 사용 중입니다");
+          return;
+        }
+        commit(currentProjectCatalog().filter((c) => c.id !== id));
+      }),
+  );
+  container.querySelector("#project-category-add").onsubmit = (e) => {
+    e.preventDefault();
+    const name = String(new FormData(e.currentTarget).get("name") || "").trim();
+    if (!name || catalog.some((c) => c.name === name)) {
+      message("다른 이름을 입력해주세요");
+      return;
+    }
+    projectCatalogCategory = uid();
+    commit([
+      ...currentProjectCatalog(),
+      {
+        id: projectCatalogCategory,
+        name,
+        stages: ["기획", "진행", "검토", "완료"],
+      },
+    ]);
+  };
+  container.querySelectorAll("[data-stage-name]").forEach((input) => {
+    const update = () => {
+      const i = Number(input.dataset.stageName),
+        name = input.value.trim();
+      if (name === current.stages[i]) return;
+      try {
+        renameProjectStage(current.id, i, name);
+        drawProjectCatalogSettings(container);
+      } catch (e) {
+        input.value = current.stages[i];
+        message(e.message);
+      }
+    };
+    input.onblur = update;
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      }
+    };
+  });
+  container.querySelectorAll("[data-delete-stage]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        if (current.stages.length === 1) {
+          message("단계를 하나 이상 남겨주세요");
+          return;
+        }
+        const i = Number(b.dataset.deleteStage),
+          next = currentProjectCatalog(),
+          c = next.find((c) => c.id === current.id),
+          old = c.stages[i];
+        c.stages.splice(i, 1);
+        for (const p of state.projects)
+          if ((p.categoryIds || [p.categoryId || "video"]).includes(c.id))
+            for (const t of p.tasks || [])
+              if (t.stage === old) t.stage = c.stages[0];
+        commit(next);
+      }),
+  );
+  container.querySelector("#project-stage-add").onsubmit = (e) => {
+    e.preventDefault();
+    const name = String(new FormData(e.currentTarget).get("name") || "").trim();
+    if (!name || current.stages.includes(name)) {
+      message("다른 이름을 입력해주세요");
+      return;
+    }
+    const next = currentProjectCatalog();
+    const c = next.find((c) => c.id === current.id);
+    c.stages.push(name);
+    c.stageGroups = {
+      ...c.stageGroups,
+      [name]: String(new FormData(e.currentTarget).get("group") || "시작 전"),
+    };
+    commit(next);
+  };
+  container.querySelectorAll(".project-stage-drag").forEach((handle) => {
+    let target, origin;
+    handle.onpointerdown = (e) => {
+      e.preventDefault();
+      origin = Number(handle.parentElement.dataset.stageIndex);
+      target = origin;
+      handle.setPointerCapture(e.pointerId);
+    };
+    handle.onpointermove = (e) => {
+      if (origin == null) return;
+      const rows = [...container.querySelectorAll(".project-stage-row")];
+      const index = rows.findIndex((row) => {
+        const r = row.getBoundingClientRect();
+        return e.clientY >= r.top && e.clientY <= r.bottom;
+      });
+      if (index >= 0) {
+        target = Number(rows[index].dataset.stageIndex);
+        rows.forEach((row) =>
+          row.classList.toggle(
+            "drag-target",
+            Number(row.dataset.stageIndex) === target,
+          ),
+        );
+      }
+    };
+    handle.onpointerup = () => {
+      if (origin != null && target !== origin) {
+        const next = currentProjectCatalog(),
+          stages = next.find((c) => c.id === current.id).stages;
+        stages.splice(target, 0, stages.splice(origin, 1)[0]);
+        commit(next);
+      }
+      origin = null;
+      container
+        .querySelectorAll(".drag-target")
+        .forEach((r) => r.classList.remove("drag-target"));
+    };
+    handle.onpointercancel = () => {
+      origin = null;
+    };
+    handle.onkeydown = (e) => {
+      if (!["ArrowUp", "ArrowDown"].includes(e.key)) return;
+      e.preventDefault();
+      const from = Number(handle.parentElement.dataset.stageIndex),
+        to = Math.max(
+          0,
+          Math.min(
+            current.stages.length - 1,
+            from + (e.key === "ArrowUp" ? -1 : 1),
+          ),
+        );
+      if (from === to) return;
+      const next = currentProjectCatalog(),
+        stages = next.find((c) => c.id === current.id).stages;
+      stages.splice(to, 0, stages.splice(from, 1)[0]);
+      commit(next);
+    };
+    window.installDelayedPointerDrag?.(handle);
+  });
+}
+async function renderProjectCatalogSettings() {
+  const container = document.createElement("section");
+  container.className = "project-catalog-settings";
+  settingsPanel.querySelector(".settings-page-body").append(container);
+  try {
+    await flushWorkspace();
+    const response = await fetch("/api/data");
+    if (!response.ok) throw Error("불러오기 실패");
+    const data = await response.json();
+    if (!container.isConnected) return;
+    state = data;
+    storageRevision =
+      response.headers.get("X-Workspace-Revision") ||
+      response.headers.get("ETag") ||
+      "";
+    drawProjectCatalogSettings(container);
+  } catch (e) {
+    container.textContent = e.message;
+  }
+}
 
 function searchText(value){if(value==null)return '';if(typeof value!=='object')return String(value).normalize('NFKC');if(Array.isArray(value))return value.map(searchText).join(' ');return Object.entries(value).filter(([key])=>!['id','fileId','ownerId','taskId','deleted','image','x','y','width','height','span','photoEdit'].includes(key)).map(([,v])=>searchText(v)).join(' ')}
 const moduleSearchKinds={pdf:'PDF 파일 문서 document file',audio:'오디오 음향 audio sound',document:'문서 파일 document file',table:'표 table',check:'체크리스트 checklist',event:'행사 event',text:'텍스트 글 노트 text note',image:'사진 이미지 촬영 photo image',video:'영상 동영상 video film movie',file:'파일 첨부 문서 file attachment',link:'링크 북마크 link bookmark instagram youtube',materials:'자료 소스 resources materials',tasks:'할일 할 일 task todo',schedule:'일정 스케줄 calendar schedule',timetable:'타임테이블 일정표 timetable calendar'};
