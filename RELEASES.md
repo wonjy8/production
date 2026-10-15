@@ -81,3 +81,12 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Export PDF directly from the visible editor layout, without browser printing. Lossless image PDF uses one continuous page; text is not selectable.
 - Load document creation and PDF codecs only when requested; deduplicate shared UI sources during build.
 - NAS files and container configuration: unchanged from 0.0.6.
+
+## 0.0.8
+
+- Replace image-only PDF with selectable, searchable vector text and embedded Korean/Latin fonts, using the editor's measured positions without browser printing.
+- Add shared on-screen/PDF pagination, A4/A5/Letter/custom paper sizes, margins, landscape and zoom; preserve original DOCX packages and image dimensions.
+- Persist editable document titles; consolidate exports and organize file/edit/insert/format/view menus and icon toolbar with mobile horizontal scrolling.
+- Restore masonry resource browsing alongside list/board views, rename 자료 DB to 자료, add type tabs and a sidebar document-editor shortcut, and align folder/file row heights.
+- Default home to today; limit schedule previews to five unended events and separate today's complete schedule group with rules.
+- NAS files and configuration: unchanged from 0.0.6.

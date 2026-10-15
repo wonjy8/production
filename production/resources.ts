@@ -13,7 +13,7 @@ async function responseJSON(response: Response) {
   if (!response.ok)
     throw Error(
       response.status === 404
-        ? "자료 DB를 사용할 수 없습니다. NAS 서버를 최신 버전으로 업데이트하세요."
+        ? "자료를 불러올 수 없습니다. NAS 서버를 최신 버전으로 업데이트하세요."
         : typeof data.detail === "string"
           ? data.detail
           : data.error || "자료를 저장하지 못했습니다.",

@@ -15,3 +15,5 @@ button.sidebar-project>svg{width:18px;height:18px;margin:0;min-width:18px}
 .assignee-trigger{padding:0 12px!important;gap:8px!important;align-items:center!important}
 .assignee-popover button{padding:8px 12px!important;gap:8px!important}
 button.ui-icon-button .count{display:inline-flex;align-items:center;justify-content:center;line-height:1;min-width:16px;min-height:16px;margin:0}
+.sidebar-reference-area:not([hidden]){display:flex;flex-direction:column;min-height:0;flex:1}.sidebar-reference-area .sidebar-document-editor{margin-top:auto;flex-shrink:0}
+.sidebar-document-editor[hidden]{display:none!important}

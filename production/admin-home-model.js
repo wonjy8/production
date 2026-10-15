@@ -6,3 +6,9 @@ export function adminHomeData(w,{today=localDay(),period='today',productionId=''
  const filteredTasks=tasks.filter(t=>!mine||((memberId&&(t.ownerId||t.owner)===memberId)||(memberName&&t.owner===memberName))),sort=(a,b)=>(a.due||'9999').localeCompare(b.due||'9999')||(a.title||'').localeCompare(b.title||'','ko'),active=projectEntries(w).filter(p=>(!productionId||p.id===productionId)&&!['완료','취소'].includes(p.status)).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'));
  return {start,end,active,allTasks:allTasks.sort(sort),allSchedules:allSchedules.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.startTime||'').localeCompare(b.startTime||'')),tasks:filteredTasks.filter(t=>period==='all'||t.due>=start&&t.due<=end).sort(sort),overdue:filteredTasks.filter(t=>t.due&&t.due<today).sort(sort),unassigned:tasks.filter(t=>!(t.ownerId||t.owner)),upcoming:active.filter(p=>p.due&&p.due>=today&&p.due<=week.end),overdueProjects:active.filter(p=>p.due&&p.due<today),schedules:schedules.filter(s=>period==='all'||s.date<=end&&(s.endDate||s.date)>=start).sort((a,b)=>a.date.localeCompare(b.date)||(a.startTime||'').localeCompare(b.startTime||'')),productions:groups}}
 export function completeHomeTask(w,row,done){const key=row.origin.kind==='project'?'projects':'productions',id=row.origin.projectId||row.origin.productionId;return {...w,[key]:w[key].map(owner=>owner.id===id?{...owner,tasks:owner.tasks.map(t=>t.id===row.id?{...t,done}:t)}:owner)}}
+
+// All-day events remain visible through their final date; timed events end at endTime (or startTime).
+export function upcomingSchedulePreview(rows,now=new Date(),limit=5){
+ const today=localDay(now),time=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+ return rows.filter(s=>{const day=s.endDate||s.date;if(!day)return true;if(day!==today)return day>today;const end=s.endTime||s.startTime;return !end||end>time}).slice(0,limit);
+}

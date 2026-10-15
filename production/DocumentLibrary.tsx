@@ -1,29 +1,40 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { observeUI } from "../ui/decorate.js";
-import {listResources,resourceFile} from './resources';
+import { listResources, resourceFile } from "./resources";
 import { documentLibrary } from "./document-library.js";
 import { documentFormat } from "./document-types";
 import { documentURL } from "./document-launch";
 import { Icon } from "./Icon";
-function DocumentLibrary() {
-  const [resources,setResources]=useState<any[]>([]);
+export function DocumentLibrary() {
+  const [resources, setResources] = useState<any[]>([]);
   const [data, setData] = useState(() => window.sourceGalleryBridge.read()),
     [path, setPath] = useState<string[]>([]),
     [query, setQuery] = useState("");
   useEffect(() => {
-    const update = () => {setData(window.sourceGalleryBridge.read());listResources().then(rows=>setResources(rows.filter((r:any)=>r.fileId&&!r.deleted).map((r:any)=>({...r,file:resourceFile(r)})))).catch(()=>{})};
+    const update = () => {
+      setData(window.sourceGalleryBridge.read());
+      listResources()
+        .then((rows) =>
+          setResources(
+            rows
+              .filter((r: any) => r.fileId && !r.deleted)
+              .map((r: any) => ({ ...r, file: resourceFile(r) })),
+          ),
+        )
+        .catch(() => {});
+    };
     update();
-    window.addEventListener('resources-changed',update);
+    window.addEventListener("resources-changed", update);
     window.addEventListener("references-changed", update);
     window.addEventListener("gallery-changed", update);
     return () => {
-      window.removeEventListener('resources-changed',update);
+      window.removeEventListener("resources-changed", update);
       window.removeEventListener("references-changed", update);
       window.removeEventListener("gallery-changed", update);
     };
   }, []);
-  const library = documentLibrary(data.workspace, data.references,resources),
+  const library = documentLibrary(data.workspace, data.references, resources),
     crumbs = [library.root];
   let folder = library.root;
   for (const id of path) {

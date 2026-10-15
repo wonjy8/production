@@ -7,7 +7,7 @@ export const defaultLayout = {
   left: 25.4,
 };
 export function documentLayout(value: any = {}) {
-  return Object.fromEntries(
+  const layout = Object.fromEntries(
     Object.entries(defaultLayout).map(([key, fallback]) => {
       const n = Number(value?.[key]);
       return [
@@ -20,4 +20,17 @@ export function documentLayout(value: any = {}) {
       ];
     }),
   ) as typeof defaultLayout;
+  if (layout.left + layout.right > layout.width - 30) {
+    const ratio = (layout.width - 30) / (layout.left + layout.right);
+    layout.left *= ratio;
+    layout.right *= ratio;
+  }
+  if (layout.top + layout.bottom > layout.height - 30) {
+    const ratio = (layout.height - 30) / (layout.top + layout.bottom);
+    layout.top *= ratio;
+    layout.bottom *= ratio;
+  }
+  return layout;
 }
+
+export const pageGap = 28;

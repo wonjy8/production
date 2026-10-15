@@ -1,6 +1,7 @@
 import {execFileSync} from 'node:child_process';
 import {mkdir, readFile, writeFile, rm} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import {documentFonts,documentFontLicense} from '../worker/document-font-assets.js';
 import {application} from '../worker/index.js';
 
 const releaseVersion=(await readFile(new URL('../VERSION',import.meta.url),'utf8')).trim();
@@ -12,8 +13,11 @@ await rm(output, {recursive:true, force:true});
 await mkdir(output, {recursive:true});
 execFileSync('python3',['scripts/package-nas.py','--output-dir',output],{stdio:'inherit'});
 const routes = {'/':'app.html', '/document-app':'document-app.js', '/document-pdf':'document-pdf.js', '/document-tools':'document-tools.js', '/document-style':'document-style.css', '/production-app':'production-app.js', '/production-style':'production-style.css', '/ui-app':'ui-app.js', '/ui-style':'ui-style.css', '/account-app':'account-app.js'};
+for (const name of Object.keys(documentFonts)) await writeFile(output+'/document-font-'+name+'.ttf',Buffer.from(documentFonts[name],'base64'));
+await writeFile(output+'/document-font-licenses.txt',documentFontLicense);
 const rendered = {};
 for (const [route, file] of Object.entries(routes)) {
+  if(file.endsWith('.ttf'))continue;
   const response = await application.fetch(new Request('https://build.invalid' + route), {});
   if (!response.ok) throw Error('Failed to render ' + route);
   rendered[file] = await response.text();
@@ -21,12 +25,15 @@ for (const [route, file] of Object.entries(routes)) {
 const versions = Object.fromEntries(Object.entries(rendered).filter(([file]) => file !== 'app.html').map(([file, contents]) => [file, createHash('sha256').update(contents).digest('hex').slice(0, 12)]));
 function rewrite(text) {
   text = text.replaceAll('/api/', base + 'api/');
+  text = text.replaceAll('\"/document-font-\"',JSON.stringify(base+'document-font-'));
+
   for (const [route, file] of Object.entries(routes)) {
-    if (route !== '/') text = text.replaceAll(route, base + file + '?v=' + versions[file]);
+    if (route !== '/') text = text.replaceAll(route, base + file + '?v=' + (versions[file] || releaseVersion));
   }
   return text.replaceAll("location.origin+'/?invite='", `location.origin+location.pathname+'?invite='`).replaceAll("location.origin+'/'", `location.origin+location.pathname`);
 }
 for (const [route, file] of Object.entries(routes)) {
+  if(file.endsWith('.ttf'))continue;
   let text = rewrite(rendered[file]);
   await writeFile(output+'/'+file, text);
 }

@@ -102,3 +102,51 @@
     width: 100%;
   }
 }
+.document-library-row,
+.document-library-row.keep-label {
+  height: 64px !important;
+  min-height: 64px !important;
+  max-height: 64px !important;
+  box-sizing: border-box;
+  font-size: 14px !important;
+  padding: 12px 14px !important;
+  overflow: hidden;
+}
+.document-library-row > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+.document-library-row strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.document-library-row > small {
+  flex: 0 1 auto;
+  max-width: 35%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.document-library-row small {
+  font-size: 11px;
+  line-height: 1.4;
+}
+.document-library-row > div > small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .document-library-row,
+  .document-library-row.keep-label {
+    padding: 10px 8px !important;
+    gap: 8px;
+  }
+  .document-library-row > small {
+    max-width: 28%;
+  }
+}

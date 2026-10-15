@@ -1,6 +1,19 @@
 import {projectIconPaths} from './project-icon-paths.js';
 // Production icon pack: 24px grid, 1.75px stroke, rounded caps and joins.
 export const icons={
+ redo:'<path d="M21 7H11a7 7 0 0 0 0 14M21 7l-5-5M21 7l-5 5"/>',
+ bold:'<path d="M7 4h6a4 4 0 0 1 0 8H7Zm0 8h7a4 4 0 0 1 0 8H7Z"/>',
+ italic:'<path d="M10 4h10M4 20h10M15 4 9 20"/>',
+ underline:'<path d="M6 3v8a6 6 0 0 0 12 0V3M4 21h16"/>',
+ strike:'<path d="M17 5c-2-3-10-3-10 2 0 2 3 3 5 4m5 3c3 7-8 9-11 4M3 12h18"/>',
+ listOrdered:'<path d="M9 6h12M9 12h12M9 18h12M3 4h1v4M3 11c3-2 3 1 0 4h3M3 18h2l-1 2 2 1H3"/>',
+ rowPlus:'<rect x="3" y="3" width="18" height="12" rx="2"/><path d="M3 9h18M8 20h8m-4-4v8"/>',
+ columnPlus:'<rect x="3" y="3" width="12" height="18" rx="2"/><path d="M9 3v18M20 8v8m-4-4h8"/>',
+ rowDelete:'<rect x="3" y="3" width="18" height="12" rx="2"/><path d="M3 9h18M8 20h8"/>',
+ columnDelete:'<rect x="3" y="3" width="12" height="18" rx="2"/><path d="M9 3v18M20 8v8"/>',
+ mergeCells:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m5 12 4-3v6Zm14 0-4-3v6Z"/>',
+ splitCells:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16m-7-8 3-3m-3 3 3 3m11-3-3-3m3 3-3 3"/>',
+
  cross:'<path d="M10 3h4v5h5v4h-5v9h-4v-9H5V8h5Z"/>',
  church:'<path d="M12 2v7m-3-4h6M4 22V11l8-5 8 5v11M9 22v-7h6v7M3 22h18"/>',
  bible:'<path d="M5 3h14v18H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Zm-2 15a3 3 0 0 1 3-3h13M12 6v6m-3-3h6"/>',

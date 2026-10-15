@@ -1,3 +1,11 @@
+import { documentPagination } from "./document-pagination";
+import {
+  listResources,
+  saveResource,
+  createNote,
+  resourceFile,
+} from "./resources";
+import { documentURL } from "./document-launch";
 import { loadDocumentPDF } from "./load-document-tools";
 import { legacyDraft } from "./legacy-document-drafts";
 import { documentLayout } from "./document-layout";
@@ -149,8 +157,145 @@ function DocumentEditor({ file }: { file: any }) {
     [active, setActive] = useState(0),
     [comment, setComment] = useState<any>(null),
     [showComments, setShowComments] = useState(false),
-    [showLayout, setShowLayout] = useState(false);
+    [showLayout, setShowLayout] = useState(false),
+    [name, setName] = useState(file.name),
+    [titleDraft, setTitleDraft] = useState(file.name.replace(/\.[^.]+$/, "")),
+    [editingTitle, setEditingTitle] = useState(false),
+    [exporting, setExporting] = useState(false),
+    [zoom, setZoom] = useState("fit"),
+    [fitScale, setFitScale] = useState(1);
   const layout = documentLayout(editor.current?.getJSON().attrs?.docxLayout);
+  const scroll = useRef<HTMLDivElement>(null),
+    titleInput = useRef<HTMLInputElement>(null);
+  const resource = useRef<any>(null);
+  useEffect(() => {
+    listResources()
+      .then((rows) => {
+        const row = rows.find((r: any) => r.fileId === file.id);
+        if (row) {
+          resource.current = row;
+          const ext = file.name.match(/\.[^.]+$/)?.[0] || "";
+          file.name = row.title.toLowerCase().endsWith(ext.toLowerCase())
+            ? row.title
+            : row.title + ext;
+          setName(file.name);
+          setTitleDraft(file.name.replace(/\.[^.]+$/, ""));
+          document.title = file.name + " · 문서";
+        }
+      })
+      .catch(() => {});
+  }, [file.id]);
+  useEffect(() => {
+    if (!scroll.current) return;
+    const update = () => {
+      const next = Math.min(
+        1,
+        (scroll.current!.clientWidth - 24) / ((layout.width * 96) / 25.4),
+      );
+      setFitScale((old) => (Math.abs(old - next) < 0.001 ? old : next));
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(scroll.current);
+    update();
+    return () => observer.disconnect();
+  }, [ready, layout.width]);
+  useEffect(() => {
+    if (editingTitle) {
+      titleInput.current?.focus();
+      titleInput.current?.select();
+    }
+  }, [editingTitle]);
+  useEffect(() => {
+    const close = (event: Event) => {
+      const target = event.target as Element;
+      document
+        .querySelectorAll<HTMLDetailsElement>(".document-menu[open]")
+        .forEach((menu) => {
+          if (!menu.contains(target)) menu.open = false;
+        });
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape")
+        document
+          .querySelectorAll<HTMLDetailsElement>(".document-menu[open]")
+          .forEach((menu) => (menu.open = false));
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
+  async function rename() {
+    if (!editingTitle) return;
+    const title = titleDraft.trim().replace(/[\/\\\r\n]/g, " ");
+    if (!title) {
+      setTitleDraft(name.replace(/\.[^.]+$/, ""));
+      setEditingTitle(false);
+      return;
+    }
+    try {
+      const rows = await listResources(),
+        row = rows.find((r: any) => r.fileId === file.id);
+      if (!row) throw Error("문서 정보를 찾을 수 없습니다.");
+      const saved = await saveResource({ ...row, title });
+      resource.current = saved;
+      file.name = title + (name.match(/\.[^.]+$/)?.[0] || "");
+      setName(file.name);
+      setTitleDraft(title);
+      document.title = title + " · 문서";
+      const url = new URL(location.href);
+      url.searchParams.set("name", file.name);
+      history.replaceState(null, "", url);
+      window.opener?.dispatchEvent(new Event("resources-changed"));
+      setEditingTitle(false);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }
+  async function exportPDF() {
+    if (exporting) return;
+    setExporting(true);
+    setError("");
+    editor.current?.setEditable(false);
+    try {
+      await document.fonts.ready;
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      );
+      const exportPDF = await loadDocumentPDF();
+      const blob = await exportPDF(
+        host.current!,
+        editor.current?.getJSON().attrs?.docxLayout,
+      );
+      downloadBlob(blob, file.name.replace(/\.[^.]+$/, "") + ".pdf");
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      editor.current?.setEditable(true);
+      setExporting(false);
+    }
+  }
+  async function newDocument() {
+    const popup = window.open("about:blank", "_blank");
+    if (popup) {
+      popup.opener = null;
+      popup.document.body.textContent = "문서를 준비하는 중…";
+    }
+    try {
+      const row = await createNote({ title: "제목 없는 문서", properties: {} });
+      if (popup) popup.location.replace(documentURL(resourceFile(row), null));
+    } catch (e: any) {
+      popup?.close();
+      setError(e.message);
+    }
+  }
+  function menuAction(event: any, run: () => any) {
+    event.currentTarget.closest("details")?.removeAttribute("open");
+    run();
+  }
+
   const comments = new Map<string, any>();
   editor.current?.state.doc.descendants((node: any, pos: number) =>
     node.marks.forEach((m: any) => {
@@ -367,6 +512,7 @@ function DocumentEditor({ file }: { file: any }) {
           element: host.current!,
           extensions: [
             commentMark,
+            documentPagination,
             StarterKit.configure({
               link: { openOnClick: false, protocols: ["https", "http"] },
             }),
@@ -482,6 +628,18 @@ function DocumentEditor({ file }: { file: any }) {
             orderedList: "번호 목록",
           }[name] || name
         }
+        title={
+          (
+            {
+              bold: "굵게",
+              italic: "기울임",
+              underline: "밑줄",
+              strike: "취소선",
+              bulletList: "글머리 기호",
+              orderedList: "번호 목록",
+            } as any
+          )[name] || name
+        }
         aria-pressed={editor.current?.isActive(name) || false}
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => {
@@ -491,16 +649,31 @@ function DocumentEditor({ file }: { file: any }) {
           }
         }}
       >
-        {(
-          {
-            bold: <b>B</b>,
-            italic: <i>I</i>,
-            underline: <u>U</u>,
-            strike: <s>S</s>,
-            bulletList: "• 목록",
-            orderedList: "1. 목록",
-          } as any
-        )[name] || name}
+        <Icon
+          name={
+            (
+              {
+                bold: "bold",
+                italic: "italic",
+                underline: "underline",
+                strike: "strike",
+                bulletList: "list",
+                orderedList: "listOrdered",
+                "실행 취소": "undo",
+                "다시 실행": "redo",
+                링크: "link",
+                "표 삽입": "table",
+                "행 추가": "rowPlus",
+                "열 추가": "columnPlus",
+                "행 삭제": "rowDelete",
+                "열 삭제": "columnDelete",
+                "셀 병합": "mergeCells",
+                "셀 분할": "splitCells",
+                "표 삭제": "trash",
+              } as any
+            )[name] || "settings"
+          }
+        />
       </button>
     );
   }
@@ -511,54 +684,275 @@ function DocumentEditor({ file }: { file: any }) {
           <Icon name="file" />
         </span>
         <div className="document-heading">
-          <h1>{file.name}</h1>
+          {editingTitle ? (
+            <input
+              ref={titleInput}
+              className="document-title-input"
+              aria-label="문서 제목"
+              value={titleDraft}
+              maxLength={190}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={rename}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") {
+                  setTitleDraft(name.replace(/\.[^.]+$/, ""));
+                  setEditingTitle(false);
+                }
+              }}
+            />
+          ) : (
+            <h1>
+              <button
+                className="document-title keep-label"
+                title="문서 이름 바꾸기"
+                aria-label="문서 이름 바꾸기"
+                onClick={() => setEditingTitle(true)}
+              >
+                {name.replace(/\.[^.]+$/, "")}
+              </button>
+            </h1>
+          )}
           <span role="status" aria-live="polite">
             {status}
           </span>
         </div>
         <span className="document-autosave-label">자동저장</span>
-        <button
-          className="keep-label"
-          disabled={!ready}
-          onClick={() =>
-            session.current?.download().catch((e: any) => setError(e.message))
-          }
-        >
-          {format === "docx" ? "Word 내보내기" : "파일 내보내기"}
-        </button>
-        <button
-          className="keep-label"
-          disabled={!ready}
-          onClick={async (event) => {
-            const button = event.currentTarget;
-            button.disabled = true;
-            button.textContent = "PDF 만드는 중…";
-            try {
-              const exportPDF = await loadDocumentPDF();
-              const sheet = editor.current!.view.dom.closest(
-                ".document-sheet",
-              ) as HTMLElement;
-              const blob = await exportPDF(sheet);
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement("a");
-              link.href = url;
-              link.download = file.name.replace(/\.[^.]+$/, "") + ".pdf";
-              link.click();
-              setTimeout(() => URL.revokeObjectURL(url), 60000);
-            } catch (e: any) {
-              setError(e.message);
-            } finally {
-              button.disabled = false;
-              button.textContent = "PDF 내보내기";
-            }
-          }}
-        >
-          PDF 내보내기
-        </button>
+        <details className="document-export document-menu">
+          <summary aria-label="내보내기">
+            <Icon name="download" />
+            <span>{exporting ? "PDF 만드는 중…" : "내보내기"}</span>
+            <Icon name="down" />
+          </summary>
+          <div role="menu">
+            <button
+              className="keep-label"
+              role="menuitem"
+              disabled={!ready || exporting}
+              onClick={(e) => menuAction(e, exportPDF)}
+            >
+              <Icon name="file" />
+              PDF (.pdf)
+            </button>
+            <button
+              className="keep-label"
+              role="menuitem"
+              disabled={!ready || exporting}
+              onClick={(e) =>
+                menuAction(e, () =>
+                  session.current
+                    ?.download()
+                    .catch((err: any) => setError(err.message)),
+                )
+              }
+            >
+              <Icon name="file" />
+              {format === "docx" ? "Word (.docx)" : "원본 파일"}
+            </button>
+          </div>
+        </details>
       </header>
+      <nav className="document-menubar" aria-label="문서 메뉴">
+        <details className="document-menu">
+          <summary>파일</summary>
+          <div role="menu">
+            <button
+              className="keep-label"
+              role="menuitem"
+              onClick={(e) => menuAction(e, newDocument)}
+            >
+              <Icon name="plus" />새 문서
+            </button>
+            <button
+              className="keep-label"
+              role="menuitem"
+              onClick={(e) => menuAction(e, () => setEditingTitle(true))}
+            >
+              <Icon name="edit" />
+              이름 바꾸기
+            </button>
+            <hr />
+            <button
+              className="keep-label"
+              role="menuitem"
+              onClick={(e) => menuAction(e, () => setShowLayout(true))}
+            >
+              <Icon name="settings" />
+              페이지 설정
+            </button>
+            <button
+              className="keep-label"
+              role="menuitem"
+              disabled={!ready || exporting}
+              onClick={(e) => menuAction(e, exportPDF)}
+            >
+              <Icon name="download" />
+              PDF 내보내기
+            </button>
+            <button
+              className="keep-label"
+              role="menuitem"
+              disabled={!ready}
+              onClick={(e) => menuAction(e, () => session.current?.download())}
+            >
+              <Icon name="download" />
+              Word 내보내기
+            </button>
+          </div>
+        </details>
+        <details className="document-menu">
+          <summary>수정</summary>
+          <div role="menu">
+            {[
+              [
+                "실행 취소",
+                "undo",
+                () => editor.current?.chain().focus().undo().run(),
+              ],
+              [
+                "다시 실행",
+                "redo",
+                () => editor.current?.chain().focus().redo().run(),
+              ],
+              [
+                "전체 선택",
+                "text",
+                () => editor.current?.chain().focus().selectAll().run(),
+              ],
+            ].map(([label, icon, run]) => (
+              <button
+                className="keep-label"
+                key={label as string}
+                role="menuitem"
+                onClick={(e) => menuAction(e, run as any)}
+              >
+                <Icon name={icon as string} />
+                {label as string}
+              </button>
+            ))}
+          </div>
+        </details>
+        <details className="document-menu">
+          <summary>삽입</summary>
+          <div role="menu">
+            <button
+              className="keep-label"
+              role="menuitem"
+              onClick={(e) =>
+                menuAction(e, () =>
+                  editor.current
+                    ?.chain()
+                    .focus()
+                    .insertTable({ rows: 3, cols: 3, withHeaderRow: false })
+                    .run(),
+                )
+              }
+            >
+              <Icon name="table" />표
+            </button>
+            <button
+              className="keep-label"
+              role="menuitem"
+              onClick={(e) =>
+                menuAction(e, () =>
+                  document
+                    .querySelector<HTMLInputElement>(
+                      '[aria-label="문서 이미지 추가"]',
+                    )
+                    ?.click(),
+                )
+              }
+            >
+              <Icon name="reference" />
+              이미지
+            </button>
+            <button
+              className="keep-label"
+              role="menuitem"
+              onClick={(e) => menuAction(e, addComment)}
+            >
+              <Icon name="feedback" />
+              주석
+            </button>
+          </div>
+        </details>
+        <details className="document-menu">
+          <summary>서식</summary>
+          <div role="menu">
+            <button
+              className="keep-label"
+              role="menuitem"
+              onClick={(e) =>
+                menuAction(e, () =>
+                  editor.current
+                    ?.chain()
+                    .focus()
+                    .unsetAllMarks()
+                    .clearNodes()
+                    .run(),
+                )
+              }
+            >
+              <Icon name="text" />
+              서식 지우기
+            </button>
+            <button
+              className="keep-label"
+              role="menuitem"
+              onClick={(e) => menuAction(e, () => setShowLayout(true))}
+            >
+              <Icon name="settings" />
+              쪽·여백
+            </button>
+          </div>
+        </details>
+        <details className="document-menu">
+          <summary>보기</summary>
+          <div role="menu">
+            <button
+              className="keep-label"
+              role="menuitem"
+              onClick={(e) => menuAction(e, () => setZoom("fit"))}
+            >
+              <Icon name="eye" />창 너비에 맞춤
+            </button>
+            <button
+              className="keep-label"
+              role="menuitem"
+              onClick={(e) => menuAction(e, () => setZoom("100"))}
+            >
+              <Icon name="search" />
+              실제 크기 (100%)
+            </button>
+            <button
+              className="keep-label"
+              role="menuitem"
+              onClick={(e) =>
+                menuAction(e, () => setShowComments(!showComments))
+              }
+            >
+              <Icon name="feedback" />
+              주석 보기
+            </button>
+          </div>
+        </details>
+      </nav>
       <div className="document-toolbar" role="toolbar" aria-label="문서 서식">
         {command("실행 취소", (ed) => ed.chain().focus().undo().run())}
         {command("다시 실행", (ed) => ed.chain().focus().redo().run())}
+        <select
+          className="keep-label document-zoom"
+          aria-label="문서 배율"
+          value={zoom}
+          onChange={(e) => setZoom(e.target.value)}
+        >
+          <option value="fit">너비 맞춤</option>
+          {[50, 75, 100, 125, 150, 200].map((n) => (
+            <option key={n} value={n}>
+              {n}%
+            </option>
+          ))}
+        </select>
         <span className="document-tool-divider" />
         {format === "docx" && (
           <>
@@ -568,7 +962,8 @@ function DocumentEditor({ file }: { file: any }) {
               aria-expanded={showLayout}
               onClick={() => setShowLayout(!showLayout)}
             >
-              쪽·여백
+              <Icon name="settings" />
+              <span className="sr-only">쪽·여백</span>
             </button>
             <button
               className="document-tool keep-label"
@@ -576,7 +971,8 @@ function DocumentEditor({ file }: { file: any }) {
               onPointerDown={(e) => e.preventDefault()}
               onClick={addComment}
             >
-              주석 추가
+              <Icon name="feedback" />
+              <span className="sr-only">주석 추가</span>
             </button>
             <button
               className="document-tool keep-label"
@@ -584,7 +980,8 @@ function DocumentEditor({ file }: { file: any }) {
               aria-expanded={showComments}
               onClick={() => setShowComments(!showComments)}
             >
-              주석 {comments.size}
+              <Icon name="feedback" />
+              {comments.size}
             </button>
           </>
         )}
@@ -691,7 +1088,7 @@ function DocumentEditor({ file }: { file: any }) {
             )}
             {command("strike", (ed) => ed.chain().focus().toggleStrike().run())}
             <label className="document-color">
-              글자색
+              <Icon name="text" />
               <input
                 type="color"
                 aria-label="글자색"
@@ -732,7 +1129,8 @@ function DocumentEditor({ file }: { file: any }) {
               ed.chain().focus().toggleOrderedList().run(),
             )}
             <label className="document-tool keep-label">
-              이미지 추가
+              <Icon name="reference" />
+              <span className="sr-only">이미지 추가</span>
               <input
                 style={{ display: "none" }}
                 type="file"
@@ -750,12 +1148,33 @@ function DocumentEditor({ file }: { file: any }) {
                     return;
                   }
                   const reader = new FileReader();
-                  reader.onload = () =>
-                    editor.current
-                      ?.chain()
-                      .focus()
-                      .setImage({ src: String(reader.result) })
-                      .run();
+                  reader.onload = () => {
+                    const image = new window.Image();
+                    image.onload = () => {
+                      const maxWidth =
+                          ((layout.width - layout.left - layout.right) * 96) /
+                          25.4,
+                        maxHeight =
+                          ((layout.height - layout.top - layout.bottom) * 96) /
+                          25.4;
+                      const ratio = Math.min(
+                        1,
+                        maxWidth / image.naturalWidth,
+                        maxHeight / image.naturalHeight,
+                      );
+                      editor.current
+                        ?.chain()
+                        .focus()
+                        .setImage({
+                          src: String(reader.result),
+                          width: Math.round(image.naturalWidth * ratio),
+                          height: Math.round(image.naturalHeight * ratio),
+                        })
+                        .run();
+                    };
+                    image.onerror = () => setError("이미지를 읽지 못했습니다.");
+                    image.src = String(reader.result);
+                  };
                   reader.onerror = () => setError("이미지를 읽지 못했습니다.");
                   reader.readAsDataURL(file);
                 }}
@@ -810,7 +1229,75 @@ function DocumentEditor({ file }: { file: any }) {
       )}
       {showLayout && format === "docx" && (
         <fieldset className="document-layout-controls">
-          <legend>쪽·여백 (mm)</legend>
+          <legend>페이지 설정 · mm</legend>
+          <label>
+            용지 크기
+            <select
+              className="keep-label"
+              aria-label="용지 크기"
+              value={
+                (layout.width === 210 && layout.height === 297) ||
+                (layout.width === 297 && layout.height === 210)
+                  ? "a4"
+                  : (layout.width === 148 && layout.height === 210) ||
+                      (layout.width === 210 && layout.height === 148)
+                    ? "a5"
+                    : (layout.width === 215.9 && layout.height === 279.4) ||
+                        (layout.width === 279.4 && layout.height === 215.9)
+                      ? "letter"
+                      : "custom"
+              }
+              onChange={(e) => {
+                const sizes: any = {
+                  a4: [210, 297],
+                  a5: [148, 210],
+                  letter: [215.9, 279.4],
+                };
+                if (sizes[e.target.value]) {
+                  const [width, height] = sizes[e.target.value];
+                  editor.current?.commands.command(({ tr }: any) => {
+                    tr.setDocAttribute("docxLayout", {
+                      ...layout,
+                      width,
+                      height,
+                    });
+                    return true;
+                  });
+                  setActive((v) => v + 1);
+                }
+              }}
+            >
+              <option value="a4">A4 (210 × 297)</option>
+              <option value="a5">A5 (148 × 210)</option>
+              <option value="letter">Letter (215.9 × 279.4)</option>
+              <option value="custom">사용자 지정</option>
+            </select>
+          </label>
+          <button
+            className="keep-label"
+            aria-label="용지 방향 전환"
+            onClick={() => {
+              editor.current?.commands.command(({ tr }: any) => {
+                tr.setDocAttribute("docxLayout", {
+                  ...layout,
+                  width: layout.height,
+                  height: layout.width,
+                });
+                return true;
+              });
+              setActive((v) => v + 1);
+            }}
+          >
+            <Icon name="refresh" />
+            가로·세로 전환
+          </button>
+          <button
+            className="keep-label"
+            aria-label="페이지 설정 닫기"
+            onClick={() => setShowLayout(false)}
+          >
+            <Icon name="close" />
+          </button>
           {[
             ["width", "쪽 너비"],
             ["height", "쪽 높이"],
@@ -945,16 +1432,23 @@ function DocumentEditor({ file }: { file: any }) {
           )}
         </div>
       )}
-      <div className="document-scroll">
+      <div className="document-scroll" ref={scroll}>
         <div
           className="document-sheet"
           ref={host}
           style={{
-            maxWidth: layout.width + "mm",
+            width: layout.width + "mm",
+            maxWidth: "none",
+            zoom: zoom === "fit" ? fitScale : Number(zoom) / 100,
+            "--page-height": (layout.height * 96) / 25.4 + "px",
+            "--page-top": layout.top + "mm",
+            "--page-bottom": layout.bottom + "mm",
+            "--page-body-height":
+              layout.height - layout.top - layout.bottom + "mm",
             paddingTop: layout.top + "mm",
-            paddingRight: "min(" + layout.right + "mm, 8vw)",
+            paddingRight: layout.right + "mm",
             paddingBottom: layout.bottom + "mm",
-            paddingLeft: "min(" + layout.left + "mm, 8vw)",
+            paddingLeft: layout.left + "mm",
           }}
         />
       </div>

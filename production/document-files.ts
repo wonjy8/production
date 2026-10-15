@@ -213,6 +213,24 @@ export async function loadDocument(blob: Blob, format: string) {
                       ";base64," +
                       (await file.async("base64")),
                     docxXml: xml(part),
+                    width:
+                      Number(
+                        part
+                          .getElementsByTagNameNS(
+                            "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
+                            "extent",
+                          )[0]
+                          ?.getAttribute("cx"),
+                      ) / 9525 || null,
+                    height:
+                      Number(
+                        part
+                          .getElementsByTagNameNS(
+                            "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
+                            "extent",
+                          )[0]
+                          ?.getAttribute("cy"),
+                      ) / 9525 || null,
                   },
                 });
             }
@@ -655,12 +673,22 @@ export async function saveDocument(
           (match[1] === "jpeg" ? "jpg" : match[1]),
         id = relation("image", "media/" + filename);
       media.push({ filename, data: match[2], mime: "image/" + match[1] });
+      const cx = Math.round((Number(n.attrs.width) || 480) * 9525),
+        cy = Math.round((Number(n.attrs.height) || 320) * 9525);
       return (
-        '<w:r><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="4572000" cy="3048000"/><wp:docPr id="' +
+        '<w:r><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="' +
+        cx +
+        '" cy="' +
+        cy +
+        '"/><wp:docPr id="' +
         seq +
         '" name="image"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="image"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="' +
         id +
-        '"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="3048000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>'
+        '"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' +
+        cx +
+        '" cy="' +
+        cy +
+        '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>'
       );
     }
     if (n.type !== "text") return "";

@@ -5,7 +5,7 @@ const types =
 export function documentLibrary(workspace, references, resources=[]) {
   if(resources.length){
     const categories=[...new Set(resources.map(r=>r.properties?.category||'미분류'))];
-    references=[...references,{id:'catalog-library',title:'자료 DB',recordType:'source',tabs:categories.map(category=>({id:'catalog-'+category,name:category,modules:[{id:'catalog-module-'+category,kind:'file',files:resources.filter(r=>(r.properties?.category||'미분류')===category).map(r=>r.file)}]}))}];
+    references=[...references,{id:'catalog-library',title:'자료',recordType:'source',tabs:categories.map(category=>({id:'catalog-'+category,name:category,modules:[{id:'catalog-module-'+category,kind:'file',files:resources.filter(r=>(r.properties?.category||'미분류')===category).map(r=>r.file)}]}))}];
   }
   const current = (o) => ({ ...o, archives: undefined }),
     data = {
@@ -30,6 +30,8 @@ export function documentLibrary(workspace, references, resources=[]) {
     }
     return child;
   }
+  const names=new Map(resources.map(r=>[r.fileId,r.file?.name||r.title]));
+  for (const file of rows) {if(names.has(file.id))file.name=names.get(file.id);}
   for (const file of rows)
     for (const origin of file.origins) {
       const ref =

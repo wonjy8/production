@@ -41,6 +41,15 @@ with tempfile.TemporaryDirectory() as td:
     z.writestr('[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
     z.writestr('_rels/.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')
     z.writestr('word/document.xml','<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Original document</w:t></w:r></w:p><w:tbl><w:tblPr/><w:tblGrid><w:gridCol w:w="3000"/></w:tblGrid><w:tr><w:tc><w:p><w:r><w:t>Word table cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:sectPr><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>')
+   expanded=io.BytesIO()
+   with zipfile.ZipFile(io.BytesIO(package.getvalue())) as source,zipfile.ZipFile(expanded,'w') as target:
+    for filename in source.namelist():
+     data=source.read(filename)
+     if filename=='word/document.xml':
+      single=b'<w:tr><w:tc><w:p><w:r><w:t>Word table cell</w:t></w:r></w:p></w:tc></w:tr>'
+      data=data.replace(single,b''.join(single.replace(b'Word table cell',('Word table cell '+str(i)).encode()) for i in range(32)))
+     target.writestr(filename,data)
+   package=expanded
    original=base64.b64encode(package.getvalue()).decode()
    file_id=page.evaluate("""async data=>{const id=crypto.randomUUID();const blob=await fetch('data:application/octet-stream;base64,'+data).then(r=>r.blob());const r=await fetch('/production/api/ref-files/'+id,{method:'PUT',body:blob});if(!r.ok)throw Error('fixture upload');return id}""",original)
    page.wait_for_function('typeof window.mountProduction === "function" && !!window.productionBridge')
@@ -90,6 +99,22 @@ with tempfile.TemporaryDirectory() as td:
    nav.evaluate('(el)=>el.style.removeProperty("width")')
    print('PASS past schedules above today, mobile geometry, compact tabs and workspace isolation',flush=True)
 
+   # Dashboard defaults to today, limits upcoming schedules, and marks today's group.
+   page.evaluate("""async()=>{const w=window.productionBridge.read(),d=new Date(),today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');w.productions.push({id:'home-preview',name:'일정 미리보기',status:'진행 중',tasks:[],teams:[],memberIds:[],schedules:[...Array.from({length:10},(_,i)=>({id:'today-'+i,date:today,title:'오늘 미리보기 '+i})),{id:'ended-today',date:today,title:'지난 시간 일정',startTime:'00:00',endTime:'00:00'}]});window.productionBridge.write(w);await window.flushDocumentModules()}""")
+   page.goto('https://pages.test:9443/production/?home-preview=1#/home')
+   page.locator('.admin-home[data-home-view=dashboard]').wait_for()
+   period=page.locator('.admin-home-heading .admin-segment>button')
+   assert period.all_text_contents()==['오늘','이번 주','전체']
+   assert period.first.get_attribute('aria-pressed')=='true'
+   assert page.locator('.admin-home .admin-schedule-list>button').count()==5
+   assert page.get_by_text('지난 시간 일정',exact=True).count()==0
+   page.get_by_role('button',name='모든 일정 보기',exact=True).click()
+   today_group=page.locator('.home-schedule-today-group')
+   today_group.get_by_text('지난 시간 일정',exact=True).wait_for()
+   assert today_group.locator('.admin-schedule-list>button').count()==11
+   assert today_group.evaluate("e=>getComputedStyle(e).borderTopWidth==='1px'&&getComputedStyle(e).borderBottomWidth==='1px'")
+   print('PASS today/week/all order, five upcoming previews and today separators',flush=True)
+
    url='https://pages.test:9443/production/?document='+file_id+'&name=Restored.docx'
    page.goto(url)
    page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent.endsWith('저장됨')",timeout=120000)
@@ -116,33 +141,68 @@ with tempfile.TemporaryDirectory() as td:
    restored=page.evaluate("async id=>btoa(String.fromCharCode(...new Uint8Array(await fetch('/production/api/ref-files/'+id).then(r=>r.arrayBuffer()))))",file_id)
    with zipfile.ZipFile(io.BytesIO(base64.b64decode(restored))) as z:
     assert z.read('customXml/legacy-draft.xml')==b'preserved recovery package'
-   # Native PDF must download without invoking browser print or opening a print window.
+   # Rename metadata persists across reload without changing file identity.
+   page.get_by_role('button',name='문서 이름 바꾸기',exact=True).click()
+   page.get_by_role('textbox',name='문서 제목',exact=True).fill('새 문서 제목')
+   page.get_by_role('textbox',name='문서 제목',exact=True).press('Enter')
+   page.get_by_role('button',name='문서 이름 바꾸기',exact=True).filter(has_text='새 문서 제목').wait_for()
+   page.reload();page.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
+   assert page.get_by_role('button',name='문서 이름 바꾸기',exact=True).inner_text()=='새 문서 제목'
+   page.get_by_role('navigation',name='문서 메뉴').get_by_text('파일',exact=True).click();page.get_by_role('menuitem',name='페이지 설정',exact=True).click()
+   page.get_by_label('용지 크기',exact=True).select_option('a4')
+   page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
+   body=page.get_by_role('textbox',name='문서 본문',exact=True);body.click();page.keyboard.press('Control+End')
+   for i in range(75):
+    page.keyboard.press('Enter');page.keyboard.insert_text('일정 말씀 노트 PDF selectable line '+str(i))
+   page.keyboard.press('Enter');page.keyboard.insert_text('LONGSTART '+('긴 문단 paragraph wrapping test ' * 180)+' cafe\u0301 LONGEND')
+   page.keyboard.press('Enter')
+   png=page.evaluate("()=>{const c=document.createElement('canvas');c.width=128;c.height=96;const ctx=c.getContext('2d');ctx.fillStyle='#2563eb';ctx.fillRect(0,0,128,96);ctx.fillStyle='#facc15';ctx.fillRect(20,20,40,40);return c.toDataURL('image/png').split(',')[1]}")
+   page.get_by_label('문서 이미지 추가',exact=True).set_input_files({'name':'diagram.png','mimeType':'image/png','buffer':base64.b64decode(png)})
+   page.locator('.document-sheet img[src]').wait_for()
+   page.wait_for_timeout(1400)
+   assert int(page.locator('.document-sheet').get_attribute('data-page-count'))>=2
    page.evaluate("() => {window.print=()=>{throw Error('Browser printing forbidden')}; window.open=()=>{throw Error('Print popup forbidden')};}")
-   assert not page.evaluate("!!window.productionDocumentPDF")
-   with page.expect_download() as export:
-    page.get_by_role('button',name='PDF 내보내기',exact=True).click()
-   pdf=pathlib.Path(export.value.path()).read_bytes()
-   (t/'export.pdf').write_bytes(pdf)
-   subprocess.run(['pdftoppm','-singlefile','-scale-to','256','-png',str(t/'export.pdf'),str(t/'rendered-pdf')],check=True,capture_output=True)
-   assert (t/'rendered-pdf.png').stat().st_size>1000
-   assert pdf.startswith(b'%PDF-1.4') and pdf.endswith(b'%%EOF\n')
-   assert b'/Subtype /Image' in pdf and b'/FlateDecode' in pdf
-   import zlib
-   image=re.search(rb'/Width (\d+) /Height (\d+).*?/Length (\d+) >>\nstream\n',pdf,re.S)
-   assert image
-   w,h,n=map(int,image.groups());pixels=zlib.decompress(pdf[image.end():image.end()+n])
-   assert len(pixels)==w*h*3
-   # Verify actual screen capture and PDF contain precisely the same RGB pixels.
-   page.add_script_tag(content="window.capturePDFCanvas=null; const old=HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext=function(...args){const c=old.apply(this,args); if(c&&args[0]==='2d'){const get=c.getImageData.bind(c);c.getImageData=(...a)=>{const data=get(...a);window.capturePDFCanvas={width:this.width,height:this.height,data:data.data};return data}}return c}")
-   with page.expect_download():page.get_by_role('button',name='PDF 내보내기',exact=True).click()
-   captured=page.evaluate("""async()=>{const c=window.capturePDFCanvas,rgb=new Uint8Array(c.width*c.height*3);for(let i=0,j=0;i<c.data.length;i+=4){rgb[j++]=c.data[i];rgb[j++]=c.data[i+1];rgb[j++]=c.data[i+2]}return {width:c.width,height:c.height,hash:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',rgb))).map(n=>n.toString(16).padStart(2,'0')).join('')}}""")
-   assert captured['width']==w and captured['height']==h
-   assert captured['hash']==hashlib.sha256(pixels).hexdigest()
-   page.set_viewport_size({'width':390,'height':844})
+   assert not page.evaluate('!!window.productionDocumentPDF')
+   page.get_by_label('내보내기',exact=True).click()
+   with page.expect_download(timeout=60000) as export:
+    page.get_by_role('menuitem',name='PDF (.pdf)',exact=True).click()
+   pdf=pathlib.Path(export.value.path()).read_bytes();(t/'export.pdf').write_bytes(pdf);pathlib.Path('/tmp/editor-v8.pdf').write_bytes(pdf)
+   images=subprocess.run(['pdfimages','-list',str(t/'export.pdf')],check=True,capture_output=True,text=True).stdout
+   assert 'image' in images and '128' in images and '96' in images,images
+   info=subprocess.run(['pdfinfo',str(t/'export.pdf')],check=True,capture_output=True,text=True).stdout
+   assert '595.276 x 841.89' in info,info
+   text=subprocess.run(['pdftotext','-layout',str(t/'export.pdf'),'-'],check=True,capture_output=True,text=True).stdout
+   assert 'PDF selectable line 74' in text,text[-1000:]
+   assert '말씀' in text,text[-1000:]
+   assert text.count('PDF selectable line')==75,text
+   assert text.count('Word table cell')==32,text
+   assert 'LONGEND' in ''.join(text.split()),text[-1000:]
+   assert 'café' in text,text[-1000:]
+   subprocess.run(['pdftoppm','-f','1','-singlefile','-scale-to','1024','-png',str(t/'export.pdf'),'/tmp/editor-v8-pdf'],check=True,capture_output=True)
+   page.get_by_role('navigation',name='문서 메뉴').get_by_text('파일',exact=True).click();page.get_by_role('menuitem',name='페이지 설정',exact=True).click()
+   page.get_by_label('용지 크기',exact=True).select_option('a5')
+   page.get_by_role('button',name='용지 방향 전환',exact=True).click()
+   page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
+   page.get_by_label('내보내기',exact=True).click()
+   with page.expect_download(timeout=60000) as smaller:page.get_by_role('menuitem',name='PDF (.pdf)',exact=True).click()
+   smallinfo=subprocess.run(['pdfinfo',smaller.value.path()],check=True,capture_output=True,text=True).stdout
+   assert '595.276 x 419.528' in smallinfo,smallinfo
+   page.get_by_label('내보내기',exact=True).click()
+   with page.expect_download() as word:page.get_by_role('menuitem',name='Word (.docx)',exact=True).click()
+   with zipfile.ZipFile(word.value.path()) as saved:
+    xml=saved.read('word/document.xml').decode();assert 'document-page-break' not in xml and 'LONGEND' in xml
+   page.screenshot(path='/tmp/editor-v8-desktop.png')
+   page.set_viewport_size({'width':390,'height':844});page.wait_for_timeout(300)
    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
-   assert page.get_by_role('button',name='PDF 내보내기',exact=True).is_visible()
+   assert page.locator('.document-toolbar').evaluate('e=>e.scrollWidth>e.clientWidth')
+   page.get_by_label('내보내기',exact=True).click()
+   with page.expect_download(timeout=60000) as mobile:page.get_by_role('menuitem',name='PDF (.pdf)',exact=True).click()
+   mobiletext=subprocess.run(['pdftotext',mobile.value.path(),'-'],check=True,capture_output=True,text=True).stdout
+   assert mobiletext.count('PDF selectable line')==75 and mobiletext.count('Word table cell')==32
+   assert 'LONGEND' in ''.join(mobiletext.split())
+   page.screenshot(path='/tmp/editor-v8-mobile.png')
    assert not errors,errors
-   print('PASS native editor, DOCX autosave/reopen, mobile layout, lazy PDF, lossless screen pixels, no print/WordCraft',flush=True)
+   print('PASS native editor, persisted title, layout/zoom, multipage A4 selectable Korean PDF, toolbar/mobile, legacy draft recovery and no print/WordCraft',flush=True)
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

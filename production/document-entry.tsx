@@ -1,3 +1,5 @@
+import { installDocumentFonts } from './document-fonts';
+installDocumentFonts();
 import { mountDocumentEditor } from "./DocumentEditor";
 (window as any).startDocumentEditor = async () => {
   const params = new URLSearchParams(location.search),

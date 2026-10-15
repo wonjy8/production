@@ -1,6 +1,7 @@
 import { readFile, downloadBlob } from "./files";
 import { useEffect, useState } from "react";
 import { Modal } from "./Modal";
+import { Photo } from "./Photo";
 import { Icon } from "./Icon";
 import { InlineRemove } from "./InlineRemove";
 import { documentFormat } from "./document-types";
@@ -14,12 +15,35 @@ import {
   copyResource,
   noteFields,
 } from "./resources";
+export function resourceType(row: any) {
+  if (row.mime?.startsWith("image/") || row.kind === "image") return "image";
+  if (
+    row.mime?.startsWith("video/") ||
+    ["video", "youtube"].includes(row.kind) ||
+    /youtube\.com|youtu\.be|vimeo\.com/.test(row.url || "")
+  )
+    return "video";
+  if (row.mime?.startsWith("audio/") || row.kind === "audio") return "audio";
+  if (!row.fileId && row.url) return "link";
+  if (
+    row.kind === "text" ||
+    documentFormat(resourceFile(row)) ||
+    /\.(pdf|docx?|xlsx?|pptx?|odt|hwp|hwpx)$/i.test(row.filename || "")
+  )
+    return "documents";
+  return "file";
+}
 const defaults = ["예배", "QT", "동아리"];
 const day = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
-export function ResourceDatabase({ module, onChange, global = false }: any) {
+export function ResourceDatabase({
+  module,
+  onChange,
+  global = false,
+  filterType = "all",
+}: any) {
   const [rows, setRows] = useState<any[]>([]),
     [query, setQuery] = useState(""),
     [category, setCategory] = useState(""),
@@ -32,7 +56,12 @@ export function ResourceDatabase({ module, onChange, global = false }: any) {
     [picking, setPicking] = useState(false),
     [settings, setSettings] = useState(false),
     [preview, setPreview] = useState<any>(null),
-    [view, setView] = useState(module?.databaseView || "table"),
+    [view, setView] = useState(
+      module?.databaseView ||
+        (global
+          ? localStorage.getItem("pn-resource-view") || "gallery"
+          : "table"),
+    ),
     [sort, setSort] = useState("date"),
     [reverse, setReverse] = useState(true);
   const fields = module?.databaseFields || noteFields,
@@ -71,6 +100,7 @@ export function ResourceDatabase({ module, onChange, global = false }: any) {
     visible = selected
       .filter(
         (r) =>
+          (filterType === "all" || resourceType(r) === filterType) &&
           (!category || r.properties?.category === category) &&
           (!needle ||
             [r.title, ...(r.tags || []), ...Object.values(r.properties || {})]
@@ -161,6 +191,43 @@ export function ResourceDatabase({ module, onChange, global = false }: any) {
   function rowCard(row: any) {
     return (
       <div className="resource-card" key={row.id}>
+        {view === "gallery" && (
+          <button
+            className="resource-cover keep-label"
+            aria-label={row.title + " 미리보기"}
+            onClick={() => open(row)}
+          >
+            {resourceType(row) === "image" ? (
+              <Photo file={resourceFile(row)} />
+            ) : resourceType(row) === "video" && row.fileId ? (
+              <video
+                src={"/api/ref-files/" + row.fileId}
+                preload="metadata"
+                muted
+                playsInline
+              />
+            ) : (
+              <div
+                className={
+                  "resource-cover-icon resource-cover-" + resourceType(row)
+                }
+              >
+                <Icon
+                  name={
+                    resourceType(row) === "video"
+                      ? "video"
+                      : resourceType(row) === "link"
+                        ? "link"
+                        : resourceType(row) === "audio"
+                          ? "music"
+                          : "file"
+                  }
+                />
+                {row.content && <p>{row.content.slice(0, 240)}</p>}
+              </div>
+            )}
+          </button>
+        )}
         <button className="keep-label resource-title" onClick={() => open(row)}>
           <Icon name={row.fileId ? "file" : "link"} />
           <strong>{row.title}</strong>
@@ -242,22 +309,38 @@ export function ResourceDatabase({ module, onChange, global = false }: any) {
         <div className="resource-view-switch">
           <button
             className="keep-label"
+            aria-pressed={view === "gallery"}
+            onClick={() => {
+              setView("gallery");
+              if (global) localStorage.setItem("pn-resource-view", "gallery");
+              onChange?.((old: any) => ({ ...old, databaseView: "gallery" }));
+            }}
+          >
+            <Icon name="projects" />
+            갤러리
+          </button>
+          <button
+            className="keep-label"
             aria-pressed={view === "table"}
             onClick={() => {
               setView("table");
+              if (global) localStorage.setItem("pn-resource-view", "table");
               onChange?.((old: any) => ({ ...old, databaseView: "table" }));
             }}
           >
-            표
+            <Icon name="list" />
+            목록
           </button>
           <button
             className="keep-label"
             aria-pressed={view === "board"}
             onClick={() => {
               setView("board");
+              if (global) localStorage.setItem("pn-resource-view", "board");
               onChange?.((old: any) => ({ ...old, databaseView: "board" }));
             }}
           >
+            <Icon name="board" />
             보드
           </button>
         </div>
@@ -321,6 +404,8 @@ export function ResourceDatabase({ module, onChange, global = false }: any) {
       )}
       {loading ? (
         <p role="status">자료를 불러오는 중…</p>
+      ) : view === "gallery" ? (
+        <div className="resource-masonry">{visible.map(rowCard)}</div>
       ) : view === "board" ? (
         <div className="resource-board">
           {[...options, "미분류"].map((c) => (
@@ -355,7 +440,7 @@ export function ResourceDatabase({ module, onChange, global = false }: any) {
       )}
       {!global && (
         <small className="resource-explanation">
-          연결한 자료는 같은 원본을 사용합니다. 이 모듈에서 제거해도 자료 DB와
+          연결한 자료는 같은 원본을 사용합니다. 이 모듈에서 제거해도 자료 목록과
           파일은 유지됩니다.
         </small>
       )}
