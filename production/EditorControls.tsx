@@ -1,58 +1,84 @@
 import React, { useState } from "react";
 import { Icon } from "./Icon";
+export const editorColors = [
+  ["빨강", "#ef4444"],
+  ["주황", "#f97316"],
+  ["노랑", "#facc15"],
+  ["초록", "#22c55e"],
+  ["파랑", "#3b82f6"],
+  ["남색", "#312e81"],
+  ["보라", "#a855f7"],
+  ["갈색", "#92400e"],
+  ["검정", "#000000"],
+  ["흰색", "#ffffff"],
+];
 export function ColorControl({
   label,
   value,
   onChange,
   onClear,
+  disabled = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   onClear?: () => void;
+  disabled?: boolean;
 }) {
-  const color = /^#[a-f\d]{6}$/i.test(value) ? value : "#242424";
-  const [draft, setDraft] = useState("");
   return (
-    <div className="editor-color-control">
-      <span>{label}</span>
-      <div>
-        <input
-          type="color"
-          aria-label={label}
-          value={color}
-          onChange={(e) => onChange(e.target.value)}
-        />
-        <label>
-          <input
-            aria-label={label + " HEX"}
-            placeholder={color.slice(1).toUpperCase()}
-            value={draft}
-            maxLength={7}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={() => {
-              const hex = "#" + draft.replace("#", "");
-              if (/^#[a-f\d]{6}$/i.test(hex)) onChange(hex);
-              setDraft("");
+    <details className="editor-color-control editor-preset-color">
+      <summary
+        title={label + " 색 선택"}
+        aria-label={label + " 색 선택"}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={(e) => {
+          if (disabled) e.preventDefault();
+        }}
+        aria-disabled={disabled}
+      >
+        <span>{label}</span>
+        <span className="editor-color-current" style={{ background: value }} />
+        <Icon name="plus" />
+      </summary>
+      <div
+        className="editor-color-palette"
+        role="group"
+        aria-label={label + " 프리셋"}
+      >
+        {editorColors.map(([name, color]) => (
+          <button
+            type="button"
+            key={color}
+            className="keep-label"
+            title={name}
+            aria-label={label + " " + name}
+            aria-pressed={value.toLowerCase() === color}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={(e) => {
+              onChange(color);
+              e.currentTarget.closest("details")?.removeAttribute("open");
             }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") e.currentTarget.blur();
-            }}
-          />
-          <small>100% · 단색</small>
-        </label>
+          >
+            <span style={{ background: color }} />
+            {name}
+          </button>
+        ))}
         {onClear && (
           <button
-            title={label + " 지우기"}
+            type="button"
+            className="color-clear keep-label"
             aria-label={label + " 지우기"}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={onClear}
+            onClick={(e) => {
+              onClear();
+              e.currentTarget.closest("details")?.removeAttribute("open");
+            }}
           >
-            −
+            지우기
           </button>
         )}
       </div>
-    </div>
+    </details>
   );
 }
 export function TablePicker({

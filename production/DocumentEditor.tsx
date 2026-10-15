@@ -1031,6 +1031,25 @@ function DocumentEditor({ file }: { file: any }) {
         {command("실행 취소", (ed) => ed.chain().focus().undo().run())}
         {command("다시 실행", (ed) => ed.chain().focus().redo().run())}
         {format !== "text" && (
+          <ColorControl
+            label="하이라이트"
+            value={
+              editor.current?.getAttributes("highlight").color || "#facc15"
+            }
+            disabled={editor.current?.state.selection.empty ?? true}
+            onChange={(color) =>
+              editor.current
+                ?.chain()
+                .focus()
+                .setMark("highlight", { color })
+                .run()
+            }
+            onClear={() =>
+              editor.current?.chain().focus().unsetMark("highlight").run()
+            }
+          />
+        )}
+        {format !== "text" && (
           <>
             <span className="document-tool-divider" />
             {command("링크", (ed) => {
@@ -1538,6 +1557,9 @@ function DocumentEditor({ file }: { file: any }) {
                           />
                           <ColorControl
                             label="하이라이트"
+                            disabled={
+                              editor.current?.state.selection.empty ?? true
+                            }
                             value={
                               editor.current?.getAttributes("highlight")
                                 .color || "#fff29a"

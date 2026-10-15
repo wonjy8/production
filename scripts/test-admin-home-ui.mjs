@@ -14,4 +14,4 @@ assert.match(fs.readFileSync('production/entry.tsx','utf8'),/section==='dashboar
 assert.match(fs.readFileSync('production/entry.tsx','utf8'),/await \(window as any\)\.openRefs/);
 console.log('Admin home UI: render, source navigation, completion updates, filter, administrator guard and preserved text buttons passed');
 
-const homeSource=fs.readFileSync('production/AdminHome.tsx','utf8');assert.ok(homeSource.indexOf("진행 중 프로젝트")<homeSource.indexOf('<h2>할 일</h2>'));assert.ok(homeSource.includes("[['프로젝트',data.allProjects.length,'projects']"));
+const homeSource=fs.readFileSync('production/AdminHome.tsx','utf8');assert.ok(homeSource.indexOf("진행 중 프로젝트")<homeSource.indexOf('<h2>할 일</h2>'));assert.match(homeSource,/\[\s*['"]프로젝트['"]\s*,\s*data\.allProjects\.length\s*,\s*['"]projects['"]/);

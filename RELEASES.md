@@ -183,3 +183,10 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Customize project, work-group and reference tab icons through the shared icon/emoji/photo picker, with persisted built-in and custom tab choices.
 - Keep three fixed task parent groups (Not Started, In Progress, Completed) in list and board views. Add category-specific stages inside these groups in Settings, preserve existing stages, move checked tasks into Completed and support reopening and cross-group dragging.
 - NAS files, database schema and configuration: unchanged.
+
+## 0.0.20
+
+- Add a monthly calendar to All Schedules with list/calendar switching, month navigation, today focus, past schedules and existing event detail/edit links. Remove the previous-history hint while retaining upward history reveal in the list.
+- Add selection-based highlight insertion to the editor toolbar and use ten shared color presets (red, orange, yellow, green, blue, indigo, purple, brown, black, white) for text/highlight colors. Preserve selection, DOCX autosaving and highlight removal.
+- Center the compact floating insertion toolbar, reserve its layout space, keep popovers above the canvas and fit the toolbar/preset palette on mobile.
+- NAS files, database schema and configuration: unchanged.

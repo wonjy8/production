@@ -77,6 +77,7 @@ with tempfile.TemporaryDirectory() as td:
     page.get_by_label('줄 간격',exact=True).fill('1.5');page.get_by_label('문단 앞 여백',exact=True).fill('12');page.get_by_label('문단 뒤 여백',exact=True).fill('18')
     page.get_by_label('왼쪽 들여쓰기',exact=True).fill('1');page.get_by_label('오른쪽 들여쓰기',exact=True).fill('0.5');page.get_by_label('첫 줄 들여쓰기 방식',exact=True).select_option('hanging')
     assert body.locator('p').first.evaluate("e=>e.style.lineHeight==='1.5'&&e.style.textIndent==='-0.5cm'&&e.style.marginTop==='12pt'")
+    assert body.locator('p').first.inner_text()=='Selected text'
     # A separate list supports nested Tab indentation, capped at five levels.
     hide();page.keyboard.press('ArrowRight');page.keyboard.press('Control+End');page.keyboard.press('Enter');page.keyboard.insert_text('Root bullet');panel('속성')
     page.get_by_role('button',name='글머리 기호',exact=True).click();page.get_by_label('글머리 기호 종류',exact=True).click();page.get_by_role('menuitemradio',name='빈 원',exact=True).click()
@@ -92,6 +93,7 @@ with tempfile.TemporaryDirectory() as td:
     # The anchored insertion menu is above the canvas and receives pointer events.
     page.get_by_label('표 삽입',exact=True).click();cell=page.get_by_role('button',name='2행 4열 표 삽입',exact=True);r=cell.bounding_box();assert cell.evaluate('e=>e===document.elementFromPoint(e.getBoundingClientRect().x+e.getBoundingClientRect().width/2,e.getBoundingClientRect().y+e.getBoundingClientRect().height/2)')
     page.screenshot(path='/tmp/editor-v15-'+mode+'-menu.png');cell.click();assert body.locator('table tr').count()==2
+    assert 'Selected text' in body.inner_text()
     panel('문서')
     for label in ['위 여백','오른쪽 여백','아래 여백','왼쪽 여백']:assert float(page.get_by_label(label,exact=True).input_value())==25.4
     with page.expect_download(timeout=60000) as word:page.get_by_role('menuitem',name='Word (.docx)',exact=True).click()
