@@ -290,357 +290,133 @@ body.document-mode {
     padding: 10px 14px;
   }
 }
-.full-document-editor {
-  height: 100%;
+
+.document-layout-controls {
   display: flex;
-  flex-direction: column;
-  min-width: 0;
-  background: #fff;
-  color: #242424;
-  font:
-    13px system-ui,
-    sans-serif;
-}
-.full-document-editor .document-header {
-  padding: 8px 16px;
   gap: 10px;
   flex-wrap: wrap;
-}
-.full-document-editor .document-heading {
-  flex: 1;
-  min-width: 150px;
-}
-.full-wordcraft-frame {
-  width: 100%;
-  flex: 1;
-  min-height: 0;
+  margin: 0;
+  padding: 8px 14px;
   border: 0;
-  background: #f5f5f5;
+  border-bottom: 1px solid #eee;
+  flex: none;
 }
-.full-document-editor .document-header button {
+.document-layout-controls label {
+  font-size: 11px;
+  display: grid;
+  gap: 4px;
+}
+.document-layout-controls input {
+  width: 86px;
+  padding: 6px;
+  border: 0;
+  border-radius: 7px;
+  background: #f3f3f3;
+}
+.document-comment-form {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  padding: 10px 14px;
+  flex-wrap: wrap;
+}
+.document-comment-form label {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+}
+.document-comment-form input {
+  width: 100%;
+  padding: 8px;
+  background: #f5f5f5;
   border: 0;
   border-radius: 8px;
-  background: #f5f5f5;
-  padding: 8px 12px;
-  cursor: pointer;
 }
-.full-document-editor .document-header button:disabled {
-  opacity: 0.45;
-  cursor: default;
+.document-comments {
+  flex: none;
+  max-height: 160px;
+  overflow: auto;
+  padding: 8px 14px;
+  border-bottom: 1px solid #eee;
+  overscroll-behavior: contain;
 }
-@media (max-width: 600px) {
-  .full-document-editor .document-header {
-    padding: 8px;
-    gap: 6px;
+.document-comments > div {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+.document-comments button {
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+.docx-comment {
+  background: #fff0b3;
+  border-bottom: 2px solid #e4b000;
+}
+.document-toolbar {
+  max-height: 160px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.document-editor {
+  min-width: 0;
+}
+.document-sheet img {
+  max-width: 100%;
+  height: auto;
+}
+@media (max-width: 720px) {
+  .document-sheet {
+    min-height: 70dvh;
+    padding-top: 24px !important;
+    padding-bottom: 24px !important;
   }
-  .full-document-editor .document-heading {
-    flex-basis: 100%;
+  .document-toolbar {
+    max-height: 180px;
+  }
+  .document-header {
+    flex-wrap: wrap;
+  }
+  .document-header button {
+    border: 0;
+    padding: 8px;
+    font-size: 12px;
+  }
+  .document-layout-controls {
+    max-height: 140px;
+    overflow: auto;
+  }
+  .document-comment-form {
+    padding: 8px;
+  }
+  .document-scroll {
+    padding: 10px 6px;
   }
 }
 
-.full-editor-surface {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-}
-.full-editor-loading {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: #f6f6f6;
-  color: #666;
-}
-.document-library {
-  width: 100%;
-  min-width: 0;
-  padding: 16px 0;
-}
-.document-library-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.document-library h1 {
-  font-size: 24px;
-  margin: 0;
-}
-.document-library-heading p {
-  color: #888;
-  margin: 6px 0;
-}
-.document-library-heading input {
-  width: min(360px, 100%);
-  border: 0;
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: #f5f5f5;
-}
-.document-library-path {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 18px 0;
-}
-.document-library-path > span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.document-library-path button {
-  border: 0;
-  background: none;
-  padding: 6px 8px;
-}
-.document-library-list {
-  display: grid;
-  gap: 4px;
-}
-.document-library-row {
-  display: flex;
-  width: 100%;
-  min-width: 0;
-  align-items: center;
-  gap: 14px;
-  border: 0;
-  border-radius: 10px;
-  padding: 16px;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-}
-.document-library-row:hover {
-  background: #f5f5f5;
-}
-.document-library-row > strong,
-.document-library-row > div {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.document-library-row strong {
-  font-weight: 500;
-  white-space: normal;
-}
-.document-library-row small {
-  display: block;
-  color: #888;
-}
-.document-library-row > svg {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-}
-.document-library-row > svg:first-child {
-  color: var(--accent, #2463eb);
-}
-.document-library-empty {
-  padding: 40px 12px;
-  text-align: center;
-  color: #888;
-}
-@media (max-width: 600px) {
-  .document-library-row {
-    padding: 12px 8px;
-    gap: 10px;
-  }
-  .document-library-row > small {
-    font-size: 11px;
-  }
-  .document-library-heading input {
-    width: 100%;
-  }
-}
-/* App chrome stays touch sized; the original complete ribbon remains available. */
-.full-document-editor {
-  background: #fff;
-}
-.full-document-editor .document-header {
-  padding: 12px 16px;
-  border: 0;
-  min-width: 0;
-}
-.full-document-editor .document-heading h1 {
-  font-size: 16px;
-  font-weight: 600;
+html.document-html {
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  height: 100%;
 }
-.full-document-editor .document-heading {
-  min-width: 0;
-}
-.full-document-editor .document-header button {
-  min-height: 36px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.app-document-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: none;
-  padding: 8px 12px;
-  border-bottom: 1px solid #eee;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  background: #fff;
-}
-.app-document-toolbar::-webkit-scrollbar {
-  display: none;
-}
-.app-document-toolbar button {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #555;
-  width: 38px;
-  min-width: 38px;
-  min-height: 38px;
-  padding: 8px;
-  cursor: pointer;
-}
-.app-document-toolbar button:hover,
-.app-document-toolbar button[aria-expanded="true"] {
-  background: var(--accent-soft, #eef5ff);
-  color: var(--accent, #2463eb);
-}
-.app-document-toolbar button:disabled {
-  opacity: 0.4;
-}
-.app-document-toolbar svg {
-  width: 18px;
-  height: 18px;
-}
-.app-document-toolbar .document-all-tools {
-  width: auto;
-  margin-left: auto;
-  white-space: nowrap;
-}
-.full-editor-surface {
-  overflow: hidden;
-}
-.full-document-editor[data-tools="false"] .full-wordcraft-frame {
-  height: calc(100% + 160px);
-  min-height: calc(100% + 160px);
-  transform: translateY(-160px);
-  flex: none;
-}
-.full-document-editor .document-footer {
-  font-size: 11px;
-  padding-bottom: calc(8px + env(safe-area-inset-bottom));
-  background: #fff;
-}
-@media (max-width: 600px) {
-  .full-document-editor .document-header {
-    padding: 10px 12px;
-    gap: 6px;
-  }
-  .full-document-editor .document-heading {
-    flex: 1 1 calc(100% - 70px);
-  }
-  .full-document-editor .document-header button {
-    flex: 1;
-    padding: 8px 6px;
-    min-height: 40px;
-  }
-  .app-document-toolbar {
-    padding: 6px 8px;
-  }
-  .app-document-toolbar button {
-    min-width: 42px;
-    width: 42px;
-    min-height: 42px;
-  }
-  .app-document-toolbar .document-all-tools {
-    position: sticky;
-    right: -8px;
-    background: #fff;
-    box-shadow: -6px 0 10px #fff;
-  }
-  .full-document-editor .document-footer {
-    font-size: 10px;
-  }
-  .full-document-editor .document-autosave-label {
-    font-size: 10px;
-  }
-}
+body.document-mode,
 #document-editor-root {
   height: var(--document-height, 100dvh);
 }
-body.document-mode {
-  overscroll-behavior: none;
+.document-header button {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f5f5f5;
+  color: inherit;
 }
-.full-editor-loading {
-  padding: 24px;
-  text-align: center;
-  box-sizing: border-box;
+.document-header .ui-icon {
+  width: 20px;
+  height: 20px;
 }
-.document-mode .app-document-toolbar button {
-  border: 0 !important;
-  box-shadow: none !important;
+.document-toolbar .document-tool {
+  min-height: 36px !important;
 }
-.document-mobile-view {
-  display: none !important;
+.document-toolbar select {
+  min-height: 36px !important;
 }
-.full-document-editor[data-tools="false"] .full-wordcraft-frame {
-  height: calc(100% + 186px);
-  min-height: calc(100% + 186px);
-}
-@media (max-width: 600px) {
-  .app-document-toolbar .document-mobile-view {
-    display: inline-flex !important;
-    width: auto;
-    white-space: nowrap;
-  }
-  .app-document-toolbar .document-all-tools {
-    font-size: 12px;
-  }
-  .app-document-toolbar .document-all-tools > svg:first-child {
-    display: none;
-  }
-}
-html.document-html {
-  scrollbar-gutter: auto;
-  overflow: hidden;
-}
-body.document-mode {
-  margin: 0;
-}
-.document-native-pan {
-  display: none;
-}
-@media (max-width: 600px) {
-  .document-native-pan {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 6px 12px;
-    background: #f7f7f7;
-    font-size: 11px;
-    color: #777;
-  }
-  .document-native-pan input {
-    flex: 1;
-    min-width: 0;
-    accent-color: var(--accent);
-  }
-  .full-document-editor[data-tools="true"] .full-wordcraft-frame {
-    width: 1000px;
-    min-width: 1000px;
-    flex: 0 0 1000px;
-  }
-}
-
-.document-core-hint{margin:0;padding:6px 12px;font-size:11px;color:#777;flex:none}

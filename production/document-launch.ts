@@ -1,4 +1,5 @@
-import { documentFormat, DOCX_MIME, saveDocument } from "./document-files";
+import { documentFormat, DOCX_MIME } from "./document-types";
+import { loadDocumentTools } from "./load-document-tools";
 import { storeFile } from "./files";
 export function documentURL(
   file: any,
@@ -40,6 +41,7 @@ export async function convertTextDocument(
   tab.opener = null;
   tab.document.body.textContent = "문서를 준비하는 중…";
   try {
+    const { saveDocument } = await loadDocumentTools();
     const content = {
         type: "doc",
         content: String(module.text || "")

@@ -1,4 +1,4 @@
-import {documentFormat} from './document-files';
+import {documentFormat} from './document-types';
 import {openDocument} from './document-launch';
 import {moduleItemBindings} from './module-item-menu.js';
 import {useState} from 'react';

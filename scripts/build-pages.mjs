@@ -11,9 +11,7 @@ const output = 'dist/pages';
 await rm(output, {recursive:true, force:true});
 await mkdir(output, {recursive:true});
 execFileSync('python3',['scripts/package-nas.py','--output-dir',output],{stdio:'inherit'});
-execFileSync('python3',['scripts/prepare-wordcraft.py',output+'/modules/wordcraft/0.6.1'],{stdio:'inherit'});
-const wordcraftHostHash=createHash('sha256').update(await readFile(output+'/modules/wordcraft/0.6.1/app.html')).digest('hex').slice(0,12);
-const routes = {'/':'app.html', '/document-app':'document-app.js', '/document-basic':'document-basic.js', '/document-style':'document-style.css', '/production-app':'production-app.js', '/production-style':'production-style.css', '/ui-app':'ui-app.js', '/ui-style':'ui-style.css', '/account-app':'account-app.js'};
+const routes = {'/':'app.html', '/document-app':'document-app.js', '/document-pdf':'document-pdf.js', '/document-tools':'document-tools.js', '/document-style':'document-style.css', '/production-app':'production-app.js', '/production-style':'production-style.css', '/ui-app':'ui-app.js', '/ui-style':'ui-style.css', '/account-app':'account-app.js'};
 const rendered = {};
 for (const [route, file] of Object.entries(routes)) {
   const response = await application.fetch(new Request('https://build.invalid' + route), {});
@@ -22,7 +20,7 @@ for (const [route, file] of Object.entries(routes)) {
 }
 const versions = Object.fromEntries(Object.entries(rendered).filter(([file]) => file !== 'app.html').map(([file, contents]) => [file, createHash('sha256').update(contents).digest('hex').slice(0, 12)]));
 function rewrite(text) {
-  text = text.replaceAll('/api/', base + 'api/').replaceAll('modules/wordcraft/0.6.1/app.html','modules/wordcraft/0.6.1/app.html?v='+wordcraftHostHash);
+  text = text.replaceAll('/api/', base + 'api/');
   for (const [route, file] of Object.entries(routes)) {
     if (route !== '/') text = text.replaceAll(route, base + file + '?v=' + versions[file]);
   }
@@ -43,8 +41,7 @@ for (const file of ['pages-sw.js','pages-local.js','pages-loader.js','pages-upda
 const hash = text => createHash('sha256').update(text).digest('hex');
 helpers['pages-loader.js']=helpers['pages-loader.js'].replace('./pages-route.js','./pages-route.js?v='+hash(helpers['pages-route.js']).slice(0,12));
 await writeFile(output+'/pages-loader.js',helpers['pages-loader.js']);
-const wordcraft = JSON.parse(await readFile('third_party/wordcraft/source.json','utf8'));
-const version = hash(JSON.stringify({rendered,helpers,base,wordcraft,wordcraftHostHash}));
+const version = hash(JSON.stringify({rendered,helpers,base}));
 const worker = helpers['pages-sw.js'].replace("'./pages-route.js'",JSON.stringify('./pages-route.js?v='+hash(helpers['pages-route.js']).slice(0,12))).replace("'./pages-local.js'", JSON.stringify('./pages-local.js?v='+hash(helpers['pages-local.js']).slice(0,12)));
 await writeFile(output+'/pages-sw.js',worker);
 const app = await readFile(output+'/app.html','utf8');

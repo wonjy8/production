@@ -64,7 +64,7 @@ with tempfile.TemporaryDirectory() as td:
     if mode=='local':
      full=context.new_page();full.add_init_script("localStorage.setItem('production-document-editor','full')")
      full.goto(base+'?document='+note['fileId']+'&name=Note.docx&mime='+note['mime'])
-     full.wait_for_function("document.querySelector('.full-document-editor .document-heading [role=status]')?.textContent==='저장됨'",timeout=120000);full.close()
+     full.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent.endsWith('저장됨')",timeout=120000);full.close()
     page.reload();page.get_by_role('button',name='주일 말씀 '+mode,exact=True).wait_for()
     page.get_by_role('button',name='주일 말씀 '+mode+' 속성 수정',exact=True).click();page.get_by_label('분류',exact=True).fill('QT');page.get_by_role('button',name='적용',exact=True).click();page.get_by_role('dialog',name='자료 속성',exact=True).wait_for(state='detached')
     page.get_by_role('combobox',name='자료 분류 필터',exact=True).select_option('QT');assert page.locator('.resource-card').count()==1

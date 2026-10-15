@@ -61,3 +61,13 @@ NAS 구성과 인증 서버 실행 방법은 [nas/README.md](nas/README.md)를 �
 ## 다른 사람의 NAS에 설치
 
 [새 NAS Docker 설치 안내](nas/INSTALL.md)를 따르세요. `python3 scripts/package-nas.py`로 공유할 `dist/production-nas-install.zip`과 기존 서버용 `dist/production-nas-update.zip`을 만듭니다. ZIP에는 소스·설치 스크립트·README만 포함하며 실제 설정·DB·사용자 파일은 포함하지 않습니다. Pages 빌드에도 두 ZIP이 포함됩니다. 배포 후 `/production/production-nas-install.zip`에서 다운로드할 수 있습니다.
+
+## 독립 문서 편집기
+
+WordCraft/WASM 다운로드 없이 문서를 편집합니다. 문서 편집기는 문서를 열 때, 파일 생성 도구와 PDF 도구는 해당 기능을 사용할 때 불러옵니다. 표·글자 서식·쪽 여백·주석·이미지·자동저장과 DOCX 내보내기를 지원합니다. 복잡한 Word 필드 등 지원하지 않는 요소는 원본 XML을 보존하며 읽기 전용으로 표시합니다. Word의 모든 고급 기능을 편집할 수 있다는 의미는 아닙니다.
+
+PDF 내보내기는 브라우저 인쇄를 사용하지 않습니다. 현재 문서 영역의 실제 폭·글꼴·줄바꿈을 캡처하여 손실 없는 RGB 이미지로 PDF에 넣습니다. 연속된 편집 화면과 동일하게 하나의 긴 페이지로 저장하며, PDF 텍스트 검색·선택은 지원하지 않습니다. 모바일에서 줄바꿈이 달라지면 PDF도 모바일에서 보이는 배치를 따릅니다. 매우 긴 문서는 캔버스 한도에 맞춰 해상도를 줄이고, 메모리 한도를 넘으면 분할 안내를 표시합니다.
+
+## 공용 UI 소스 수정
+
+`ui/page.html`의 `{{source:ui/파일.js}}` 부분은 해당 UI 소스에서 빌드 시 삽입합니다. 서버 로직은 `worker/server.template.js`에서 수정합니다. `npm run build`가 `worker/index.js`와 번들을 생성하므로 생성 파일만 직접 수정하지 마세요.

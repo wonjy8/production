@@ -1,3 +1,4 @@
+import { loadDocumentTools } from "./load-document-tools";
 import { storeFile, readFile } from "./files";
 import { DOCX_MIME } from "./document-types";
 export const noteFields = [
@@ -100,23 +101,29 @@ export async function addResourceFile(file: File, metadata: any = {}) {
   });
 }
 export async function createNote(metadata: any) {
-  const { Document, Packer, Paragraph, TextRun } = await import("docx");
-  const doc = new Document({
-    sections: [
-      {
-        children: [
-          new Paragraph({
-            heading: "Heading1",
-            children: [new TextRun(metadata.title)],
-          }),
-          ...(metadata.content || "")
-            .split(/\r?\n/)
-            .map((line: string) => new Paragraph(line)),
-        ],
-      },
-    ],
-  });
-  const blob = await Packer.toBlob(doc);
+  const { saveDocument } = await loadDocumentTools();
+  const blob = await saveDocument(
+    {
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 1 },
+          content: [{ type: "text", text: metadata.title }],
+        },
+        ...(metadata.content || "")
+          .split(/\r?\n/)
+          .map((text: string) => ({
+            type: "paragraph",
+            ...(text ? { content: [{ type: "text", text }] } : {}),
+          })),
+      ],
+    },
+    "docx",
+    null,
+    "",
+    "",
+  );
   return addResourceFile(
     new File([blob], metadata.title.replace(/[\\/\r\n]/g, " ") + ".docx", {
       type: DOCX_MIME,

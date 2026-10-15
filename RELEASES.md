@@ -73,3 +73,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Add Database and Sermon Notes modules. New entries are real DOCX files opened in the document editor; support worship/QT/club classifications, date/place/speaker/scripture and custom text properties.
 - Existing-resource connections share the original; explicit copy creates an independent file. Database module copies retain current property values and labels.
 - NAS update required: replace `server.py`, `schema.sql`, `Dockerfile`, and add `resources.py`; rebuild the existing container. Keep `.env` and `data` unchanged. See `nas/UPDATE-0.0.6.md`.
+
+## 0.0.7
+
+- Replace WordCraft and its downloaded WASM engine with the independent document editor; retain legacy document modules and unsaved draft recovery.
+- Restore common document tools: fonts, page margins, comments, tables including merged cells, images, links and DOCX export with original package parts preserved.
+- Export PDF directly from the visible editor layout, without browser printing. Lossless image PDF uses one continuous page; text is not selectable.
+- Load document creation and PDF codecs only when requested; deduplicate shared UI sources during build.
+- NAS files and container configuration: unchanged from 0.0.6.

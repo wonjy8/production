@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { observeUI } from "../ui/decorate.js";
 import {listResources,resourceFile} from './resources';
 import { documentLibrary } from "./document-library.js";
-import { documentFormat } from "./document-files";
+import { documentFormat } from "./document-types";
 import { documentURL } from "./document-launch";
 import { Icon } from "./Icon";
 function DocumentLibrary() {

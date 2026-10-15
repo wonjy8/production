@@ -1,7 +1,8 @@
+import { documentLayout } from "./document-layout";
 import JSZip from "jszip";
 import { Document, Packer, Paragraph } from "docx";
-import {DOCX_MIME} from "./document-types";
-export {DOCX_MIME,documentFormat} from "./document-types";
+import { DOCX_MIME } from "./document-types";
+export { DOCX_MIME, documentFormat } from "./document-types";
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
   R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -31,7 +32,12 @@ const escape = (text: any) =>
   );
 const opaque = (node: Element) => ({
   type: "docxOpaque",
-  attrs: { xml: xml(node) },
+  attrs: {
+    xml: xml(node),
+    preview: Array.from(node.getElementsByTagNameNS(W, "t"))
+      .map((n) => n.textContent)
+      .join(" "),
+  },
 });
 export async function loadDocument(blob: Blob, format: string) {
   if (format === "text")
@@ -91,12 +97,35 @@ export async function loadDocument(blob: Blob, format: string) {
   if (relsText)
     for (const r of Array.from(parse(relsText).documentElement.children))
       rels.set(r.getAttribute("Id") || "", r.getAttribute("Target") || "");
-  async function runs(p: Element) {
+  const commentSource = await zip.file("word/comments.xml")?.async("string"),
+    comments = new Map<string, any>();
+  if (commentSource)
+    for (const c of Array.from(
+      parse(commentSource).getElementsByTagNameNS(W, "comment"),
+    ))
+      comments.set(val(c, "id"), {
+        id: val(c, "id"),
+        author: val(c, "author"),
+        date: val(c, "date"),
+        text: Array.from(c.getElementsByTagNameNS(W, "t"))
+          .map((t) => t.textContent)
+          .join(""),
+      });
+  async function runs(p: Element, inherited: any = null) {
+    let currentComment: any = inherited;
     const content: any[] = [];
     for (const n of children(p)) {
+      if (n.localName === "commentRangeStart") {
+        currentComment = comments.get(val(n, "id"));
+        continue;
+      }
+      if (n.localName === "commentRangeEnd") {
+        currentComment = null;
+        continue;
+      }
       if (n.localName === "pPr") continue;
       if (n.localName === "hyperlink") {
-        const nested = await runs(n);
+        const nested = await runs(n, currentComment);
         const href = rels.get(n.getAttributeNS(R, "id") || "");
         if (href && /^https?:\/\//i.test(href))
           for (const t of nested)
@@ -113,7 +142,9 @@ export async function loadDocument(blob: Blob, format: string) {
       }
       if (n.localName !== "r") continue;
       const props = child(n, "rPr"),
-        marks: any[] = [];
+        marks: any[] = currentComment
+          ? [{ type: "docxComment", attrs: currentComment }]
+          : [];
       if (props) {
         marks.push({ type: "docxRun", attrs: { xml: xml(props) } });
         for (const [tag, type] of [
@@ -128,7 +159,9 @@ export async function loadDocument(blob: Blob, format: string) {
         }
         const color = val(child(props, "color")),
           size = Number(val(child(props, "sz"))),
-          font = val(child(props, "rFonts"), "ascii");
+          font =
+            val(child(props, "rFonts"), "ascii") ||
+            val(child(props, "rFonts"), "eastAsia");
         if ((color && color !== "auto") || size || font)
           marks.push({
             type: "textStyle",
@@ -144,7 +177,13 @@ export async function loadDocument(blob: Blob, format: string) {
           content.push({ type: "text", text: part.textContent || "", marks });
         else if (part.localName === "tab")
           content.push({ type: "text", text: "\t", marks });
-        else if (part.localName === "br") content.push({ type: "hardBreak" });
+        else if (part.localName === "br")
+          content.push({
+            type: "hardBreak",
+            ...(currentComment
+              ? { marks: [{ type: "docxComment", attrs: currentComment }] }
+              : {}),
+          });
         else if (part.localName === "drawing") {
           const blip = part.getElementsByTagNameNS(
               "http://schemas.openxmlformats.org/drawingml/2006/main",
@@ -184,10 +223,29 @@ export async function loadDocument(blob: Blob, format: string) {
     return content.filter((n) => n.type !== "text" || n.text);
   }
   function unsafe(p: Element) {
+    const starts = Array.from(p.getElementsByTagNameNS(W, "commentRangeStart")),
+      ends = Array.from(p.getElementsByTagNameNS(W, "commentRangeEnd"));
+    const nested = children(p).filter((n) =>
+      ["commentRangeStart", "commentRangeEnd"].includes(n.localName),
+    );
+    let depth = 0;
+    for (const n of nested) {
+      depth += n.localName === "commentRangeStart" ? 1 : -1;
+      if (depth < 0 || depth > 1) return true;
+    }
+    if (
+      depth ||
+      starts.length !== ends.length ||
+      starts.some((n) => !comments.has(val(n, "id")))
+    )
+      return true;
     return (
       Array.from(p.getElementsByTagNameNS(W, "r")).some((r) =>
         children(r).some(
-          (n) => !["rPr", "t", "tab", "br", "drawing"].includes(n.localName),
+          (n) =>
+            !["rPr", "t", "tab", "br", "drawing", "commentReference"].includes(
+              n.localName,
+            ),
         ),
       ) ||
       Array.from(p.getElementsByTagName("*")).some((n) =>
@@ -201,7 +259,6 @@ export async function loadDocument(blob: Blob, format: string) {
           "ins",
           "footnoteReference",
           "endnoteReference",
-          "commentReference",
           "AlternateContent",
         ].includes(n.localName),
       ) ||
@@ -214,6 +271,8 @@ export async function loadDocument(blob: Blob, format: string) {
             "bookmarkStart",
             "bookmarkEnd",
             "proofErr",
+            "commentRangeStart",
+            "commentRangeEnd",
           ].includes(n.localName),
       ) ||
       Array.from(p.getElementsByTagNameNS(W, "br")).some(
@@ -256,40 +315,62 @@ export async function loadDocument(blob: Blob, format: string) {
       };
     }
     if (n.localName === "tbl") {
-      if (n.getElementsByTagNameNS(W, "vMerge").length) return opaque(n);
+      const rows: any[] = [],
+        leaders = new Map<number, any>();
+      for (const row of children(n, "tr")) {
+        const cells: any[] = [];
+        let column = 0;
+        for (const cell of children(row, "tc")) {
+          const props = child(cell, "tcPr"),
+            span = Number(props && val(child(props, "gridSpan"))) || 1,
+            merge = props && child(props, "vMerge");
+          if (merge && val(merge) !== "restart") {
+            if (
+              Array.from(cell.getElementsByTagNameNS(W, "t")).some(
+                (t) => t.textContent,
+              ) ||
+              children(props!).some(
+                (p) => !["tcW", "gridSpan", "vMerge"].includes(p.localName),
+              )
+            )
+              return opaque(n);
+            const leader = leaders.get(column);
+            if (!leader) return opaque(n);
+            leader.attrs.rowspan++;
+            column += span;
+            continue;
+          }
+          const item: any = {
+            type: "tableCell",
+            attrs: {
+              colspan: span,
+              rowspan: 1,
+              docxProperties: props ? xml(props) : null,
+            },
+            content: await blocks(
+              children(cell).filter((c) => c.localName !== "tcPr"),
+            ),
+          };
+          for (let c = column; c < column + span; c++) leaders.delete(c);
+          if (merge) leaders.set(column, item);
+          cells.push(item);
+          column += span;
+        }
+        rows.push({
+          type: "tableRow",
+          attrs: {
+            docxProperties: child(row, "trPr") ? xml(child(row, "trPr")) : null,
+          },
+          content: cells,
+        });
+      }
       return {
         type: "table",
         attrs: {
           docxProperties: child(n, "tblPr") ? xml(child(n, "tblPr")) : null,
           docxGrid: child(n, "tblGrid") ? xml(child(n, "tblGrid")) : null,
         },
-        content: await Promise.all(
-          children(n, "tr").map(async (row) => ({
-            type: "tableRow",
-            content: await Promise.all(
-              children(row, "tc").map(async (cell) => {
-                const props = child(cell, "tcPr");
-                if (props && child(props, "vMerge"))
-                  return {
-                    type: "tableCell",
-                    attrs: { docxProperties: xml(props) },
-                    content: [opaque(cell)],
-                  };
-                return {
-                  type: "tableCell",
-                  attrs: {
-                    colspan:
-                      Number(props && val(child(props, "gridSpan"))) || 1,
-                    docxProperties: props ? xml(props) : null,
-                  },
-                  content: await blocks(
-                    children(cell).filter((n) => n.localName !== "tcPr"),
-                  ),
-                };
-              }),
-            ),
-          })),
-        ),
+        content: rows,
       };
     }
     return opaque(n);
@@ -343,7 +424,26 @@ export async function loadDocument(blob: Blob, format: string) {
     return output.length ? output : [{ type: "paragraph" }];
   }
   return {
-    content: { type: "doc", content: await blocks(children(body)) },
+    content: {
+      type: "doc",
+      attrs: {
+        docxLayout: (() => {
+          const sect = children(body, "sectPr").at(-1),
+            m = sect && child(sect, "pgMar"),
+            size = sect && child(sect, "pgSz");
+          const value: any = {};
+          for (const key of ["top", "right", "bottom", "left"])
+            if (m?.hasAttributeNS(W, key))
+              value[key] = (Number(val(m, key)) * 25.4) / 1440;
+          if (size) {
+            value.width = (Number(val(size, "w")) * 25.4) / 1440;
+            value.height = (Number(val(size, "h")) * 25.4) / 1440;
+          }
+          return documentLayout(value);
+        })(),
+      },
+      content: await blocks(children(body)),
+    },
     zip,
   };
 }
@@ -384,6 +484,68 @@ export async function saveDocument(
       (await zip.file(relPath)?.async("string")) ||
         '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>',
     );
+  const commentsPath = "word/comments.xml",
+    commentDoc = parse(
+      (await zip.file(commentsPath)?.async("string")) ||
+        '<w:comments xmlns:w="' + W + '"/>',
+    );
+  let commentsChanged = false;
+  function commentXML(mark: any) {
+    const a = mark.attrs,
+      id = String(a.id);
+    let entry = Array.from(commentDoc.documentElement.children).find(
+      (n) => val(n, "id") === id,
+    );
+    if (!entry) {
+      entry = commentDoc.createElementNS(W, "w:comment");
+      entry.setAttributeNS(W, "w:id", id);
+      entry.setAttributeNS(W, "w:author", String(a.author || "사용자"));
+      entry.setAttributeNS(
+        W,
+        "w:date",
+        String(a.date || new Date().toISOString()),
+      );
+      const p = commentDoc.createElementNS(W, "w:p"),
+        r = commentDoc.createElementNS(W, "w:r"),
+        t = commentDoc.createElementNS(W, "w:t");
+      t.textContent = a.text || "";
+      r.append(t);
+      p.append(r);
+      entry.append(p);
+      commentDoc.documentElement.append(entry);
+      commentsChanged = true;
+    }
+    return escape(id);
+  }
+  function paragraphInline(nodes: any[]) {
+    let output = "",
+      current = "";
+    const close = () => {
+      if (current !== "") {
+        output +=
+          '<w:commentRangeEnd w:id="' +
+          current +
+          '"/><w:r><w:commentReference w:id="' +
+          current +
+          '"/></w:r>';
+        current = "";
+      }
+    };
+    for (const n of nodes) {
+      const mark = n.marks?.find((m: any) => m.type === "docxComment"),
+        id = mark ? commentXML(mark) : "";
+      if (id !== current) {
+        close();
+        if (id !== "") {
+          current = id;
+          output += '<w:commentRangeStart w:id="' + id + '"/>';
+        }
+      }
+      output += inline(n);
+    }
+    close();
+    return output;
+  }
   let seq = 0;
   const media: any[] = [];
   const numPath = "word/numbering.xml",
@@ -449,6 +611,9 @@ export async function saveDocument(
         const node = el.ownerDocument.createElementNS(W, "w:" + key);
         if (key === "numPr") {
           node.innerHTML = value;
+        } else if (key === "rFonts") {
+          for (const name of ["ascii", "hAnsi", "eastAsia", "cs"])
+            node.setAttributeNS(W, "w:" + name, value);
         } else node.setAttributeNS(W, "w:val", value);
         el.appendChild(node);
       }
@@ -509,6 +674,13 @@ export async function saveDocument(
       u: has("underline") ? "single" : "",
       strike: has("strike") ? "1" : "",
       color: style.color ? style.color.replace("#", "") : "",
+      ...(style.fontFamily &&
+      (!raw ||
+        (val(child(parse(raw).documentElement, "rFonts"), "ascii") ||
+          val(child(parse(raw).documentElement, "rFonts"), "eastAsia")) !==
+          style.fontFamily)
+        ? { rFonts: style.fontFamily }
+        : {}),
       sz: style.fontSize
         ? String(
             Math.round(
@@ -547,14 +719,70 @@ export async function saveDocument(
     }
     if (n.type === "listItem")
       return (n.content || []).map((c: any) => node(c, list)).join("");
-    if (n.type === "table")
+    if (n.type === "table") {
+      const pending = new Map<number, { left: number; span: number }>();
+      let rows = "";
+      for (const row of n.content || []) {
+        let column = 0,
+          cells = "";
+        const continuation = () => {
+          while (pending.has(column)) {
+            const p = pending.get(column)!;
+            cells +=
+              "<w:tc><w:tcPr>" +
+              (p.span > 1 ? '<w:gridSpan w:val="' + p.span + '"/>' : "") +
+              "<w:vMerge/></w:tcPr><w:p/></w:tc>";
+            if (--p.left === 0) pending.delete(column);
+            column += p.span;
+          }
+        };
+        for (const cell of row.content || []) {
+          continuation();
+          const span = cell.attrs?.colspan || 1;
+          cells += node(cell);
+          if (cell.attrs?.rowspan > 1)
+            pending.set(column, { left: cell.attrs.rowspan - 1, span });
+          column += span;
+        }
+        continuation();
+        rows +=
+          "<w:tr>" +
+          property(row.attrs?.docxProperties, "trPr", {}) +
+          cells +
+          "</w:tr>";
+      }
+      const columns = Math.max(
+          1,
+          ...(n.content || []).map((r: any) =>
+            (r.content || []).reduce(
+              (sum: number, c: any) => sum + (c.attrs?.colspan || 1),
+              0,
+            ),
+          ),
+        ),
+        originalGrid = n.attrs?.docxGrid
+          ? parse(n.attrs.docxGrid).documentElement
+          : null,
+        oldColumns = originalGrid ? children(originalGrid, "gridCol") : [],
+        total =
+          oldColumns.reduce((sum, c) => sum + Number(val(c, "w")), 0) || 9000,
+        grid =
+          oldColumns.length === columns
+            ? n.attrs.docxGrid
+            : "<w:tblGrid>" +
+              Array.from(
+                { length: columns },
+                () => '<w:gridCol w:w="' + Math.floor(total / columns) + '"/>',
+              ).join("") +
+              "</w:tblGrid>";
       return (
         "<w:tbl>" +
         property(n.attrs?.docxProperties, "tblPr", {}) +
-        (n.attrs?.docxGrid || "") +
-        (n.content || []).map((c: any) => node(c)).join("") +
+        grid +
+        rows +
         "</w:tbl>"
       );
+    }
     if (n.type === "tableRow")
       return (
         "<w:tr>" +
@@ -566,6 +794,7 @@ export async function saveDocument(
         "<w:tc>" +
         property(n.attrs?.docxProperties, "tcPr", {
           gridSpan: n.attrs?.colspan > 1 ? String(n.attrs.colspan) : "",
+          vMerge: n.attrs?.rowspan > 1 ? "restart" : "",
         }) +
         (n.content || [{ type: "paragraph" }])
           .map((c: any) => node(c))
@@ -596,7 +825,7 @@ export async function saveDocument(
               '"/>'
             : "",
         });
-      return "<w:p>" + pr + (n.content || []).map(inline).join("") + "</w:p>";
+      return "<w:p>" + pr + paragraphInline(n.content || []) + "</w:p>";
     }
     if (n.type === "horizontalRule")
       return '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6"/></w:pBdr></w:pPr></w:p>';
@@ -644,6 +873,41 @@ export async function saveDocument(
       "</w:body>",
   );
   body.replaceWith(document.importNode(result.documentElement, true));
+  if (content.attrs?.docxLayout) {
+    const layout = documentLayout(content.attrs.docxLayout),
+      sect = children(result.documentElement, "sectPr").at(-1);
+    if (sect) {
+      let margins = child(sect, "pgMar");
+      if (!margins) {
+        margins = result.createElementNS(W, "w:pgMar");
+        sect.append(margins);
+      }
+      for (const key of ["top", "right", "bottom", "left"])
+        margins.setAttributeNS(
+          W,
+          "w:" + key,
+          String(Math.round(((layout as any)[key] / 25.4) * 1440)),
+        );
+      let size = child(sect, "pgSz");
+      if (!size) {
+        size = result.createElementNS(W, "w:pgSz");
+        sect.prepend(size);
+      }
+      size.setAttributeNS(
+        W,
+        "w:w",
+        String(Math.round((layout.width / 25.4) * 1440)),
+      );
+      size.setAttributeNS(
+        W,
+        "w:h",
+        String(Math.round((layout.height / 25.4) * 1440)),
+      );
+      document
+        .getElementsByTagNameNS(W, "body")[0]
+        .replaceWith(document.importNode(result.documentElement, true));
+    }
+  }
   zip.file("word/document.xml", xml(document));
   if (numId) {
     zip.file(numPath, xml(numbering));
@@ -653,6 +917,15 @@ export async function saveDocument(
       )
     )
       relation("numbering", "numbering.xml");
+  }
+  if (commentsChanged) {
+    zip.file(commentsPath, xml(commentDoc));
+    if (
+      !Array.from(rels.documentElement.children).some((n) =>
+        (n.getAttribute("Type") || "").endsWith("/comments"),
+      )
+    )
+      relation("comments", "comments.xml");
   }
   zip.file(relPath, xml(rels));
   const types = parse(await zip.file("[Content_Types].xml").async("string"));
@@ -672,6 +945,23 @@ export async function saveDocument(
       "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml",
     );
     types.documentElement.appendChild(n);
+  }
+  if (
+    commentsChanged &&
+    !Array.from(types.documentElement.children).some(
+      (n) => n.getAttribute("PartName") === "/word/comments.xml",
+    )
+  ) {
+    const n = types.createElementNS(
+      types.documentElement.namespaceURI,
+      "Override",
+    );
+    n.setAttribute("PartName", "/word/comments.xml");
+    n.setAttribute(
+      "ContentType",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+    );
+    types.documentElement.append(n);
   }
   for (const item of media) {
     zip.file("word/media/" + item.filename, item.data, { base64: true });

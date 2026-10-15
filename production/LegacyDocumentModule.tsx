@@ -1,7 +1,7 @@
 // Existing Wordcraft placements remain convertible; the editor is no longer a Hub module.
 import { useState } from "react";
 import { convertTextDocument } from "./document-launch";
-export function WordcraftModule({
+export function LegacyDocumentModule({
   module,
   onChange,
 }: {
@@ -11,7 +11,7 @@ export function WordcraftModule({
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   return (
-    <div className="wordcraft-module">
+    <div className="legacy-document-module">
       <p>문서편집기는 파일에서 새 탭으로 열 수 있습니다.</p>
       <button
         className="button keep-label"

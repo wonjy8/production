@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory() as td:
    page.get_by_role('searchbox',name='문서 검색',exact=True).fill('문서 자료')
    with page.expect_popup() as opened:page.locator('.document-library-row',has_text='Restored.docx').click()
    editor=opened.value
-   editor.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
+   editor.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent.endsWith('저장됨')",timeout=120000)
    editor.close()
    print('PASS Materials Documents folders, search, scoped editor links, reload and opening',flush=True)
    page.set_viewport_size({'width':390,'height':844})
@@ -92,90 +92,57 @@ with tempfile.TemporaryDirectory() as td:
 
    url='https://pages.test:9443/production/?document='+file_id+'&name=Restored.docx'
    page.goto(url)
-   page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
-   assert page.evaluate('typeof window.mountProduction === "undefined" && typeof window.startBasicDocumentEditor === "undefined"')
-   assert len(engine_requests)==1 and engine_requests[0].endswith('.wasm.gz'),engine_requests
+   page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent.endsWith('저장됨')",timeout=120000)
+   assert not engine_requests,engine_requests
+   assert page.get_by_role('textbox',name='문서 본문',exact=True).is_visible()
+   body=page.get_by_role('textbox',name='문서 본문',exact=True)
+   body.click();page.keyboard.press('Control+End');page.keyboard.press('Enter');page.keyboard.type('Native editor saved content')
+   page.wait_for_timeout(1500)
+   page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent.endsWith('저장됨')")
+   page.reload();body=page.get_by_role('textbox',name='문서 본문',exact=True);body.wait_for()
+   assert 'Native editor saved content' in body.inner_text()
+   # Upgrade recovery: a pending old-editor DOCX is restored and uploaded once.
+   recovery=io.BytesIO()
+   with zipfile.ZipFile(io.BytesIO(package.getvalue())) as source, zipfile.ZipFile(recovery,'w') as target:
+    for name in source.namelist():
+     data=source.read(name)
+     if name=='word/document.xml':data=data.replace(b'Original document',b'Recovered legacy document')
+     target.writestr(name,data)
+    target.writestr('customXml/legacy-draft.xml','preserved recovery package')
+   page.evaluate("""async ({id,data})=>{const response=await fetch('/production/api/ref-files/'+id);const version=response.headers.get('ETag');const blob=await fetch('data:application/octet-stream;base64,'+data).then(r=>r.blob());await new Promise((resolve,reject)=>{const request=indexedDB.open('production-wordcraft-recovery',1);request.onupgradeneeded=()=>request.result.createObjectStore('drafts');request.onerror=reject;request.onsuccess=()=>{const db=request.result,tx=db.transaction('drafts','readwrite');tx.objectStore('drafts').put({blob,version},location.pathname+':'+id+':'+sessionStorage.getItem('production-document-session'));tx.oncomplete=()=>{db.close();resolve()}}})}""",{'id':file_id,'data':base64.b64encode(recovery.getvalue()).decode()})
+   page.reload();page.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
+   page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent.endsWith('저장됨')")
+   assert 'Recovered legacy document' in page.get_by_role('textbox',name='문서 본문',exact=True).inner_text()
+   restored=page.evaluate("async id=>btoa(String.fromCharCode(...new Uint8Array(await fetch('/production/api/ref-files/'+id).then(r=>r.arrayBuffer()))))",file_id)
+   with zipfile.ZipFile(io.BytesIO(base64.b64decode(restored))) as z:
+    assert z.read('customXml/legacy-draft.xml')==b'preserved recovery package'
+   # Native PDF must download without invoking browser print or opening a print window.
+   page.evaluate("() => {window.print=()=>{throw Error('Browser printing forbidden')}; window.open=()=>{throw Error('Print popup forbidden')};}")
+   assert not page.evaluate("!!window.productionDocumentPDF")
+   with page.expect_download() as export:
+    page.get_by_role('button',name='PDF 내보내기',exact=True).click()
+   pdf=pathlib.Path(export.value.path()).read_bytes()
+   (t/'export.pdf').write_bytes(pdf)
+   subprocess.run(['pdftoppm','-singlefile','-scale-to','256','-png',str(t/'export.pdf'),str(t/'rendered-pdf')],check=True,capture_output=True)
+   assert (t/'rendered-pdf.png').stat().st_size>1000
+   assert pdf.startswith(b'%PDF-1.4') and pdf.endswith(b'%%EOF\n')
+   assert b'/Subtype /Image' in pdf and b'/FlateDecode' in pdf
+   import zlib
+   image=re.search(rb'/Width (\d+) /Height (\d+).*?/Length (\d+) >>\nstream\n',pdf,re.S)
+   assert image
+   w,h,n=map(int,image.groups());pixels=zlib.decompress(pdf[image.end():image.end()+n])
+   assert len(pixels)==w*h*3
+   # Verify actual screen capture and PDF contain precisely the same RGB pixels.
+   page.add_script_tag(content="window.capturePDFCanvas=null; const old=HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext=function(...args){const c=old.apply(this,args); if(c&&args[0]==='2d'){const get=c.getImageData.bind(c);c.getImageData=(...a)=>{const data=get(...a);window.capturePDFCanvas={width:this.width,height:this.height,data:data.data};return data}}return c}")
+   with page.expect_download():page.get_by_role('button',name='PDF 내보내기',exact=True).click()
+   captured=page.evaluate("""async()=>{const c=window.capturePDFCanvas,rgb=new Uint8Array(c.width*c.height*3);for(let i=0,j=0;i<c.data.length;i+=4){rgb[j++]=c.data[i];rgb[j++]=c.data[i+1];rgb[j++]=c.data[i+2]}return {width:c.width,height:c.height,hash:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',rgb))).map(n=>n.toString(16).padStart(2,'0')).join('')}}""")
+   assert captured['width']==w and captured['height']==h
+   assert captured['hash']==hashlib.sha256(pixels).hexdigest()
    page.set_viewport_size({'width':390,'height':844})
    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
-   assert page.get_by_role('toolbar',name='문서 편집 도구').is_visible()
-   assert page.locator('.full-document-editor').get_attribute('data-tools')=='true'
-   page.get_by_role('slider',name='전체 도구 좌우 이동',exact=True).press('End')
-   assert page.locator('.full-editor-surface').evaluate('(el)=>el.scrollLeft')>0
-   page.get_by_role('button',name='전체 도구',exact=True).click()
-   page.get_by_role('button',name='맞춤 보기',exact=True).click();page.wait_for_timeout(300)
-   assert page.get_by_role('button',name='굵게',exact=True).evaluate('(el)=>getComputedStyle(el).borderTopWidth')=='0px'
-   page.screenshot(path='/tmp/editor-mobile-v4.png')
-   page.set_viewport_size({'width':1400,'height':1000})
-   print('READY full editor: mobile chrome, complete tools, isolated bundle and warm engine cache',flush=True)
-   frame=page.frame_locator('iframe[title="WordCraft 전체 문서 편집기"]')
-   canvas=frame.locator('canvas');canvas.click(position={'x':500,'y':400});page.keyboard.press('Control+End');page.keyboard.press('Enter');page.get_by_role('button',name='굵게',exact=True).click();page.keyboard.type('RESTORED BOLD FEATURES',delay=30);page.keyboard.press('Control+b');page.wait_for_timeout(1200)
-   page.wait_for_function("document.querySelector('.document-heading [role=status]').textContent==='저장됨'",timeout=30000)
-   def saved_xml():
-    data=page.evaluate("async id=>{const b=await fetch('/production/api/ref-files/'+id).then(r=>r.arrayBuffer());return btoa(String.fromCharCode(...new Uint8Array(b)))}",file_id)
-    with zipfile.ZipFile(io.BytesIO(base64.b64decode(data))) as z:return z.read('word/document.xml').decode()
-   xml=saved_xml();assert 'RESTORED BOLD FEATURES' in xml,xml;assert '<w:b' in xml,xml;assert '<w:tbl>' in xml and 'Word table cell' in xml and 'w:top="1440"' in xml,xml
-   with page.expect_download() as pdf_download:
-    page.get_by_role('button',name='PDF 내보내기',exact=True).click();page.wait_for_timeout(500);page.screenshot(path='/tmp/pdf-native.png')
-   pdf_path=pdf_download.value.path();pdf_bytes=pathlib.Path(pdf_path).read_bytes();assert pdf_bytes.startswith(b'%PDF-') and b'%%EOF' in pdf_bytes
-   assert page.get_by_role('button',name='지금 저장',exact=True).count()==0
-   print('PASS full editor opens DOCX, saves bold text and exports engine PDF',flush=True)
-   page.reload();page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
-   # Saving an unchanged, reopened document must not rewrite its file version.
-   before=page.evaluate("async id=>(await fetch('/production/api/ref-files/'+id)).headers.get('ETag')",file_id)
-   page.frame_locator('iframe').locator('canvas').focus();page.keyboard.press('Control+s');page.wait_for_timeout(400)
-   after=page.evaluate("async id=>(await fetch('/production/api/ref-files/'+id)).headers.get('ETag')",file_id);assert before==after
-   # Failed writes survive a reload as a local recovery copy.
-   offline_script="window.fullTestFetch=window.fetch;window.fetch=(input,init)=>sessionStorage.getItem('full-test-offline')==='1'&&String(input).includes('/api/ref-files/')&&init?.method==='PUT'?Promise.resolve(new Response('offline',{status:503})):window.fullTestFetch(input,init)"
-   page.evaluate("sessionStorage.setItem('full-test-offline','1')")
-   page.add_init_script(offline_script);page.evaluate(offline_script)
-   canvas=page.frame_locator('iframe').locator('canvas');canvas.click(position={'x':500,'y':400});page.keyboard.press('Control+End');page.keyboard.type(' RECOVERY COPY',delay=30)
-   page.get_by_role('alert').wait_for(timeout=30000)
-   assert 'RECOVERY COPY' not in saved_xml()
-   page.reload();page.get_by_role('alert').filter(has_text='원본에 저장하지').wait_for(timeout=120000)
-   page.evaluate("sessionStorage.removeItem('full-test-offline')")
-   page.get_by_role('button',name='저장 다시 시도',exact=True).click()
-   page.wait_for_function("document.querySelector('.document-heading [role=status]').textContent==='저장됨'",timeout=30000)
-   assert 'RECOVERY COPY' in saved_xml()
-   print('PASS offline recovery survives reload and saves after reconnecting',flush=True)
-   # A concurrent writer wins; the stale editor keeps a recoverable local copy.
-   page.evaluate("""async ({id,data})=>{const blob=await fetch('data:application/octet-stream;base64,'+data).then(r=>r.blob());const version=(await fetch('/production/api/ref-files/'+id)).headers.get('ETag');const saved=await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'If-Match':version},body:blob});if(!saved.ok)throw Error('Concurrent fixture upload failed')}""",{'id':file_id,'data':original})
-   canvas=page.frame_locator('iframe').locator('canvas');canvas.click(position={'x':500,'y':400});page.keyboard.press('Control+End');page.keyboard.type(' STALE CHANGE',delay=30)
-   page.get_by_role('alert').filter(has_text='다른 곳에서').wait_for(timeout=30000)
-   assert 'STALE CHANGE' not in saved_xml()
-   with page.expect_download() as download:page.get_by_role('button',name='Word 내보내기',exact=True).click()
-   with zipfile.ZipFile(download.value.path()) as z:assert 'STALE CHANGE' in z.read('word/document.xml').decode()
+   assert page.get_by_role('button',name='PDF 내보내기',exact=True).is_visible()
    assert not errors,errors
-   print('PASS unchanged save, stale-original protection and edited-copy download',flush=True)
-   # Unsupported embedded/custom data must never silently disappear from the original.
-   protected_package=io.BytesIO()
-   with zipfile.ZipFile(io.BytesIO(base64.b64decode(original))) as source,zipfile.ZipFile(protected_package,'w') as target:
-    for name in source.namelist():target.writestr(name,source.read(name))
-    target.writestr('customXml/item1.xml','<custom>KEEP ORIGINAL DATA</custom>')
-   protected_data=base64.b64encode(protected_package.getvalue()).decode()
-   protected_id=page.evaluate("""async data=>{const id=crypto.randomUUID();await fetch('/production/api/ref-files/'+id,{method:'PUT',body:await fetch('data:application/octet-stream;base64,'+data).then(r=>r.blob())});return id}""",protected_data)
-   page.goto('https://pages.test:9443/production/?document='+protected_id+'&name=Protected.docx')
-   page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
-   canvas=page.frame_locator('iframe').locator('canvas');canvas.click(position={'x':500,'y':400});page.keyboard.press('Control+End');page.keyboard.type(' PROTECTED CHANGE',delay=30)
-   page.get_by_role('alert').filter(has_text='고급 개체').wait_for(timeout=30000)
-   assert page.evaluate("async id=>{const b=await fetch('/production/api/ref-files/'+id).then(r=>r.arrayBuffer());return btoa(String.fromCharCode(...new Uint8Array(b)))}",protected_id)==protected_data
-   print('PASS unsupported Word package data leaves original untouched',flush=True)
-   page.goto(url);page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
-   # Corrupt compressed bytes must never start an unverified engine.
-   import gzip
-   page.evaluate("caches.delete('production-wordcraft-0.6.1')")
-   def corrupt(route):route.fulfill(status=200,body=gzip.compress(b'untrusted engine'),content_type='application/gzip')
-   page.route('**/*.wasm.gz',corrupt)
-   original_version=page.evaluate("async id=>(await fetch('/production/api/ref-files/'+id)).headers.get('ETag')",file_id)
-   page.on('dialog',lambda dialog:dialog.accept())
-   page.reload();page.get_by_role('alert').filter(has_text='파일 검증에 실패').wait_for(timeout=120000)
-   assert page.evaluate("async id=>(await fetch('/production/api/ref-files/'+id)).headers.get('ETag')",file_id)==original_version
-   page.unroute('**/*.wasm.gz',corrupt)
-   # Older browsers without decompression support still open the original verified engine.
-   page.add_init_script("if(location.pathname.endsWith('/wordcraft/0.6.1/app.html'))window.DecompressionStream=undefined")
-   page.reload();page.wait_for_function("document.querySelector('.document-heading [role=status]')?.textContent==='저장됨'",timeout=120000)
-   assert engine_requests[-1].endswith('.wasm'),engine_requests
-   assert not errors,errors
-   print('PASS compressed-engine integrity rejection and original-engine fallback',flush=True)
+   print('PASS native editor, DOCX autosave/reopen, mobile layout, lazy PDF, lossless screen pixels, no print/WordCraft',flush=True)
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

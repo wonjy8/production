@@ -1,6 +1,4 @@
-import { createRoot } from "react-dom/client";
-import { FullDocumentEditor } from "./FullDocumentEditor";
-import { documentFormat } from "./document-types";
+import { mountDocumentEditor } from "./DocumentEditor";
 (window as any).startDocumentEditor = async () => {
   const params = new URLSearchParams(location.search),
     id = params.get("document");
@@ -28,20 +26,5 @@ import { documentFormat } from "./document-types";
     name: params.get("name") || "문서.docx",
     mime: params.get("mime"),
   };
-  if (
-    documentFormat(file) === "docx" &&
-    localStorage.getItem("production-document-editor") !== "basic"
-  )
-    createRoot(host).render(<FullDocumentEditor file={file} />);
-  else {
-    await new Promise<void>((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "/document-basic";
-      script.onload = () => resolve();
-      script.onerror = () =>
-        reject(Error("문서 편집기를 불러오지 못했습니다."));
-      document.head.append(script);
-    });
-    (window as any).startBasicDocumentEditor(file, host);
-  }
+  mountDocumentEditor(file, host);
 };

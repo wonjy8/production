@@ -1,3 +1,6 @@
+import { loadDocumentPDF } from "./load-document-tools";
+import { legacyDraft } from "./legacy-document-drafts";
+import { documentLayout } from "./document-layout";
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Editor, Extension, Mark, Node as TiptapNode } from "@tiptap/core";
@@ -14,6 +17,10 @@ const preserve = Extension.create({
   addGlobalAttributes() {
     return [
       {
+        types: ["doc"],
+        attributes: { docxLayout: { default: null, rendered: false } },
+      },
+      {
         types: ["bulletList", "orderedList"],
         attributes: {
           docxNumId: { default: null, rendered: false },
@@ -21,7 +28,14 @@ const preserve = Extension.create({
         },
       },
       {
-        types: ["paragraph", "heading", "table", "tableCell", "tableHeader"],
+        types: [
+          "paragraph",
+          "heading",
+          "table",
+          "tableRow",
+          "tableCell",
+          "tableHeader",
+        ],
         attributes: {
           docxProperties: { default: null, rendered: false },
           docxHeading: { default: null, rendered: false },
@@ -51,7 +65,10 @@ const runProperties = Mark.create({
   name: "docxRun",
   inclusive: false,
   addAttributes() {
-    return { xml: { default: null, rendered: false } };
+    return {
+      xml: { default: null, rendered: false },
+      preview: { default: "", rendered: false },
+    };
   },
   parseHTML() {
     return [];
@@ -60,22 +77,51 @@ const runProperties = Mark.create({
     return ["span", 0];
   },
 });
+const commentMark = Mark.create({
+  name: "docxComment",
+  inclusive: false,
+  addAttributes() {
+    return {
+      id: { default: "" },
+      text: { default: "" },
+      author: { default: "" },
+      date: { default: "" },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "mark[data-comment-id]" }];
+  },
+  renderHTML({ mark }) {
+    return [
+      "mark",
+      {
+        class: "docx-comment",
+        "data-comment-id": mark.attrs.id,
+        title: mark.attrs.text,
+      },
+      0,
+    ];
+  },
+});
 const opaque = TiptapNode.create({
   name: "docxOpaque",
   group: "block",
   atom: true,
   draggable: false,
   addAttributes() {
-    return { xml: { default: null, rendered: false } };
+    return {
+      xml: { default: null, rendered: false },
+      preview: { default: "", rendered: false },
+    };
   },
   parseHTML() {
     return [];
   },
-  renderHTML() {
+  renderHTML({ node }) {
     return [
       "div",
       { class: "document-preserved", contenteditable: "false" },
-      "이 요소는 원본 형식으로 보존됩니다.",
+      node.attrs.preview || "이 요소는 원본 형식으로 보존됩니다.",
     ];
   },
 });
@@ -97,9 +143,40 @@ function DocumentEditor({ file }: { file: any }) {
     editor = useRef<Editor | null>(null),
     session = useRef<any>(null);
   const [ready, setReady] = useState(false),
+    [oldRecovery, setOldRecovery] = useState<Blob | null>(null),
     [status, setStatus] = useState("문서를 불러오는 중…"),
     [error, setError] = useState(""),
-    [active, setActive] = useState(0);
+    [active, setActive] = useState(0),
+    [comment, setComment] = useState<any>(null),
+    [showComments, setShowComments] = useState(false),
+    [showLayout, setShowLayout] = useState(false);
+  const layout = documentLayout(editor.current?.getJSON().attrs?.docxLayout);
+  const comments = new Map<string, any>();
+  editor.current?.state.doc.descendants((node: any, pos: number) =>
+    node.marks.forEach((m: any) => {
+      if (m.type.name === "docxComment" && !comments.has(m.attrs.id))
+        comments.set(m.attrs.id, { ...m.attrs, pos });
+    }),
+  );
+  function applyLayout(key: string, value: string) {
+    const next = documentLayout({ ...layout, [key]: Number(value) });
+    editor.current?.commands.command(({ tr }: any) => {
+      tr.setDocAttribute("docxLayout", next);
+      return true;
+    });
+    setActive((v) => v + 1);
+  }
+  function addComment() {
+    const ed = editor.current;
+    if (!ed) return;
+    const { from, to, $from, $to } = ed.state.selection;
+    if (from === to || !$from.sameParent($to)) {
+      setError("주석을 달 한 문단 안의 텍스트를 선택하세요.");
+      return;
+    }
+    setComment({ from, to, text: "" });
+  }
+
   const [sessionId] = useState(documentSession);
   const format = documentFormat(file),
     draftKey =
@@ -196,6 +273,10 @@ function DocumentEditor({ file }: { file: any }) {
             (result.sha256 ? '"' + result.sha256 + '"' : "");
           if (!s.version) throw Error("저장 버전을 확인할 수 없습니다.");
           s.saved = generation;
+          if (s.legacyKey) {
+            await legacyDraft(s.legacyKey, true);
+            s.legacyKey = null;
+          }
           setError("");
           if (!dirty()) {
             try {
@@ -261,6 +342,19 @@ function DocumentEditor({ file }: { file: any }) {
         if (disposed) return;
         let content = loaded.content,
           restored = false;
+        if (!localStorage.getItem(draftKey)) {
+          const key = location.pathname + ":" + file.id + ":" + sessionId,
+            old = await legacyDraft(key);
+          if (old?.blob) {
+            if (old.version === s.version) {
+              const recovered = await loadDocument(old.blob, format);
+              content = recovered.content;
+              s.zip = recovered.zip;
+              restored = true;
+              s.legacyKey = key;
+            } else setOldRecovery(old.blob);
+          }
+        }
         try {
           const draft = JSON.parse(localStorage.getItem(draftKey) || "null");
           if (draft?.content) {
@@ -272,6 +366,7 @@ function DocumentEditor({ file }: { file: any }) {
         editor.current = new Editor({
           element: host.current!,
           extensions: [
+            commentMark,
             StarterKit.configure({
               link: { openOnClick: false, protocols: ["https", "http"] },
             }),
@@ -422,23 +517,78 @@ function DocumentEditor({ file }: { file: any }) {
           </span>
         </div>
         <span className="document-autosave-label">자동저장</span>
-        {format === "docx" && (
-          <button
-            className="keep-label"
-            onClick={async () => {
-              if (!(await session.current?.flush())) return;
-              localStorage.setItem("production-document-editor", "full");
-              location.reload();
-            }}
-          >
-            전체 기능
-          </button>
-        )}
+        <button
+          className="keep-label"
+          disabled={!ready}
+          onClick={() =>
+            session.current?.download().catch((e: any) => setError(e.message))
+          }
+        >
+          {format === "docx" ? "Word 내보내기" : "파일 내보내기"}
+        </button>
+        <button
+          className="keep-label"
+          disabled={!ready}
+          onClick={async (event) => {
+            const button = event.currentTarget;
+            button.disabled = true;
+            button.textContent = "PDF 만드는 중…";
+            try {
+              const exportPDF = await loadDocumentPDF();
+              const sheet = editor.current!.view.dom.closest(
+                ".document-sheet",
+              ) as HTMLElement;
+              const blob = await exportPDF(sheet);
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = file.name.replace(/\.[^.]+$/, "") + ".pdf";
+              link.click();
+              setTimeout(() => URL.revokeObjectURL(url), 60000);
+            } catch (e: any) {
+              setError(e.message);
+            } finally {
+              button.disabled = false;
+              button.textContent = "PDF 내보내기";
+            }
+          }}
+        >
+          PDF 내보내기
+        </button>
       </header>
       <div className="document-toolbar" role="toolbar" aria-label="문서 서식">
         {command("실행 취소", (ed) => ed.chain().focus().undo().run())}
         {command("다시 실행", (ed) => ed.chain().focus().redo().run())}
         <span className="document-tool-divider" />
+        {format === "docx" && (
+          <>
+            <button
+              className="document-tool keep-label"
+              disabled={!ready}
+              aria-expanded={showLayout}
+              onClick={() => setShowLayout(!showLayout)}
+            >
+              쪽·여백
+            </button>
+            <button
+              className="document-tool keep-label"
+              disabled={!ready}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={addComment}
+            >
+              주석 추가
+            </button>
+            <button
+              className="document-tool keep-label"
+              disabled={!ready}
+              aria-expanded={showComments}
+              onClick={() => setShowComments(!showComments)}
+            >
+              주석 {comments.size}
+            </button>
+          </>
+        )}
+
         <select
           className="keep-label"
           aria-label="문단 스타일"
@@ -471,6 +621,33 @@ function DocumentEditor({ file }: { file: any }) {
         {format !== "text" && (
           <>
             <select
+              aria-label="글꼴"
+              className="keep-label"
+              disabled={!ready}
+              value={
+                editor.current?.getAttributes("textStyle").fontFamily || "Arial"
+              }
+              onChange={(e) => {
+                editor.current
+                  ?.chain()
+                  .focus()
+                  .setFontFamily(e.target.value)
+                  .run();
+                setActive((v) => v + 1);
+              }}
+            >
+              {[
+                "Arial",
+                "맑은 고딕",
+                "Noto Sans KR",
+                "바탕",
+                "Times New Roman",
+                "Calibri",
+              ].map((font) => (
+                <option key={font}>{font}</option>
+              ))}
+            </select>
+            <select
               aria-label="글자 크기"
               className="keep-label"
               value={
@@ -491,6 +668,22 @@ function DocumentEditor({ file }: { file: any }) {
                 </option>
               ))}
             </select>
+            {command("링크", (ed) => {
+              const href = window.prompt(
+                "HTTPS 링크",
+                ed.getAttributes("link").href || "https://",
+              );
+              if (href === null) return;
+              if (!href) {
+                ed.chain().focus().unsetLink().run();
+                return;
+              }
+              if (!/^https?:\/\//i.test(href)) {
+                setError("HTTP 또는 HTTPS 주소를 입력하세요.");
+                return;
+              }
+              ed.chain().focus().setLink({ href }).run();
+            })}
             {command("bold", (ed) => ed.chain().focus().toggleBold().run())}
             {command("italic", (ed) => ed.chain().focus().toggleItalic().run())}
             {command("underline", (ed) =>
@@ -538,6 +731,36 @@ function DocumentEditor({ file }: { file: any }) {
             {command("orderedList", (ed) =>
               ed.chain().focus().toggleOrderedList().run(),
             )}
+            <label className="document-tool keep-label">
+              이미지 추가
+              <input
+                style={{ display: "none" }}
+                type="file"
+                accept="image/png,image/jpeg,image/gif"
+                aria-label="문서 이미지 추가"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  if (
+                    !/^image\/(png|jpeg|gif)$/.test(file.type) ||
+                    file.size > 10 * 1024 * 1024
+                  ) {
+                    setError("PNG, JPEG, GIF 이미지를 10MB 이하로 선택하세요.");
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onload = () =>
+                    editor.current
+                      ?.chain()
+                      .focus()
+                      .setImage({ src: String(reader.result) })
+                      .run();
+                  reader.onerror = () => setError("이미지를 읽지 못했습니다.");
+                  reader.readAsDataURL(file);
+                }}
+              />
+            </label>
             {command("표 삽입", (ed) =>
               ed
                 .chain()
@@ -553,6 +776,18 @@ function DocumentEditor({ file }: { file: any }) {
                 {command("열 추가", (ed) =>
                   ed.chain().focus().addColumnAfter().run(),
                 )}
+                {command("행 삭제", (ed) =>
+                  ed.chain().focus().deleteRow().run(),
+                )}
+                {command("열 삭제", (ed) =>
+                  ed.chain().focus().deleteColumn().run(),
+                )}
+                {command("셀 병합", (ed) =>
+                  ed.chain().focus().mergeCells().run(),
+                )}
+                {command("셀 분할", (ed) =>
+                  ed.chain().focus().splitCell().run(),
+                )}
                 {command("표 삭제", (ed) =>
                   ed.chain().focus().deleteTable().run(),
                 )}
@@ -561,6 +796,128 @@ function DocumentEditor({ file }: { file: any }) {
           </>
         )}
       </div>
+      {oldRecovery && (
+        <div className="document-error" role="alert">
+          이전 편집기의 복구본이 있습니다. 원본 버전이 달라 자동 적용하지
+          않았습니다.
+          <button
+            className="keep-label"
+            onClick={() => downloadBlob(oldRecovery, file.name)}
+          >
+            이전 복구본 내려받기
+          </button>
+        </div>
+      )}
+      {showLayout && format === "docx" && (
+        <fieldset className="document-layout-controls">
+          <legend>쪽·여백 (mm)</legend>
+          {[
+            ["width", "쪽 너비"],
+            ["height", "쪽 높이"],
+            ["top", "위 여백"],
+            ["right", "오른쪽 여백"],
+            ["bottom", "아래 여백"],
+            ["left", "왼쪽 여백"],
+          ].map(([key, label]) => (
+            <label key={key}>
+              {label}
+              <input
+                type="number"
+                aria-label={label}
+                min={["width", "height"].includes(key) ? 100 : 0}
+                max={["width", "height"].includes(key) ? 600 : 80}
+                step="0.1"
+                value={Math.round((layout as any)[key] * 10) / 10}
+                onChange={(e) => applyLayout(key, e.target.value)}
+              />
+            </label>
+          ))}
+        </fieldset>
+      )}
+      {comment && (
+        <form
+          className="document-comment-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const id = String(
+              crypto.getRandomValues(new Uint32Array(1))[0] & 0x3fffffff,
+            );
+            editor.current
+              ?.chain()
+              .focus()
+              .setTextSelection({ from: comment.from, to: comment.to })
+              .setMark("docxComment", {
+                id,
+                text: comment.text,
+                author: (window as any).appAccount?.profile?.name || "사용자",
+                date: new Date().toISOString(),
+              })
+              .run();
+            setComment(null);
+            setShowComments(true);
+            setActive((v) => v + 1);
+          }}
+        >
+          <label>
+            주석
+            <input
+              aria-label="주석 내용"
+              autoFocus
+              required
+              maxLength={2000}
+              value={comment.text}
+              onChange={(e) => setComment({ ...comment, text: e.target.value })}
+            />
+          </label>
+          <button className="keep-label">주석 적용</button>
+          <button
+            type="button"
+            className="keep-label"
+            onClick={() => setComment(null)}
+          >
+            취소
+          </button>
+        </form>
+      )}
+      {showComments && (
+        <aside className="document-comments" aria-label="문서 주석">
+          {[...comments.values()].map((c) => (
+            <div key={c.id}>
+              <button
+                className="keep-label"
+                onClick={() =>
+                  editor.current?.chain().focus().setTextSelection(c.pos).run()
+                }
+              >
+                {c.author}: {c.text}
+              </button>
+              <button
+                className="keep-label danger"
+                aria-label={"주석 삭제 " + c.text}
+                onClick={() => {
+                  const ed = editor.current;
+                  if (!ed) return;
+                  ed.commands.command(({ tr, doc }: any) => {
+                    doc.descendants((n: any, pos: number) => {
+                      for (const m of n.marks)
+                        if (
+                          m.type.name === "docxComment" &&
+                          m.attrs.id === c.id
+                        )
+                          tr.removeMark(pos, pos + n.nodeSize, m);
+                    });
+                    return true;
+                  });
+                  setActive((v) => v + 1);
+                }}
+              >
+                삭제
+              </button>
+            </div>
+          ))}
+          {!comments.size && <p>선택한 텍스트에 주석을 추가할 수 있습니다.</p>}
+        </aside>
+      )}
       {error && (
         <div className="document-error" role="alert">
           <span>{error}</span>
@@ -589,7 +946,17 @@ function DocumentEditor({ file }: { file: any }) {
         </div>
       )}
       <div className="document-scroll">
-        <div className="document-sheet" ref={host} />
+        <div
+          className="document-sheet"
+          ref={host}
+          style={{
+            maxWidth: layout.width + "mm",
+            paddingTop: layout.top + "mm",
+            paddingRight: "min(" + layout.right + "mm, 8vw)",
+            paddingBottom: layout.bottom + "mm",
+            paddingLeft: "min(" + layout.left + "mm, 8vw)",
+          }}
+        />
       </div>
       <footer className="document-footer">
         원본 파일에 자동으로 저장됩니다.
@@ -598,4 +965,6 @@ function DocumentEditor({ file }: { file: any }) {
     </main>
   );
 }
-(window as any).startBasicDocumentEditor = (file:any,host:HTMLElement) => {createRoot(host).render(<DocumentEditor file={file}/>)};
+export function mountDocumentEditor(file: any, host: HTMLElement) {
+  createRoot(host).render(<DocumentEditor file={file} />);
+}

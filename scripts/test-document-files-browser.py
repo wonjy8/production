@@ -39,7 +39,14 @@ with tempfile.TemporaryDirectory() as folder:
    if(plain.content.content.some(n=>n.type==='heading'))throw Error('Switching heading to body did not persist');
    const text=await api.saveDocument({},'text',null,'','첫 줄\\nsecond line');if(await text.text()!=='첫 줄\\nsecond line')throw Error('Plain text serialization failed');
    const html=await api.saveDocument({},'html',null,'<p><strong>hello</strong></p>','');if(!(await html.text()).includes('<strong>hello</strong>'))throw Error('HTML serialization failed');
-   return {bytes:result.size,opaque:true,header:true,image:true};
+   const marked={type:'doc',attrs:{docxLayout:{width:210,height:297,top:15,left:18,right:20,bottom:22}},content:[{type:'paragraph',content:[{type:'text',text:'주석 문장',marks:[{type:'docxComment',attrs:{id:'7',text:'검토 <내용>',author:'사용자',date:'2026-10-15T00:00:00Z'}},{type:'textStyle',attrs:{fontFamily:'맑은 고딕',fontSize:'14pt'}}]}]},{type:'table',content:[{type:'tableRow',content:[{type:'tableCell',attrs:{rowspan:2,colspan:1},content:[{type:'paragraph',content:[{type:'text',text:'merged cell'}]}]},{type:'tableCell',content:[{type:'paragraph'}]}]},{type:'tableRow',content:[{type:'tableCell',content:[{type:'paragraph'}]}]}]}]};
+   const annotated=await api.loadDocument(await api.saveDocument(marked,'docx',reopened.zip,'',''),'docx');
+   const annotation=annotated.content.content[0].content[0].marks.find(m=>m.type==='docxComment');if(annotation?.attrs.text!=='검토 <내용>')throw Error('Comment roundtrip failed');
+   if(Math.abs(annotated.content.attrs.docxLayout.top-15)>.1)throw Error('Page margin roundtrip failed');
+   if(annotated.content.content[1].content[0].content[0].attrs.rowspan!==2)throw Error('Merged table did not reopen');
+   const annotatedXml=await annotated.zip.file('word/document.xml').async('string');if(!annotatedXml.includes('맑은 고딕')||!annotatedXml.includes('w:tblGrid')||!annotatedXml.includes('commentRangeStart'))throw Error('Word font/table/comment structure missing');
+   if(await annotated.zip.file('word/header-custom.xml').async('string')!=='<header>untouched original header</header>')throw Error('Annotation damaged original parts');
+   return {bytes:result.size,opaque:true,header:true,image:true,comments:true,margins:true,mergedCells:true};
   }''')
   browser.close()
 print('DOCX adapter: Unicode, escaped text, headings/body conversion, marks, links, nested lists, tables, images, original package parts, opaque fields, immutable source ZIP, TXT and HTML passed',result)
