@@ -190,3 +190,10 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Add selection-based highlight insertion to the editor toolbar and use ten shared color presets (red, orange, yellow, green, blue, indigo, purple, brown, black, white) for text/highlight colors. Preserve selection, DOCX autosaving and highlight removal.
 - Center the compact floating insertion toolbar, reserve its layout space, keep popovers above the canvas and fit the toolbar/preset palette on mobile.
 - NAS files, database schema and configuration: unchanged.
+
+## 0.0.21
+
+- Add horizontal and vertical cm rulers to the document editor, with millimeter ticks, shaded margins and page boundaries. Match document zoom, fit, custom paper sizes and per-page vertical resets; keep the horizontal ruler visible while scrolling.
+- Reserve a ruler gutter in fit-to-screen sizing, including mobile/sidebar resizing. Reuse SVG definitions across pages to bound ruler DOM cost.
+- Keep rulers outside editable content, DOCX persistence and selectable-text PDF output.
+- NAS files, database schema and configuration: unchanged.

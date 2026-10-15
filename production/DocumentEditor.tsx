@@ -1,3 +1,4 @@
+import { DocumentRulers, rulerGutter } from "./DocumentRulers";
 import {
   Alignment,
   ParagraphControls,
@@ -431,7 +432,11 @@ function DocumentEditor({ file }: { file: any }) {
     const update = () => {
       const next = Math.min(
         1,
-        (scroll.current!.clientWidth - 24) / ((layout.width * 96) / 25.4),
+        (scroll.current!.clientWidth -
+          parseFloat(getComputedStyle(scroll.current!).paddingLeft) -
+          parseFloat(getComputedStyle(scroll.current!).paddingRight) -
+          rulerGutter) /
+          ((layout.width * 96) / 25.4),
       );
       setFitScale((old) => (Math.abs(old - next) < 0.001 ? old : next));
     };
@@ -1272,27 +1277,43 @@ function DocumentEditor({ file }: { file: any }) {
         )}
         <div className="document-scroll" ref={scroll}>
           <div
-            className={
-              "document-sheet" + (marginMarks ? " show-margin-marks" : "")
-            }
-            ref={host}
+            className="document-ruler-frame"
             style={{
-              width: layout.width + "mm",
-              maxWidth: "none",
-              zoom: zoom === "fit" ? fitScale : Number(zoom) / 100,
-              "--page-height": (layout.height * 96) / 25.4 + "px",
-              "--page-top": layout.top + "mm",
-              "--page-left": layout.left + "mm",
-              "--page-right": layout.right + "mm",
-              "--page-bottom": layout.bottom + "mm",
-              "--page-body-height":
-                layout.height - layout.top - layout.bottom + "mm",
-              paddingTop: layout.top + "mm",
-              paddingRight: layout.right + "mm",
-              paddingBottom: layout.bottom + "mm",
-              paddingLeft: layout.left + "mm",
+              width:
+                ((layout.width * 96) / 25.4) *
+                  (zoom === "fit" ? fitScale : Number(zoom) / 100) +
+                rulerGutter,
             }}
-          />
+          >
+            <DocumentRulers
+              layout={layout}
+              scale={zoom === "fit" ? fitScale : Number(zoom) / 100}
+              pages={pageInfo.total}
+            />
+
+            <div
+              className={
+                "document-sheet" + (marginMarks ? " show-margin-marks" : "")
+              }
+              ref={host}
+              style={{
+                width: layout.width + "mm",
+                maxWidth: "none",
+                zoom: zoom === "fit" ? fitScale : Number(zoom) / 100,
+                "--page-height": (layout.height * 96) / 25.4 + "px",
+                "--page-top": layout.top + "mm",
+                "--page-left": layout.left + "mm",
+                "--page-right": layout.right + "mm",
+                "--page-bottom": layout.bottom + "mm",
+                "--page-body-height":
+                  layout.height - layout.top - layout.bottom + "mm",
+                paddingTop: layout.top + "mm",
+                paddingRight: layout.right + "mm",
+                paddingBottom: layout.bottom + "mm",
+                paddingLeft: layout.left + "mm",
+              }}
+            />
+          </div>
         </div>
         {showLayout && (
           <aside className="document-settings" aria-label="문서 설정 패널">

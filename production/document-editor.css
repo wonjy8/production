@@ -2088,3 +2088,11 @@ body.document-mode #document-editor-root{position:fixed;inset:0;width:100vw;heig
 .editor-preset-color:not([open])>.editor-color-palette{display:none!important}
 @media(max-width:720px){.document-toolbar{height:auto!important;min-height:44px!important;max-height:none!important;flex-wrap:wrap!important}}
 .document-toolbar .editor-color-palette>button.keep-label,.document-settings .editor-color-palette>button.keep-label{height:auto!important;min-height:0!important;width:auto!important;max-width:none!important;padding:4px!important}
+/* Rulers use screen pixels so labels remain readable at every document zoom. */
+.document-ruler-frame{position:relative;margin:0 auto;min-width:0;padding:0 0 0 26px;box-sizing:border-box}
+.document-ruler-frame>.document-sheet{margin:0}
+.document-ruler-top{position:sticky;top:0;margin-left:-26px;height:26px;z-index:3;display:flex;align-items:flex-start;pointer-events:none}
+.document-ruler-unit{flex:none;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#888;background:#f3f3f3}
+.document-ruler-x{flex:none;display:block;overflow:hidden;border-bottom:1px solid #dedede}
+.document-ruler-y{position:absolute;left:0;top:26px;overflow:hidden;pointer-events:none;border-right:1px solid #dedede}
+.document-ruler-frame svg .ruler-paper{fill:#fafafa}.document-ruler-frame svg .ruler-margin{fill:#eaeaea}.document-ruler-frame svg line{stroke:#aaa;stroke-width:1}.document-ruler-frame svg .ruler-boundary{stroke:#999;stroke-dasharray:2 2}.document-ruler-frame svg text{fill:#777;font:9px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
