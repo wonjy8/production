@@ -155,19 +155,24 @@ with tempfile.TemporaryDirectory() as td:
    page.reload();page.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
    assert page.get_by_role('button',name='문서 이름 바꾸기',exact=True).inner_text()=='새 문서 제목'
    assert page.locator('.document-menubar').count()==0
+   assert page.locator('.document-toolbar select').count()==0
+   assert page.locator('.document-toolbar').get_by_text('새 문서',exact=True).count()==0
+   assert page.locator('.document-toolbar').get_by_text('글꼴 추가',exact=True).count()==0
+   assert page.locator('.document-toolbar [aria-label=굵게]').count()==0
+   assert page.locator('.document-toolbar [aria-label=\"실행 취소\"] svg g').get_attribute('transform')=='translate(24 0) scale(-1 1)'
    assert page.locator('.document-autosave-label').count()==0
    assert page.locator('.document-header [role=status]').count()==1
    assert page.locator('.document-toolbar').get_by_role('button',name='주석',exact=True).count()==1
    missing=page.locator('.document-toolbar button').evaluate_all("nodes=>nodes.filter(b=>b.querySelector('svg')&&!b.title).map(b=>b.textContent)")
    assert not missing,missing
    assert page.locator('.document-editor').evaluate('e=>getComputedStyle(e).fontFamily===getComputedStyle(document.body).fontFamily')
-   page.get_by_role('button',name='글꼴 추가',exact=True).click()
+   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='설정',exact=True).click()
    panel=page.get_by_role('complementary',name='문서 설정 패널',exact=True)
    panel.locator('.font-list>div',has_text='NanumMyeongjo').wait_for()
    page.get_by_label('글꼴 파일 추가',exact=True).set_input_files({'name':'bad.ttf','mimeType':'font/ttf','buffer':b'invalid font'})
    panel.get_by_role('alert').wait_for()
    page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
-   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='페이지',exact=True).click()
+   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='문서',exact=True).click()
    page.get_by_label('용지 크기',exact=True).select_option('a4')
    page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
    body=page.get_by_role('textbox',name='문서 본문',exact=True);body.click();page.keyboard.press('Control+End')
@@ -176,14 +181,29 @@ with tempfile.TemporaryDirectory() as td:
    page.keyboard.press('Enter');page.keyboard.insert_text('LONGSTART '+('긴 문단 paragraph wrapping test ' * 80)+' cafe\u0301 LONGEND')
    page.keyboard.press('Enter')
    png=page.evaluate("()=>{const c=document.createElement('canvas');c.width=128;c.height=96;const ctx=c.getContext('2d');ctx.fillStyle='#2563eb';ctx.fillRect(0,0,128,96);ctx.fillStyle='#facc15';ctx.fillRect(20,20,40,40);return c.toDataURL('image/png').split(',')[1]}")
-   page.get_by_label('문서 이미지 추가',exact=True).set_input_files({'name':'diagram.png','mimeType':'image/png','buffer':base64.b64decode(png)})
+   image_id=page.evaluate('''async data=>{const id=crypto.randomUUID(),blob=await fetch('data:image/png;base64,'+data).then(r=>r.blob());await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'image/png'},body:blob});const result=await fetch('/production/api/database/resources/'+id,{method:'PUT',headers:{'Content-Type':'application/json','If-Match':'"0"'},body:JSON.stringify({id,fileId:id,title:'diagram resource',filename:'diagram.png',kind:'image',mime:'image/png',tags:[],properties:{},version:0})});if(!result.ok)throw Error('resource fixture failed');return id}''',png)
+   page.get_by_role('button',name='이미지 추가',exact=True).click()
+   picker=page.get_by_role('dialog',name='자료에서 이미지 선택',exact=True)
+   picker.get_by_role('searchbox',name='자료 이미지 검색').fill('diagram resource')
+   picker.get_by_role('button',name='diagram resource',exact=True).click()
+   picker.wait_for(state='detached')
+   page.locator('.document-sheet img[src]').click()
+   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='속성',exact=True).click()
+   page.get_by_label('이미지 너비',exact=True).wait_for()
+   page.get_by_label('이미지 너비',exact=True).fill('120')
+   assert page.locator('.document-sheet img[src]').get_attribute('width')=='120'
+   assert page.get_by_label('이미지 너비',exact=True).input_value()=='120'
+   page.screenshot(path='/tmp/editor-v10-image-properties.png')
+   print('PASS materials image picker, embedded copy and contextual image properties',flush=True)
+   page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
    page.locator('.document-sheet img[src]').wait_for()
    page.wait_for_timeout(1400)
    assert int(page.locator('.document-sheet').get_attribute('data-page-count'))>=2
-   body.click();page.keyboard.press('Control+a');page.get_by_label('글꼴',exact=True).select_option('NanumMyeongjo')
+   body.click();page.keyboard.press('Control+a');page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='속성',exact=True).click();page.get_by_label('글꼴',exact=True).select_option('NanumMyeongjo');page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
    page.wait_for_timeout(1000)
    assert page.locator('.document-sheet [style*="NanumMyeongjo"]').count()>0
    assert page.evaluate("document.fonts.check('14px NanumMyeongjo')")
+   print('PASS formatting in properties drawer and custom font selection',flush=True)
    page.evaluate("() => {window.print=()=>{throw Error('Browser printing forbidden')}; window.open=()=>{throw Error('Print popup forbidden')};}")
    # Font validation lazily loads the PDF codec; export reuses it.
    page.get_by_label('내보내기',exact=True).click()
@@ -204,7 +224,7 @@ with tempfile.TemporaryDirectory() as td:
    assert 'LONGEND' in ''.join(text.split()),text[-1000:]
    assert 'café' in text,text[-1000:]
    subprocess.run(['pdftoppm','-f','1','-singlefile','-scale-to','1024','-png',str(t/'export.pdf'),'/tmp/editor-v8-pdf'],check=True,capture_output=True)
-   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='페이지',exact=True).click()
+   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='문서',exact=True).click()
    page.get_by_label('용지 크기',exact=True).select_option('a5')
    page.get_by_role('button',name='용지 방향 전환',exact=True).click()
    page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
@@ -216,12 +236,12 @@ with tempfile.TemporaryDirectory() as td:
    with page.expect_download() as word:page.get_by_role('menuitem',name='Word (.docx)',exact=True).click()
    with zipfile.ZipFile(word.value.path()) as saved:
     xml=saved.read('word/document.xml').decode();assert 'document-page-break' not in xml and 'LONGEND' in xml
-   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='페이지',exact=True).click()
+   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='문서',exact=True).click()
    page.screenshot(path='/tmp/editor-v9-desktop.png')
    page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
    page.set_viewport_size({'width':390,'height':844});page.wait_for_timeout(300)
    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
-   assert page.locator('.document-toolbar').evaluate('e=>e.scrollWidth>e.clientWidth')
+   assert page.locator('.document-toolbar select').count()==0
    page.get_by_label('내보내기',exact=True).click()
    with page.expect_download(timeout=60000) as mobile:page.get_by_role('menuitem',name='PDF (.pdf)',exact=True).click()
    mobiletext=subprocess.run(['pdftotext',mobile.value.path(),'-'],check=True,capture_output=True,text=True).stdout

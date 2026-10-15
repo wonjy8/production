@@ -57,7 +57,7 @@ export const icons={
  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
  eyeOff:'<path d="m3 3 18 18M10 5a10 10 0 0 1 2 0c6 0 10 7 10 7a20 20 0 0 1-3 4M6 6a20 20 0 0 0-4 6s4 7 10 7a12 12 0 0 0 5-1"/>',
  star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9Z"/>',
- undo:'<path d="m9 4-5 5 5 5M4 9h11a6 6 0 0 1 0 12h-2"/>',
+ undo:'<g transform="translate(24 0) scale(-1 1)"><path d="m15 4 5 5-5 5M20 9H9a6 6 0 0 0 0 12h2"/></g>',
  refresh:'<path d="M20 8a9 9 0 0 0-15-3L3 8m0-5v5h5m-4 8a9 9 0 0 0 15 3l2-3m0 5v-5h-5"/>',
  link:'<path d="m10 14 4-4M8 16l-1 1a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0m0 2 1-1a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0" transform="translate(1 1)"/>',
  video:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m10 8 6 4-6 4Z"/>',
@@ -73,6 +73,8 @@ export const icons={
  drag:'<circle cx="8" cy="5" r="1"/><circle cx="16" cy="5" r="1"/><circle cx="8" cy="12" r="1"/><circle cx="16" cy="12" r="1"/><circle cx="8" cy="19" r="1"/><circle cx="16" cy="19" r="1"/>'
 };
 Object.assign(icons,projectIconPaths);
+// Mirror the final redo glyph after the shared icon pack has been applied.
+icons.undo='<g transform="translate(24 0) scale(-1 1)">'+icons.redo+'</g>';
 // Latin cross: long lower stem, rather than the medical cross silhouette.
 icons.cross='<path d="M12 3v18M6 8h12"/>';
 icons.figma='<g stroke="none"><path fill="#f24e1e" d="M6 2h6v7H6a3.5 3.5 0 0 1 0-7Z"/><path fill="#ff7262" d="M12 2h5a3.5 3.5 0 0 1 0 7h-5Z"/><path fill="#a259ff" d="M6 9h6v7H6a3.5 3.5 0 0 1 0-7Z"/><circle fill="#1abcfe" cx="15.5" cy="12.5" r="3.5"/><path fill="#0acf83" d="M6 16h6v3.5A3.5 3.5 0 1 1 6 16Z"/></g>';

@@ -99,3 +99,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Manage TTF/OTF fonts from app settings or the document editor, storing them through the existing authorized resource/file API. Load only used faces and embed the selected font in searchable PDFs.
 - Recalculate pagination when zoom, drawer width, images or fonts change, including mobile PDF page boundaries.
 - NAS files and configuration: unchanged; existing 0.0.6+ resource APIs are reused.
+
+## 0.0.10
+
+- Keep only undo/redo and insertion actions in the toolbar; remove the new-document and font-management shortcuts and neutralize export styling.
+- Use exactly mirrored undo/redo paths and reorganize the right drawer into Document, Properties and Settings.
+- Show text formatting, table actions and image dimensions according to the selected content; keep page settings and editor preferences separate.
+- Insert independent image copies from the existing authorized Materials library with search and previews, including conversion to DOCX/PDF-compatible image formats.
+- NAS files and configuration: unchanged.

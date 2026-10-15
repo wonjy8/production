@@ -1,3 +1,4 @@
+import { ResourceImagePicker } from "./ResourceImagePicker";
 import { FontManager } from "./FontManager";
 import {
   currentCustomFonts,
@@ -7,13 +8,7 @@ import {
   usedFontFamilies,
 } from "./custom-fonts";
 import { documentPagination } from "./document-pagination";
-import {
-  listResources,
-  saveResource,
-  createNote,
-  resourceFile,
-} from "./resources";
-import { documentURL } from "./document-launch";
+import { listResources, saveResource } from "./resources";
 import { loadDocumentPDF } from "./load-document-tools";
 import { legacyDraft } from "./legacy-document-drafts";
 import { documentLayout } from "./document-layout";
@@ -194,7 +189,8 @@ function DocumentEditor({ file }: { file: any }) {
     [active, setActive] = useState(0),
     [comment, setComment] = useState<any>(null),
     [showLayout, setShowLayout] = useState(false),
-    [panel, setPanel] = useState("page"),
+    [panel, setPanel] = useState("properties"),
+    [showImages, setShowImages] = useState(false),
     [customFonts, setCustomFonts] = useState(currentCustomFonts()),
     [name, setName] = useState(file.name),
     [titleDraft, setTitleDraft] = useState(file.name.replace(/\.[^.]+$/, "")),
@@ -359,20 +355,6 @@ function DocumentEditor({ file }: { file: any }) {
     } finally {
       editor.current?.setEditable(true);
       setExporting(false);
-    }
-  }
-  async function newDocument() {
-    const popup = window.open("about:blank", "_blank");
-    if (popup) {
-      popup.opener = null;
-      popup.document.body.textContent = "문서를 준비하는 중…";
-    }
-    try {
-      const row = await createNote({ title: "제목 없는 문서", properties: {} });
-      if (popup) popup.location.replace(documentURL(resourceFile(row), null));
-    } catch (e: any) {
-      popup?.close();
-      setError(e.message);
     }
   }
   function menuAction(event: any, run: () => any) {
@@ -876,118 +858,11 @@ function DocumentEditor({ file }: { file: any }) {
           <Icon name="settings" />
         </button>
       </header>
-      <div className="document-toolbar" role="toolbar" aria-label="문서 서식">
-        <button
-          className="keep-label document-tool-text"
-          title="새 문서"
-          onClick={newDocument}
-        >
-          <Icon name="plus" />새 문서
-        </button>
-        <span className="document-tool-divider" />
-
+      <div className="document-toolbar" role="toolbar" aria-label="문서 삽입">
         {command("실행 취소", (ed) => ed.chain().focus().undo().run())}
         {command("다시 실행", (ed) => ed.chain().focus().redo().run())}
-        <span className="document-tool-divider" />
-        <select
-          className="keep-label"
-          aria-label="문단 스타일"
-          disabled={!ready || format === "text"}
-          value={
-            editor.current?.isActive("heading")
-              ? "heading" + editor.current.getAttributes("heading").level
-              : "paragraph"
-          }
-          onChange={(e) => {
-            const ed = editor.current;
-            if (!ed) return;
-            if (e.target.value === "paragraph")
-              ed.chain().focus().setParagraph().run();
-            else
-              ed.chain()
-                .focus()
-                .setHeading({ level: Number(e.target.value.slice(-1)) as any })
-                .run();
-            setActive((v) => v + 1);
-          }}
-        >
-          <option value="paragraph">본문</option>
-          {[1, 2, 3].map((level) => (
-            <option key={level} value={"heading" + level}>
-              제목 {level}
-            </option>
-          ))}
-        </select>
         {format !== "text" && (
           <>
-            <select
-              aria-label="글꼴"
-              className="keep-label"
-              disabled={!ready}
-              value={
-                editor.current?.getAttributes("textStyle").fontFamily || "Arial"
-              }
-              onChange={(e) => {
-                editor.current
-                  ?.chain()
-                  .focus()
-                  .setFontFamily(e.target.value)
-                  .run();
-                prepareCustomFonts([e.target.value])
-                  .then((rows) => {
-                    setCustomFonts(rows);
-                    editor.current?.view.dom.dispatchEvent(
-                      new Event("document-layout-change"),
-                    );
-                  })
-                  .catch((err) => setError(err.message));
-                setActive((v) => v + 1);
-              }}
-            >
-              {[
-                ...new Set([
-                  ...customFonts.map((font) => font.family),
-                  editor.current?.getAttributes("textStyle").fontFamily ||
-                    "Arial",
-                  "Arial",
-                  "맑은 고딕",
-                  "Noto Sans KR",
-                  "바탕",
-                  "Times New Roman",
-                  "Calibri",
-                ]),
-              ].map((font) => (
-                <option key={font}>{font}</option>
-              ))}
-            </select>
-            <button
-              className="keep-label document-tool-text"
-              title="글꼴 추가·관리"
-              onClick={() => openPanel("fonts")}
-            >
-              글꼴 추가
-            </button>
-            <select
-              aria-label="글자 크기"
-              className="keep-label"
-              value={
-                editor.current?.getAttributes("textStyle").fontSize || "11pt"
-              }
-              onChange={(e) => {
-                editor.current
-                  ?.chain()
-                  .focus()
-                  .setFontSize(e.target.value)
-                  .run();
-                setActive((v) => v + 1);
-              }}
-            >
-              {[9, 10, 11, 12, 14, 16, 18, 24, 32].map((size) => (
-                <option key={size} value={size + "pt"}>
-                  {size}
-                </option>
-              ))}
-            </select>
             <span className="document-tool-divider" />
             {command("링크", (ed) => {
               const href = window.prompt(
@@ -1005,111 +880,21 @@ function DocumentEditor({ file }: { file: any }) {
               }
               ed.chain().focus().setLink({ href }).run();
             })}
-            {command("bold", (ed) => ed.chain().focus().toggleBold().run())}
-            {command("italic", (ed) => ed.chain().focus().toggleItalic().run())}
-            {command("underline", (ed) =>
-              ed.chain().focus().toggleUnderline().run(),
-            )}
-            {command("strike", (ed) => ed.chain().focus().toggleStrike().run())}
-            <label className="document-color" title="글자색">
-              <Icon name="text" />
-              <input
-                type="color"
-                aria-label="글자색"
-                value={
-                  editor.current?.getAttributes("textStyle").color || "#242424"
-                }
-                onChange={(e) =>
-                  editor.current?.chain().focus().setColor(e.target.value).run()
-                }
-              />
-            </label>
-            <select
-              className="keep-label"
-              aria-label="문단 정렬"
-              value={
-                editor.current?.getAttributes("paragraph").textAlign ||
-                editor.current?.getAttributes("heading").textAlign ||
-                "left"
-              }
-              onChange={(e) => {
-                editor.current
-                  ?.chain()
-                  .focus()
-                  .setTextAlign(e.target.value)
-                  .run();
-                setActive((v) => v + 1);
-              }}
+            <button
+              className="keep-label document-tool-text"
+              disabled={!ready}
+              title="자료에서 이미지 추가"
+              aria-label="이미지 추가"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setShowImages(true)}
             >
-              <option value="left">왼쪽 정렬</option>
-              <option value="center">가운데 정렬</option>
-              <option value="right">오른쪽 정렬</option>
-              <option value="justify">양쪽 정렬</option>
-            </select>
-            {command("bulletList", (ed) =>
-              ed.chain().focus().toggleBulletList().run(),
-            )}
-            {command("orderedList", (ed) =>
-              ed.chain().focus().toggleOrderedList().run(),
-            )}
-            <span className="document-tool-divider" />
-            <label className="document-tool keep-label" title="이미지 추가">
               <Icon name="reference" />
-              <span className="sr-only">이미지 추가</span>
-              <input
-                style={{ display: "none" }}
-                type="file"
-                accept="image/png,image/jpeg,image/gif"
-                aria-label="문서 이미지 추가"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (!file) return;
-                  if (
-                    !/^image\/(png|jpeg|gif)$/.test(file.type) ||
-                    file.size > 10 * 1024 * 1024
-                  ) {
-                    setError("PNG, JPEG, GIF 이미지를 10MB 이하로 선택하세요.");
-                    return;
-                  }
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    const image = new window.Image();
-                    image.onload = () => {
-                      const maxWidth =
-                          ((layout.width - layout.left - layout.right) * 96) /
-                          25.4,
-                        maxHeight =
-                          ((layout.height - layout.top - layout.bottom) * 96) /
-                          25.4;
-                      const ratio = Math.min(
-                        1,
-                        maxWidth / image.naturalWidth,
-                        maxHeight / image.naturalHeight,
-                      );
-                      editor.current
-                        ?.chain()
-                        .focus()
-                        .setImage({
-                          src: String(reader.result),
-                          width: Math.round(image.naturalWidth * ratio),
-                          height: Math.round(image.naturalHeight * ratio),
-                        })
-                        .run();
-                    };
-                    image.onerror = () => setError("이미지를 읽지 못했습니다.");
-                    image.src = String(reader.result);
-                  };
-                  reader.onerror = () => setError("이미지를 읽지 못했습니다.");
-                  reader.readAsDataURL(file);
-                }}
-              />
-            </label>
+              이미지
+            </button>
             <button
               className="keep-label document-tool-text"
               aria-label="주석"
               title="주석 보기·추가"
-              aria-expanded={showLayout && panel === "comments"}
               onPointerDown={(e) => e.preventDefault()}
               onClick={() => openPanel("comments")}
             >
@@ -1123,34 +908,33 @@ function DocumentEditor({ file }: { file: any }) {
                 .insertTable({ rows: 3, cols: 3, withHeaderRow: false })
                 .run(),
             )}
-            {editor.current?.isActive("table") && (
-              <>
-                {command("행 추가", (ed) =>
-                  ed.chain().focus().addRowAfter().run(),
-                )}
-                {command("열 추가", (ed) =>
-                  ed.chain().focus().addColumnAfter().run(),
-                )}
-                {command("행 삭제", (ed) =>
-                  ed.chain().focus().deleteRow().run(),
-                )}
-                {command("열 삭제", (ed) =>
-                  ed.chain().focus().deleteColumn().run(),
-                )}
-                {command("셀 병합", (ed) =>
-                  ed.chain().focus().mergeCells().run(),
-                )}
-                {command("셀 분할", (ed) =>
-                  ed.chain().focus().splitCell().run(),
-                )}
-                {command("표 삭제", (ed) =>
-                  ed.chain().focus().deleteTable().run(),
-                )}
-              </>
-            )}
           </>
         )}
       </div>
+      {showImages && (
+        <ResourceImagePicker
+          onClose={() => setShowImages(false)}
+          onSelect={async (src, width, height) => {
+            const ratio = Math.min(
+              1,
+              ((layout.width - layout.left - layout.right) * 96) / 25.4 / width,
+              ((layout.height - layout.top - layout.bottom) * 96) /
+                25.4 /
+                height,
+            );
+            editor.current
+              ?.chain()
+              .focus()
+              .setImage({
+                src,
+                width: Math.round(width * ratio),
+                height: Math.round(height * ratio),
+              })
+              .run();
+            setShowImages(false);
+          }}
+        />
+      )}
       {oldRecovery && (
         <div className="document-error" role="alert">
           이전 편집기의 복구본이 있습니다. 원본 버전이 달라 자동 적용하지
@@ -1226,20 +1010,303 @@ function DocumentEditor({ file }: { file: any }) {
             </header>
             <nav aria-label="문서 설정 종류">
               {[
-                ["page", "페이지"],
-                ["comments", "주석"],
-                ["fonts", "글꼴"],
+                ["page", "문서"],
+                ["properties", "속성"],
+                ["settings", "설정"],
               ].map(([id, label]) => (
                 <button
                   key={id}
                   className="keep-label"
-                  aria-pressed={panel === id}
+                  aria-pressed={
+                    panel === id ||
+                    (id === "properties" && panel === "comments")
+                  }
                   onClick={() => setPanel(id)}
                 >
                   {label}
                 </button>
               ))}
             </nav>
+            {panel === "properties" && (
+              <section
+                className="document-properties"
+                aria-label="선택 항목 속성"
+              >
+                <h3>
+                  {editor.current?.isActive("image")
+                    ? "이미지"
+                    : editor.current?.isActive("table")
+                      ? "표 및 텍스트"
+                      : "텍스트"}
+                </h3>
+                {editor.current?.isActive("image") ? (
+                  <>
+                    {["width", "height"].map((key) => (
+                      <label key={key}>
+                        {key === "width" ? "이미지 너비" : "이미지 높이"}
+                        <input
+                          type="number"
+                          min="1"
+                          max="2000"
+                          aria-label={
+                            key === "width" ? "이미지 너비" : "이미지 높이"
+                          }
+                          value={
+                            editor.current?.getAttributes("image")[key] || ""
+                          }
+                          onChange={(e) => {
+                            const value = Number(e.target.value);
+                            if (value > 0 && value <= 2000) {
+                              const ed = editor.current;
+                              if (ed)
+                                ed.chain()
+                                  .updateAttributes("image", { [key]: value })
+                                  .setNodeSelection(ed.state.selection.from)
+                                  .run();
+                              setActive((v) => v + 1);
+                            }
+                          }}
+                        />
+                      </label>
+                    ))}
+                    <button
+                      className="keep-label danger"
+                      onClick={() =>
+                        editor.current?.chain().focus().deleteSelection().run()
+                      }
+                    >
+                      이미지 삭제
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <select
+                      className="keep-label"
+                      aria-label="문단 스타일"
+                      disabled={!ready || format === "text"}
+                      value={
+                        editor.current?.isActive("heading")
+                          ? "heading" +
+                            editor.current.getAttributes("heading").level
+                          : "paragraph"
+                      }
+                      onChange={(e) => {
+                        const ed = editor.current;
+                        if (!ed) return;
+                        if (e.target.value === "paragraph")
+                          ed.chain().focus().setParagraph().run();
+                        else
+                          ed.chain()
+                            .focus()
+                            .setHeading({
+                              level: Number(e.target.value.slice(-1)) as any,
+                            })
+                            .run();
+                        setActive((v) => v + 1);
+                      }}
+                    >
+                      <option value="paragraph">본문</option>
+                      {[1, 2, 3].map((level) => (
+                        <option key={level} value={"heading" + level}>
+                          제목 {level}
+                        </option>
+                      ))}
+                    </select>
+                    {format !== "text" && (
+                      <>
+                        <select
+                          aria-label="글꼴"
+                          className="keep-label"
+                          disabled={!ready}
+                          value={
+                            editor.current?.getAttributes("textStyle")
+                              .fontFamily || "Arial"
+                          }
+                          onChange={(e) => {
+                            editor.current
+                              ?.chain()
+                              .focus()
+                              .setFontFamily(e.target.value)
+                              .run();
+                            prepareCustomFonts([e.target.value])
+                              .then((rows) => {
+                                setCustomFonts(rows);
+                                editor.current?.view.dom.dispatchEvent(
+                                  new Event("document-layout-change"),
+                                );
+                              })
+                              .catch((err) => setError(err.message));
+                            setActive((v) => v + 1);
+                          }}
+                        >
+                          {[
+                            ...new Set([
+                              ...customFonts.map((font) => font.family),
+                              editor.current?.getAttributes("textStyle")
+                                .fontFamily || "Arial",
+                              "Arial",
+                              "맑은 고딕",
+                              "Noto Sans KR",
+                              "바탕",
+                              "Times New Roman",
+                              "Calibri",
+                            ]),
+                          ].map((font) => (
+                            <option key={font}>{font}</option>
+                          ))}
+                        </select>
+                        <select
+                          aria-label="글자 크기"
+                          className="keep-label"
+                          value={
+                            editor.current?.getAttributes("textStyle")
+                              .fontSize || "11pt"
+                          }
+                          onChange={(e) => {
+                            editor.current
+                              ?.chain()
+                              .focus()
+                              .setFontSize(e.target.value)
+                              .run();
+                            setActive((v) => v + 1);
+                          }}
+                        >
+                          {[9, 10, 11, 12, 14, 16, 18, 24, 32].map((size) => (
+                            <option key={size} value={size + "pt"}>
+                              {size}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="document-tool-divider" />
+                        {command("bold", (ed) =>
+                          ed.chain().focus().toggleBold().run(),
+                        )}
+                        {command("italic", (ed) =>
+                          ed.chain().focus().toggleItalic().run(),
+                        )}
+                        {command("underline", (ed) =>
+                          ed.chain().focus().toggleUnderline().run(),
+                        )}
+                        {command("strike", (ed) =>
+                          ed.chain().focus().toggleStrike().run(),
+                        )}
+                        <label className="document-color" title="글자색">
+                          <Icon name="text" />
+                          <input
+                            type="color"
+                            aria-label="글자색"
+                            value={
+                              editor.current?.getAttributes("textStyle")
+                                .color || "#242424"
+                            }
+                            onChange={(e) =>
+                              editor.current
+                                ?.chain()
+                                .focus()
+                                .setColor(e.target.value)
+                                .run()
+                            }
+                          />
+                        </label>
+                        <select
+                          className="keep-label"
+                          aria-label="문단 정렬"
+                          value={
+                            editor.current?.getAttributes("paragraph")
+                              .textAlign ||
+                            editor.current?.getAttributes("heading")
+                              .textAlign ||
+                            "left"
+                          }
+                          onChange={(e) => {
+                            editor.current
+                              ?.chain()
+                              .focus()
+                              .setTextAlign(e.target.value)
+                              .run();
+                            setActive((v) => v + 1);
+                          }}
+                        >
+                          <option value="left">왼쪽 정렬</option>
+                          <option value="center">가운데 정렬</option>
+                          <option value="right">오른쪽 정렬</option>
+                          <option value="justify">양쪽 정렬</option>
+                        </select>
+                        {command("bulletList", (ed) =>
+                          ed.chain().focus().toggleBulletList().run(),
+                        )}
+                        {command("orderedList", (ed) =>
+                          ed.chain().focus().toggleOrderedList().run(),
+                        )}
+                      </>
+                    )}
+                    {editor.current?.isActive("table") && (
+                      <>
+                        {command("행 추가", (ed) =>
+                          ed.chain().focus().addRowAfter().run(),
+                        )}
+                        {command("열 추가", (ed) =>
+                          ed.chain().focus().addColumnAfter().run(),
+                        )}
+                        {command("행 삭제", (ed) =>
+                          ed.chain().focus().deleteRow().run(),
+                        )}
+                        {command("열 삭제", (ed) =>
+                          ed.chain().focus().deleteColumn().run(),
+                        )}
+                        {command("셀 병합", (ed) =>
+                          ed.chain().focus().mergeCells().run(),
+                        )}
+                        {command("셀 분할", (ed) =>
+                          ed.chain().focus().splitCell().run(),
+                        )}
+                        {command("표 삭제", (ed) =>
+                          ed.chain().focus().deleteTable().run(),
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+                <button
+                  className="keep-label"
+                  title="전체 선택"
+                  onClick={() =>
+                    editor.current?.chain().focus().selectAll().run()
+                  }
+                >
+                  전체 선택
+                </button>
+                <button
+                  className="keep-label"
+                  title="선택 영역 서식 지우기"
+                  onClick={() =>
+                    editor.current
+                      ?.chain()
+                      .focus()
+                      .unsetAllMarks()
+                      .clearNodes()
+                      .run()
+                  }
+                >
+                  서식 지우기
+                </button>
+                <button
+                  className="keep-label"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => openPanel("comments")}
+                >
+                  주석 보기·추가
+                </button>
+              </section>
+            )}
+            {panel === "comments" && (
+              <button
+                className="keep-label"
+                onClick={() => setPanel("properties")}
+              >
+                속성으로 돌아가기
+              </button>
+            )}
             {panel === "page" && (
               <fieldset className="document-layout-controls">
                 <legend>페이지 설정 · mm</legend>
@@ -1430,8 +1497,13 @@ function DocumentEditor({ file }: { file: any }) {
                 )}
               </section>
             )}
-            {panel === "fonts" && <FontManager />}
-            {panel === "page" && (
+            {panel === "settings" && (
+              <>
+                <h3>글꼴 관리</h3>
+                <FontManager />
+              </>
+            )}
+            {panel === "settings" && (
               <section className="document-view-controls">
                 <h3>보기</h3>
                 <label>
@@ -1450,29 +1522,6 @@ function DocumentEditor({ file }: { file: any }) {
                     ))}
                   </select>
                 </label>
-                <button
-                  className="keep-label"
-                  title="전체 선택"
-                  onClick={() =>
-                    editor.current?.chain().focus().selectAll().run()
-                  }
-                >
-                  전체 선택
-                </button>
-                <button
-                  className="keep-label"
-                  title="선택 영역 서식 지우기"
-                  onClick={() =>
-                    editor.current
-                      ?.chain()
-                      .focus()
-                      .unsetAllMarks()
-                      .clearNodes()
-                      .run()
-                  }
-                >
-                  서식 지우기
-                </button>
               </section>
             )}
           </aside>
