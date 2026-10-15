@@ -171,10 +171,10 @@ export async function documentPDF(
   }
   // Paint table cells, highlights and borders as vectors, then actual text above them.
   for (const el of Array.from(
-    sheet.querySelectorAll("td,th,mark,.docx-comment"),
+    sheet.querySelectorAll("td,th,mark,.docx-comment,blockquote"),
   ) as HTMLElement[]) {
     const style = getComputedStyle(el);
-    const rects = el.matches("td,th")
+    const rects = el.matches("td,th,blockquote")
       ? [el.getBoundingClientRect()]
       : Array.from(el.getClientRects());
     for (const rect of rects) {
@@ -207,7 +207,7 @@ export async function documentPDF(
             height: h,
             color: color(background),
           });
-        if (el.matches("td,th")) {
+        if (el.matches("td,th,blockquote")) {
           for (const [side, start, end] of [
             ["Top", [p.x, p.y], [p.x + width, p.y]],
             ["Bottom", [p.x, p.y - h], [p.x + width, p.y - h]],

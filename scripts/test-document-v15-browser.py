@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory() as td:
  pub=subprocess.run(['openssl','x509','-in',str(cert),'-pubkey','-noout'],check=True,capture_output=True).stdout
  der=subprocess.run(['openssl','pkey','-pubin','-outform','DER'],input=pub,check=True,capture_output=True).stdout
  spki=base64.b64encode(hashlib.sha256(der).digest()).decode()
- env={**os.environ,'ADMIN_EMAIL':'admin@example.com','ADMIN_NAME':'Example Administrator','DATA_DIR':str(t/'data'),'NAS_API_TOKEN':'test-'+ 'x'*40,'PAGES_ORIGINS':'https://pages.test:9443'}
+ env={**os.environ,'ADMIN_EMAIL':'admin@example.com','ADMIN_NAME':'Example Administrator','DATA_DIR':str(t/'data'),'NAS_API_TOKEN':'test-'+ 'x'*40,'PAGES_ORIGINS':'https://pages.test:19443'}
  subprocess.run([nas_python,'-c',"import server; from local_auth import bootstrap_admin; bootstrap_admin(server.database,server.write_lock,server.save_workspace,server.now,'StrongPassword2026!')"],cwd=root/'nas',env=env,check=True)
  subprocess.run(['npm','run','build:pages'],cwd=root,env=env,check=True)
  (t/'production').symlink_to(root/'dist/pages',target_is_directory=True)
@@ -25,10 +25,10 @@ with tempfile.TemporaryDirectory() as td:
     self.send_response(404);self.send_header('Content-Type','text/html');self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
     return
    super().do_GET()
- httpd=http.server.ThreadingHTTPServer(('127.0.0.1',9443),Handler)
+ httpd=http.server.ThreadingHTTPServer(('127.0.0.1',19443),Handler)
  ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);ctx.load_cert_chain(cert,key);httpd.socket=ctx.wrap_socket(httpd.socket,server_side=True)
  threading.Thread(target=httpd.serve_forever,daemon=True).start()
- nas=subprocess.Popen([nas_python,'-m','uvicorn','server:app','--host','127.0.0.1','--port','9444','--ssl-keyfile',str(key),'--ssl-certfile',str(cert),'--no-access-log'],cwd=root/'nas',env=env,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+ nas=subprocess.Popen([nas_python,'-m','uvicorn','server:app','--host','127.0.0.1','--port','19444','--ssl-keyfile',str(key),'--ssl-certfile',str(cert),'--no-access-log'],cwd=root/'nas',env=env,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
  try:
   with sync_playwright() as p:
    browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH'),headless=True,args=['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-proxy-server','--host-resolver-rules=MAP pages.test 127.0.0.1, MAP nas.test 127.0.0.1','--ignore-certificate-errors-spki-list='+spki])
@@ -44,7 +44,7 @@ with tempfile.TemporaryDirectory() as td:
    original=base64.b64encode(package.getvalue()).decode()
 
    for mode in ['local','nas']:
-    base='https://pages.test:9443/production/'+('nas.test:9444/' if mode=='nas' else '')
+    base='https://pages.test:19443/production/'+('nas.test:19444/' if mode=='nas' else '')
     page.goto(base)
     if mode=='nas':
      page.locator('#account-form [name=email]').fill('admin@example.com');page.locator('#account-form [name=password]').fill('StrongPassword2026!');page.locator('#account-form button').click()
@@ -111,7 +111,7 @@ with tempfile.TemporaryDirectory() as td:
     assert page.get_by_label('문단 앞 여백',exact=True).input_value()=='12'
     assert page.get_by_label('첫 줄 들여쓰기 방식',exact=True).input_value()=='hanging'
     # Removing the final heading hides the outline, without deleting its text.
-    hide();body.locator('h1').click();panel('속성');page.get_by_label('문단 스타일',exact=True).select_option('paragraph');assert page.locator('.document-outline').count()==0
+    hide();body.locator('h1').click();panel('속성');page.get_by_role('complementary',name='문서 설정 패널').get_by_label('문단 종류',exact=True).click();page.get_by_role('complementary',name='문서 설정 패널').get_by_role('menuitemradio',name='본문',exact=True).click();assert page.locator('.document-outline').count()==0
     panel('문서')
     with page.expect_download(timeout=60000) as pdf:page.get_by_role('menuitem',name='PDF (.pdf)',exact=True).click()
     text=subprocess.run(['pdftotext',pdf.value.path(),'-'],check=True,capture_output=True,text=True).stdout;assert 'Selected text' in text and 'Chapter One' in text,text

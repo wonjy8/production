@@ -197,3 +197,12 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Reserve a ruler gutter in fit-to-screen sizing, including mobile/sidebar resizing. Reuse SVG definitions across pages to bound ruler DOM cost.
 - Keep rulers outside editable content, DOCX persistence and selectable-text PDF output.
 - NAS files, database schema and configuration: unchanged.
+
+## 0.0.22
+
+- Restore the editor's full-width insertion toolbar and align the horizontal/vertical rulers with the viewport's top/left edges while retaining paper/zoom/scroll alignment.
+- Share one paragraph/color/bold/italic/underline/link/more toolbar between Properties, automatic desktop text selection and mobile selection. Combine foreground/background presets with recent choices; keep precision controls in Properties.
+- Add a keyboard-aware mobile input dock with insertion, formatting, image sources, undo/redo and keyboard dismissal; switch it to the same formatting controls on text selection.
+- Limit the desktop context menu to Cut/Copy/Paste, preserve rich clipboard content and retain text when clipboard writes fail or the document changes during an asynchronous operation.
+- Preserve Quote paragraph styles in DOCX save/reopen/removal and paint quote borders in selectable-text PDF export. Keep the underlying paginated document model and automatic saving.
+- NAS files, database schema and configuration: unchanged.

@@ -385,7 +385,7 @@ export async function loadDocument(blob: Blob, format: string) {
             Number(/^Heading([1-6])$/i.exec(style)?.[1]) ||
             null),
         align = props && val(child(props, "jc"));
-      return {
+      const paragraph = {
         type: level ? "heading" : "paragraph",
         attrs: {
           ...(level ? { level } : {}),
@@ -422,6 +422,9 @@ export async function loadDocument(blob: Blob, format: string) {
         },
         content: await runs(n),
       };
+      return ["PNQuote", "Quote", "IntenseQuote"].includes(style || "")
+        ? { type: "blockquote", content: [paragraph] }
+        : paragraph;
     }
     if (n.localName === "tbl") {
       const rows: any[] = [],
@@ -934,6 +937,12 @@ export async function saveDocument(
   }
   function node(n: any, list?: { id: number; level: number }): string {
     if (n.type === "docxOpaque") return n.attrs.xml;
+    if (n.type === "blockquote")
+      return (n.content || [])
+        .map((c: any) =>
+          node({ ...c, attrs: { ...c.attrs, docxQuote: true } }, list),
+        )
+        .join("");
     if (["bulletList", "orderedList"].includes(n.type)) {
       const id =
         original && n.attrs?.docxNumId && n.attrs.docxNumKind === n.type
@@ -1042,6 +1051,14 @@ export async function saveDocument(
             : attrs.docxHeading
               ? { pStyle: "" }
               : {}),
+          ...(attrs.docxQuote
+            ? { pStyle: "PNQuote" }
+            : n.type !== "heading" &&
+                /<(?:\w+:)?pStyle\b[^>]*\b(?:\w+:)?val=["'](?:PNQuote|Quote|IntenseQuote)["']/.test(
+                  attrs.docxProperties || "",
+                )
+              ? { pStyle: "" }
+              : {}),
           ...(["lineHeight", "spaceBefore", "spaceAfter"].some(
             (key) => attrs[key] != null,
           )
@@ -1133,6 +1150,23 @@ export async function saveDocument(
         '"/></w:pPr><w:rPr><w:b/><w:sz w:val="' +
         [36, 28, 24, 22, 20, 18][level - 1] +
         '"/></w:rPr></w:style>',
+    );
+    styles.documentElement.appendChild(
+      styles.importNode(definition.documentElement, true),
+    );
+  }
+  const hasQuote = (n: any): boolean =>
+    n.type === "blockquote" || !!n.content?.some(hasQuote);
+  if (
+    hasQuote(content) &&
+    !Array.from(styles.getElementsByTagNameNS(W, "style")).some(
+      (n) => val(n, "styleId") === "PNQuote",
+    )
+  ) {
+    const definition = parse(
+      '<w:style xmlns:w="' +
+        W +
+        '" w:type="paragraph" w:styleId="PNQuote"><w:name w:val="Quote"/><w:basedOn w:val="Normal"/><w:pPr><w:ind w:left="360"/><w:pBdr><w:left w:val="single" w:sz="12" w:space="8" w:color="D0D0D0"/></w:pBdr></w:pPr></w:style>',
     );
     styles.documentElement.appendChild(
       styles.importNode(definition.documentElement, true),

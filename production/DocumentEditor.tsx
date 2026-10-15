@@ -1,10 +1,12 @@
-import { DocumentRulers, rulerGutter } from "./DocumentRulers";
+import { DocumentRulerViewport } from "./DocumentRulers";
+import { FormattingTools, editLink } from "./EditorFormatting";
+import { EditorSelectionUI } from "./EditorSelectionUI";
 import {
   Alignment,
   ParagraphControls,
   ListControls,
 } from "./ParagraphControls";
-import { ColorControl, TablePicker, shapeImage } from "./EditorControls";
+import { TablePicker, shapeImage } from "./EditorControls";
 import {
   Highlight,
   scripts,
@@ -434,8 +436,7 @@ function DocumentEditor({ file }: { file: any }) {
         1,
         (scroll.current!.clientWidth -
           parseFloat(getComputedStyle(scroll.current!).paddingLeft) -
-          parseFloat(getComputedStyle(scroll.current!).paddingRight) -
-          rulerGutter) /
+          parseFloat(getComputedStyle(scroll.current!).paddingRight)) /
           ((layout.width * 96) / 25.4),
       );
       setFitScale((old) => (Math.abs(old - next) < 0.001 ? old : next));
@@ -755,6 +756,7 @@ function DocumentEditor({ file }: { file: any }) {
           ],
           content,
           editorProps: {
+            scrollMargin: { top: 40, right: 12, bottom: 100, left: 38 },
             handleClick: (_view, _pos, event) => {
               const link = (event.target as HTMLElement).closest("a");
               if (!link) return false;
@@ -1036,43 +1038,9 @@ function DocumentEditor({ file }: { file: any }) {
         {command("실행 취소", (ed) => ed.chain().focus().undo().run())}
         {command("다시 실행", (ed) => ed.chain().focus().redo().run())}
         {format !== "text" && (
-          <ColorControl
-            label="하이라이트"
-            value={
-              editor.current?.getAttributes("highlight").color || "#facc15"
-            }
-            disabled={editor.current?.state.selection.empty ?? true}
-            onChange={(color) =>
-              editor.current
-                ?.chain()
-                .focus()
-                .setMark("highlight", { color })
-                .run()
-            }
-            onClear={() =>
-              editor.current?.chain().focus().unsetMark("highlight").run()
-            }
-          />
-        )}
-        {format !== "text" && (
           <>
             <span className="document-tool-divider" />
-            {command("링크", (ed) => {
-              const href = window.prompt(
-                "HTTPS 링크",
-                ed.getAttributes("link").href || "https://",
-              );
-              if (href === null) return;
-              if (!href) {
-                ed.chain().focus().unsetLink().run();
-                return;
-              }
-              if (!/^https?:\/\//i.test(href)) {
-                setError("HTTP 또는 HTTPS 주소를 입력하세요.");
-                return;
-              }
-              ed.chain().focus().setLink({ href }).run();
-            })}
+            {command("링크", editLink)}
             <details className="document-menu">
               <summary aria-label="이미지 추가" title="이미지 추가">
                 <Icon name="reference" />
@@ -1281,16 +1249,9 @@ function DocumentEditor({ file }: { file: any }) {
             style={{
               width:
                 ((layout.width * 96) / 25.4) *
-                  (zoom === "fit" ? fitScale : Number(zoom) / 100) +
-                rulerGutter,
+                (zoom === "fit" ? fitScale : Number(zoom) / 100),
             }}
           >
-            <DocumentRulers
-              layout={layout}
-              scale={zoom === "fit" ? fitScale : Number(zoom) / 100}
-              pages={pageInfo.total}
-            />
-
             <div
               className={
                 "document-sheet" + (marginMarks ? " show-margin-marks" : "")
@@ -1315,6 +1276,15 @@ function DocumentEditor({ file }: { file: any }) {
             />
           </div>
         </div>
+        {ready && (
+          <DocumentRulerViewport
+            sheet={host.current}
+            viewport={scroll.current}
+            layout={layout}
+            scale={zoom === "fit" ? fitScale : Number(zoom) / 100}
+            pages={pageInfo.total}
+          />
+        )}
         {showLayout && (
           <aside className="document-settings" aria-label="문서 설정 패널">
             <nav
@@ -1449,38 +1419,9 @@ function DocumentEditor({ file }: { file: any }) {
                     </>
                   ) : (
                     <>
-                      <select
-                        className="keep-label"
-                        aria-label="문단 스타일"
-                        disabled={!ready || format === "text"}
-                        value={
-                          editor.current?.isActive("heading")
-                            ? "heading" +
-                              editor.current.getAttributes("heading").level
-                            : "paragraph"
-                        }
-                        onChange={(e) => {
-                          const ed = editor.current;
-                          if (!ed) return;
-                          if (e.target.value === "paragraph")
-                            ed.chain().focus().setParagraph().run();
-                          else
-                            ed.chain()
-                              .focus()
-                              .setHeading({
-                                level: Number(e.target.value.slice(-1)) as any,
-                              })
-                              .run();
-                          setActive((v) => v + 1);
-                        }}
-                      >
-                        <option value="paragraph">본문</option>
-                        {[1, 2, 3].map((level) => (
-                          <option key={level} value={"heading" + level}>
-                            제목 {level}
-                          </option>
-                        ))}
-                      </select>
+                      {format !== "text" && (
+                        <FormattingTools editor={editor.current} />
+                      )}
                       {format !== "text" && (
                         <>
                           <ParagraphControls editor={editor.current} />
@@ -1549,63 +1490,6 @@ function DocumentEditor({ file }: { file: any }) {
                               </option>
                             ))}
                           </select>
-                          <span className="document-tool-divider" />
-                          {command("bold", (ed) =>
-                            ed.chain().focus().toggleBold().run(),
-                          )}
-                          {command("italic", (ed) =>
-                            ed.chain().focus().toggleItalic().run(),
-                          )}
-                          {command("underline", (ed) =>
-                            ed.chain().focus().toggleUnderline().run(),
-                          )}
-                          {command("strike", (ed) =>
-                            ed.chain().focus().toggleStrike().run(),
-                          )}
-                          <ColorControl
-                            label="글자색"
-                            value={
-                              editor.current?.getAttributes("textStyle")
-                                .color || "#242424"
-                            }
-                            onChange={(color) =>
-                              editor.current
-                                ?.chain()
-                                .focus()
-                                .setColor(color)
-                                .run()
-                            }
-                          />
-                          <ColorControl
-                            label="하이라이트"
-                            disabled={
-                              editor.current?.state.selection.empty ?? true
-                            }
-                            value={
-                              editor.current?.getAttributes("highlight")
-                                .color || "#fff29a"
-                            }
-                            onChange={(color) =>
-                              editor.current
-                                ?.chain()
-                                .focus()
-                                .setMark("highlight", { color })
-                                .run()
-                            }
-                            onClear={() => {
-                              editor.current
-                                ?.chain()
-                                .focus()
-                                .unsetMark("highlight")
-                                .run();
-                            }}
-                          />
-                          {command("아래 첨자", (ed) =>
-                            ed.chain().focus().toggleMark("subscript").run(),
-                          )}
-                          {command("위 첨자", (ed) =>
-                            ed.chain().focus().toggleMark("superscript").run(),
-                          )}
                           <hr />
                           <ListControls editor={editor.current} />
                         </>
@@ -1849,6 +1733,22 @@ function DocumentEditor({ file }: { file: any }) {
           </select>
         </div>
       </footer>
+      {ready && (
+        <EditorSelectionUI
+          editor={editor.current}
+          rich={format !== "text"}
+          onProperties={() => {
+            setShowLayout(true);
+            setPanel("properties");
+          }}
+          onLibrary={() => setShowImages(true)}
+          onDeviceImage={() => deviceImage.current?.click()}
+          onFile={() => deviceFile.current?.click()}
+          onShape={(id, label) =>
+            insertImage(shapeImage(id), 320, 200, "도형: " + label)
+          }
+        />
+      )}
       {updateAvailable && (
         <div className="document-update-toast" role="status">
           <button
