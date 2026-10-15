@@ -1,12 +1,14 @@
+import { InlineRemove } from "./InlineRemove";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { observeUI } from "../ui/decorate.js";
-import { listResources, resourceFile } from "./resources";
+import { listResources, resourceFile, saveResource } from "./resources";
 import { documentLibrary } from "./document-library.js";
 import { documentFormat } from "./document-types";
 import { documentURL } from "./document-launch";
 import { Icon } from "./Icon";
 export function DocumentLibrary() {
+  const [error, setError] = useState("");
   const [resources, setResources] = useState<any[]>([]);
   const [data, setData] = useState(() => window.sourceGalleryBridge.read()),
     [path, setPath] = useState<string[]>([]),
@@ -14,11 +16,11 @@ export function DocumentLibrary() {
   useEffect(() => {
     const update = () => {
       setData(window.sourceGalleryBridge.read());
-      listResources()
+      listResources(true)
         .then((rows) =>
           setResources(
             rows
-              .filter((r: any) => r.fileId && !r.deleted)
+              .filter((r: any) => r.fileId)
               .map((r: any) => ({ ...r, file: resourceFile(r) })),
           ),
         )
@@ -68,6 +70,7 @@ export function DocumentLibrary() {
   }
   return (
     <section className="document-library">
+      {error && <p role="alert">{error}</p>}
       <header className="document-library-heading">
         <div>
           <h1>문서</h1>
@@ -115,29 +118,47 @@ export function DocumentLibrary() {
             </button>
           ))}
         {rows.map((f: any) => (
-          <a
-            className="document-library-row"
-            key={f.key}
-            href={address(f)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Icon name="file" />
-            <div>
-              <strong>{f.name}</strong>
-              {needle && (
-                <small>{f.path.map((p: any) => p.name).join(" / ")}</small>
-              )}
-            </div>
-            <small>
-              {documentFormat(f)
-                ? "문서편집기로 열기"
-                : /\.pdf$/i.test(f.name)
-                  ? "PDF 열기"
-                  : "내려받기"}
-            </small>
-            <Icon name="link" />
-          </a>
+          <div className="document-file-entry" key={f.key}>
+            <a
+              className="document-library-row"
+              key={f.key}
+              href={address(f)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Icon name="file" />
+              <div>
+                <strong>{f.name}</strong>
+                {needle && (
+                  <small>{f.path.map((p: any) => p.name).join(" / ")}</small>
+                )}
+              </div>
+              <small>
+                {documentFormat(f)
+                  ? "문서편집기로 열기"
+                  : /\.pdf$/i.test(f.name)
+                    ? "PDF 열기"
+                    : "내려받기"}
+              </small>
+              <Icon name="link" />
+            </a>
+            {resources.find((row: any) => row.fileId === f.id)?.canEdit && (
+              <InlineRemove
+                triggerText="휴지통"
+                label={f.name + " 휴지통으로 이동"}
+                onDelete={async () => {
+                  try {
+                    const row = resources.find(
+                      (row: any) => row.fileId === f.id,
+                    );
+                    if (row) await saveResource({ ...row, deleted: true });
+                  } catch (e: any) {
+                    setError(e.message);
+                  }
+                }}
+              />
+            )}
+          </div>
         ))}
       </div>
       {!rows.length && (needle || !folder.folders.length) && (

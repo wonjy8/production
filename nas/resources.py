@@ -1,7 +1,9 @@
 """Independent resource catalog; legacy placements are registered without rewriting originals."""
 import hashlib,json,re,uuid
+from pathlib import Path
+from datetime import datetime,timezone,timedelta
 from fastapi import Request,HTTPException
-from access import actor_for,is_admin,scope,apply_tab_visibility,workspace_data,ref_visible,permitted,deny
+from access import actor_for,is_admin,scope,apply_tab_visibility,workspace_data,ref_visible,permitted,deny,file_ids
 
 def link_id(url): return str(uuid.UUID(hashlib.sha256(url.encode()).hexdigest()[:32]))
 def catalog_entries(workspace, references):
@@ -48,6 +50,20 @@ def install_resources(app,database,write_lock,now,json_body,can_edit_file):
                 if previous.get('content')!=item.get('content'):
                     previous['content']=item.get('content');conn.execute('UPDATE resource_records SET payload=?,version=version+1,updated_at=? WHERE id=?',(json.dumps(previous,ensure_ascii=False),now(),ident))
             conn.execute('INSERT OR IGNORE INTO resource_records(id,file_id,owner_user_id,payload,version,updated_at) VALUES(?,?,?,?,1,?)',(ident,item['fileId'],owner[0] if owner else '',json.dumps(payload,ensure_ascii=False),now()))
+    def purge_item(conn,item):
+        payload={'id':item['id'],'fileId':item.get('fileId'),'title':'','tags':[],'properties':{},'deleted':True,'purged':True}
+        conn.execute('UPDATE resource_records SET payload=?,version=version+1,updated_at=? WHERE id=?',(json.dumps(payload,ensure_ascii=False),now(),item['id']))
+        ident=item.get('fileId')
+        if not ident:return
+        references=[json.loads(row[0]) for row in conn.execute('SELECT payload FROM reference_records')]
+        if ident in file_ids([workspace_data(conn),references]):return
+        if conn.execute('SELECT 1 FROM reference_blocks WHERE file_id=?',(ident,)).fetchone():return
+        root=Path(conn.execute('PRAGMA database_list').fetchone()[2]).parent
+        conn.execute('DELETE FROM file_uploaders WHERE file_id=?',(ident,))
+        conn.execute('DELETE FROM files WHERE id=?',(ident,))
+        (root/'files'/ident).unlink(missing_ok=True)
+        for thumbnail in (root/'thumbnails').glob(ident+'-*.webp'):thumbnail.unlink(missing_ok=True)
+
     def discover(conn,actor):
         sync_catalog(conn)
         full=workspace_data(conn);refs=[json.loads(r[0]) for r in conn.execute('SELECT payload FROM reference_records')]
@@ -56,6 +72,14 @@ def install_resources(app,database,write_lock,now,json_body,can_edit_file):
         result={}
         for record in conn.execute('SELECT * FROM resource_records'):
             ident=record['id']
+            payload=json.loads(record['payload'])
+            if payload.get('deleted') and not payload.get('purged'):
+                try:
+                    deleted_at=datetime.fromisoformat(payload.get('deletedAt') or record['updated_at'])
+                    if deleted_at.tzinfo is None:deleted_at=deleted_at.replace(tzinfo=timezone.utc)
+                    if deleted_at<=datetime.now(timezone.utc)-timedelta(days=30):
+                        purge_item(conn,{**payload,'id':ident});continue
+                except (ValueError,TypeError):pass
             if not (is_admin(actor) or ident in scoped or record['owner_user_id']==actor['id']):continue
             if record['file_id'] and not conn.execute('SELECT 1 FROM files WHERE id=?',(record['file_id'],)).fetchone():continue
             item=json.loads(record['payload']);item.update(version=record['version'],updatedAt=record['updated_at'],origins=scoped.get(ident,{}).get('origins',[]))
@@ -68,13 +92,14 @@ def install_resources(app,database,write_lock,now,json_body,can_edit_file):
     def resources(request:Request):
         with write_lock,database() as conn:
             actor=actor_for(conn,request);items=discover(conn,actor)
-            return list(items.values())
+            return [item for item in items.values() if not item.get('purged') or 'includePurged' in request.query_params]
     @app.put('/api/database/resources/{ident}')
     async def put_resource(ident:str,request:Request):
         data=await json_body(request,100000)
         if not re.fullmatch(r'[a-f0-9-]{36}',ident) or not isinstance(data,dict):raise HTTPException(400,'Invalid resource')
         with write_lock,database() as conn:
             actor=actor_for(conn,request);items=discover(conn,actor);old=items.get(ident)
+            if old and old.get('purged'):raise HTTPException(409,'Resource permanently deleted')
             exists=conn.execute('SELECT 1 FROM resource_records WHERE id=?',(ident,)).fetchone()
             if actor['role']=='viewer' or exists and not old or old and not old['canEdit']:deny()
             if not old:
@@ -90,9 +115,24 @@ def install_resources(app,database,write_lock,now,json_body,can_edit_file):
             labels=data.get('propertyLabels',old.get('propertyLabels',{}))
             if not isinstance(labels,dict) or len(labels)>50 or any(not isinstance(k,str) or len(k)>80 or not isinstance(v,str) or len(v)>80 for k,v in labels.items()):raise HTTPException(400,'Invalid resource property labels')
             item['propertyLabels']=labels
+            if item['deleted']:item['deletedAt']=old.get('deletedAt') or now()
+            else:item.pop('deletedAt',None)
             version=old['version']+1;stamp=now()
             conn.execute('INSERT INTO resource_records VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,version=excluded.version,updated_at=excluded.updated_at',(ident,item.get('fileId'),actor['id'],json.dumps(item,ensure_ascii=False),version,stamp))
             return {**item,'version':version,'updatedAt':stamp,'origins':old['origins'],'canEdit':True}
+
+    @app.delete('/api/database/resources/{ident}')
+    def delete_resource(ident:str,request:Request):
+        if not re.fullmatch(r'[a-f0-9-]{36}',ident):raise HTTPException(400,'Invalid resource')
+        with write_lock,database() as conn:
+            actor=actor_for(conn,request);item=discover(conn,actor).get(ident)
+            if not item:raise HTTPException(404,'Not found')
+            if not item['canEdit']:deny()
+            if not item.get('deleted'):raise HTTPException(409,'Move to trash first')
+            if request.headers.get('if-match')!='"'+str(item['version'])+'"':raise HTTPException(409,'Resource changed')
+            # Tombstones prevent rediscovery; referenced originals remain in place.
+            purge_item(conn,item)
+            return {'ok':True}
 
     with write_lock,database() as conn:sync_catalog(conn)
     return sync_catalog

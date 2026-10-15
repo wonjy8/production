@@ -6,6 +6,7 @@ import {itemMenuBindings} from '../ui/item-menu.js';
 import {assigneeLabel} from './people-model.js';
 import { useEffect, useRef, useState } from "react";
 import {
+  Flag,
   Filter,
   Archive,
   ArrowDownToLine,
@@ -207,7 +208,7 @@ export function ProjectWorkspace({
           onChange={() => toggleTask(t.id)}
         />
         <button className="task-title" onClick={() => {if(suppressCalendarClick.current>Date.now())return;setCalendarDraft(false);setTaskEditor(t)}}>
-          <strong>{t.title}</strong>
+          <strong>{t.flagged&&<Flag size={13} aria-label="깃발"/>}{t.title}</strong>
           <small>
             {taskSources && (
               <span className="task-source">{taskSources[t.id]}</span>
@@ -608,6 +609,7 @@ export function ProjectWorkspace({
                 due: field(d, "due"),
                 stage: field(d, "stage") as Task["stage"],
                 priority: field(d, "priority") as Task["priority"],
+                flagged: d.has("flagged"),
                 description: field(d, "description"),
               });
             }}
@@ -657,6 +659,7 @@ export function ProjectWorkspace({
                 <input type="date" name="due" defaultValue={taskEditor.due} />
               </label>
             </div>
+            <label className="member-check"><input type="checkbox" name="flagged" defaultChecked={!!taskEditor.flagged}/>깃발 · 완료할 때까지 이번 주에 표시</label>
             <TimeFields start={taskEditor.startTime} end={taskEditor.endTime}/>
             {error&&<p role="alert" className="form-error">{error}</p>}
             <label>
@@ -869,4 +872,4 @@ function LinkForm({ onSave }: { onSave: (name: string, url: string) => void }) {
 
 
 function validTimes(start:string,end:string,multipleDays=false){const a=minutes(start),b=minutes(end);return a!==null&&b!==null&&a<1440&&(multipleDays||b>a)}
-function TimeFields({start='',end=''}:{start?:string;end?:string}){const [a,setA]=useState(start),[b,setB]=useState(end);return <div className="form-row"><label>시작 시간<TimeInput name="startTime" label="시작 시간" value={a} onChange={setA}/></label><label>종료 시간<TimeInput name="endTime" label="종료 시간" value={b} onChange={setB}/></label></div>}
+function TimeFields({start='',end=''}:{start?:string;end?:string}){const [a,setA]=useState(start),[b,setB]=useState(end);return <div className="form-row time-fields"><label>시작 시간<TimeInput name="startTime" label="시작 시간" value={a} onChange={setA}/></label><label>종료 시간<TimeInput name="endTime" label="종료 시간" value={b} onChange={setB}/></label></div>}

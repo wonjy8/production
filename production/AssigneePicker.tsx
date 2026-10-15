@@ -65,9 +65,8 @@ export function AssigneePicker({
     <div
       ref={root}
       className="assignee-picker"
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
-      }}
+      onBlur={()=>requestAnimationFrame(()=>{const focused=(root.current?.getRootNode() as Document|ShadowRoot)?.activeElement;if(!root.current?.contains(focused))setOpen(false)})}
+
     >
       {name && <input type="hidden" name={name} value={current} />}
       <button
@@ -78,13 +77,13 @@ export function AssigneePicker({
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => {
-          setOpen(!open);
+          setOpen(previous=>!previous);
           setQuery("");
           setActive(0);
         }}
       >
         {assigneeLabel(members,current)}
-        <ChevronDown size={12} />
+        <ChevronDown size={12} style={{pointerEvents:"none",transform:open?"rotate(180deg)":undefined}} />
       </button>
       {open && (
         <div className="assignee-popover">

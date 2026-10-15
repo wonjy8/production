@@ -11,3 +11,8 @@ assert.equal(lib.entries.find(e=>e.id==='text').path[0].name,'소스');
 assert.equal(lib.entries.filter(e=>e.id==='doc').length,2);
 assert.equal(JSON.stringify({w,references}),before);
 console.log('Document library: project/work-group/reference/source folders, office/PDF/text types, shared locations, archive and trash exclusion, immutable source passed');
+
+assert.equal(documentLibrary(w,references,[{fileId:'doc',deleted:true}]).entries.some(f=>f.id==='doc'),false);
+assert.equal(documentLibrary(w,references,[{fileId:'doc',deleted:true,purged:true}]).entries.some(f=>f.id==='doc'),false);
+assert.equal(JSON.stringify({w,references}),before);
+console.log('Document catalog trash hides every placement while preserving shared originals');

@@ -17,6 +17,38 @@ class ResourceTest(unittest.TestCase):
             conn.execute('INSERT INTO app_users VALUES(?,?,?,?,1,?)',(ident,ident+'@example.com',ident,role,'now'))
             conn.execute('INSERT INTO local_sessions VALUES(?,?,?,?,?,2)',(hashlib.sha256(token.encode()).hexdigest(),ident,stamp,stamp+10000,stamp))
         return ident,{**self.auth,'X-Auth-Session':token}
+    def test_resource_trash_purge_versions_permissions_and_retention(self):
+        ident=self.upload();url='/api/database/resources/'+ident
+        draft={'id':ident,'fileId':ident,'title':'trash test','tags':[],'properties':{},'kind':'file','filename':'trash.txt','deleted':False}
+        saved=self.client.put(url,headers={**self.auth,'If-Match':'"0"'},json=draft).json()
+        self.assertEqual(self.client.delete(url,headers={**self.auth,'If-Match':'"1"'}).status_code,409)
+        trashed=self.client.put(url,headers={**self.auth,'If-Match':'"1"'},json={**saved,'deleted':True}).json()
+        self.assertIn('deletedAt',trashed)
+        _,viewer=self.account('viewer')
+        self.assertIn(self.client.delete(url,headers={**viewer,'If-Match':'"2"'}).status_code,(403,404))
+        self.assertEqual(self.client.delete(url,headers={**self.auth,'If-Match':'"1"'}).status_code,409)
+        self.assertEqual(self.client.delete(url,headers={**self.auth,'If-Match':'"2"'}).status_code,200)
+        self.assertFalse(any(row['id']==ident for row in self.rows()))
+        self.assertEqual(self.client.get('/api/ref-files/'+ident,headers=self.auth).status_code,404)
+        self.assertIn(self.client.put(url,headers={**self.auth,'If-Match':'"3"'},json={**saved,'deleted':False}).status_code,(403,409))
+        # A shared original survives permanent catalog removal and cannot reappear in the catalog.
+        shared=self.upload();reference={'id':str(uuid4()),'title':'shared','modules':[{'id':'files','kind':'file','files':[{'id':shared,'kind':'file','name':'shared.txt'}]}]}
+        self.client.put('/api/references/'+reference['id'],headers=self.auth,json=reference)
+        row=next(row for row in self.rows() if row['id']==shared)
+        deleted=self.client.put('/api/database/resources/'+shared,headers={**self.auth,'If-Match':'"'+str(row['version'])+'"'},json={**row,'deleted':True}).json()
+        self.assertEqual(self.client.delete('/api/database/resources/'+shared,headers={**self.auth,'If-Match':'"'+str(deleted['version'])+'"'}).status_code,200)
+        self.assertEqual(self.client.get('/api/ref-files/'+shared,headers=self.auth).status_code,200)
+        self.assertFalse(any(row['id']==shared for row in self.rows()))
+        hidden=self.client.get('/api/database/resources?includePurged=1',headers=self.auth).json()
+        self.assertTrue(next(row for row in hidden if row['id']==shared)['purged'])
+        expired=self.upload();url='/api/database/resources/'+expired
+        row=self.client.put(url,headers={**self.auth,'If-Match':'"0"'},json={**draft,'id':expired,'fileId':expired,'deleted':True}).json()
+        with self.module.database() as conn:
+            value=json.loads(conn.execute('SELECT payload FROM resource_records WHERE id=?',(expired,)).fetchone()[0]);value['deletedAt']='2000-01-01T00:00:00+00:00';conn.execute('UPDATE resource_records SET payload=? WHERE id=?',(json.dumps(value),expired))
+        self.assertFalse(any(row['id']==expired for row in self.rows()))
+        self.assertEqual(self.client.get('/api/ref-files/'+expired,headers=self.auth).status_code,404)
+
+
     def test_legacy_migration_and_independent_metadata(self):
         ident=self.upload();ref={'id':str(uuid4()),'title':'기존 자료','tags':['말씀'],'blocks':[{'id':'f','kind':'file','fileId':ident,'originalName':'기존 노트.txt','mime':'text/plain'}]}
         self.assertEqual(self.client.put('/api/references/'+ref['id'],headers=self.auth,json=ref).status_code,200)

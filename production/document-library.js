@@ -3,6 +3,8 @@ import { sourceGallery } from "./source-gallery-model.js";
 const types =
   /\.(docx?|docm|dotx?|dotm|odt|rtf|txt|md|markdown|html?|pdf|hwp|hwpx|xlsx?|xlsm|ods|csv|pptx?|odp)$/i;
 export function documentLibrary(workspace, references, resources=[]) {
+  const hiddenIds=new Set(resources.filter(r=>r.deleted||r.purged).map(r=>r.fileId));
+  resources=resources.filter(r=>!r.deleted&&!r.purged);
   if(resources.length){
     const categories=[...new Set(resources.map(r=>r.properties?.category||'미분류'))];
     references=[...references,{id:'catalog-library',title:'자료',recordType:'source',tabs:categories.map(category=>({id:'catalog-'+category,name:category,modules:[{id:'catalog-module-'+category,kind:'file',files:resources.filter(r=>(r.properties?.category||'미분류')===category).map(r=>r.file)}]}))}];
@@ -15,10 +17,10 @@ export function documentLibrary(workspace, references, resources=[]) {
     };
   const rows = sourceGallery(data, references).filter(
     (f) =>
-      types.test(f.name || "") ||
+      !hiddenIds.has(f.id)&&(types.test(f.name || "") ||
       /^(text\/|application\/(pdf|msword|vnd\.(openxmlformats|ms-|oasis)))/i.test(
         f.mime || "",
-      ),
+      )),
   );
   const root = { id: "", name: "문서", folders: [], files: [] },
     entries = [];

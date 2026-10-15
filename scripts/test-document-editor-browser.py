@@ -55,7 +55,7 @@ with tempfile.TemporaryDirectory() as td:
    page.wait_for_function('typeof window.mountProduction === "function" && !!window.productionBridge')
    page.evaluate("""async id=>{const w=window.productionBridge.read();w.productions.push({id:'documents-project',name:'문서 프로젝트',status:'진행 중',customTabs:[{id:'documents-tab',name:'기획 문서',modules:[{id:'documents-module',kind:'file',files:[{id,name:'Restored.docx',kind:'file',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]}]}],tasks:[],teams:[],memberIds:[],schedules:[...Array.from({length:8},(_,i)=>({id:'past-'+i,title:'과거 일정 '+i,date:'2000-01-01'})),{id:'geometry-timed',title:'시간 일정',date:'2099-01-01',startTime:'09:00',endTime:'10:00'},{id:'geometry-all',title:'종일 일정',date:'2099-01-02'}]});window.productionBridge.write(w);await window.flushDocumentModules();await window.referenceBridge.create({title:'문서 자료',modules:[{id:'reference-doc',kind:'file',files:[{id,name:'Restored.docx',kind:'file',mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}]}]})}""",file_id)
    page.locator('[data-main-space=references]').click()
-   page.locator('button[data-source-section=documents]').click()
+   page.locator('button[data-source-section=resources]').click();page.get_by_role('navigation',name='자료 유형',exact=True).get_by_role('button',name='문서',exact=True).click()
    page.locator('.document-library').wait_for()
    page.get_by_role('button',name='프로젝트 폴더 열기',exact=True).click()
    page.get_by_role('button',name='문서 프로젝트 폴더 열기',exact=True).click()
@@ -67,7 +67,7 @@ with tempfile.TemporaryDirectory() as td:
    reference_link=page.locator('.document-library-row',has_text='Restored.docx')
    assert 'owner=' not in reference_link.get_attribute('href')
    page.reload();page.locator('.document-library').wait_for()
-   assert '/materials/documents' in page.url
+   assert '/materials/resources' in page.url
    page.get_by_role('searchbox',name='문서 검색',exact=True).fill('문서 자료')
    with page.expect_popup() as opened:page.locator('.document-library-row',has_text='Restored.docx').click()
    editor=opened.value
@@ -76,12 +76,12 @@ with tempfile.TemporaryDirectory() as td:
    print('PASS Materials Documents folders, search, scoped editor links, reload and opening',flush=True)
    page.set_viewport_size({'width':390,'height':844})
    page.goto('https://pages.test:9443/production/#/home/schedule')
-   page.locator('.admin-schedule-list>button').first.wait_for()
-   positions=page.locator('.home-schedule-future .admin-schedule-list>button>div').evaluate_all('(nodes)=>nodes.map(n=>n.getBoundingClientRect().left)')
+   page.locator('.admin-schedule-list .admin-schedule-open').first.wait_for()
+   positions=page.locator('.home-schedule-future .admin-schedule-list .admin-schedule-open>div').evaluate_all('(nodes)=>nodes.map(n=>n.getBoundingClientRect().left)')
    assert len(positions)==2 and max(positions)-min(positions)<1,positions
    timeline=page.get_by_role('region',name='전체 일정',exact=True)
-   assert timeline.evaluate('(el)=>el.scrollTop')>100
-   assert page.get_by_text('과거 일정 0',exact=True).evaluate('(el)=>el.getBoundingClientRect().bottom') < timeline.evaluate('(el)=>el.getBoundingClientRect().top')
+   assert page.get_by_text('과거 일정 0',exact=True).count()==0
+   timeline.hover();page.mouse.wheel(0,-3000);page.get_by_text('과거 일정 0',exact=True).wait_for(state='attached')
    timeline.hover();page.mouse.wheel(0,-3000);page.wait_for_timeout(400)
    assert timeline.evaluate('(el)=>el.scrollTop')==0
    def bottom_inside():
@@ -106,12 +106,12 @@ with tempfile.TemporaryDirectory() as td:
    period=page.locator('.admin-home-heading .admin-segment>button')
    assert period.all_text_contents()==['오늘','이번 주','전체']
    assert period.first.get_attribute('aria-pressed')=='true'
-   assert page.locator('.admin-home .admin-schedule-list>button').count()==5
-   assert page.get_by_text('지난 시간 일정',exact=True).count()==0
+   assert page.locator('.admin-home .admin-schedule-list .admin-schedule-open:visible').count()==5
+   assert page.get_by_text('지난 시간 일정',exact=True).is_hidden()
    page.get_by_role('button',name='모든 일정 보기',exact=True).click()
    today_group=page.locator('.home-schedule-today-group')
-   today_group.get_by_text('지난 시간 일정',exact=True).wait_for()
-   assert today_group.locator('.admin-schedule-list>button').count()==11
+   today_group.locator('.home-completed summary').click();today_group.get_by_text('지난 시간 일정',exact=True).wait_for()
+   assert today_group.locator('.admin-schedule-list .admin-schedule-open').count()==11
    assert today_group.evaluate("e=>getComputedStyle(e).borderTopWidth==='1px'&&getComputedStyle(e).borderBottomWidth==='1px'")
    print('PASS today/week/all order, five upcoming previews and today separators',flush=True)
 

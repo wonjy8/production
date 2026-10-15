@@ -246,6 +246,7 @@ export function ResourceDatabase({
               속성
             </button>
           )}
+          {!readonly&&global&&row.canEdit&&<InlineRemove triggerText="휴지통" label={row.title+" 휴지통으로 이동"} onDelete={()=>perform(async()=>{await saveResource({...row,deleted:true});await refresh()})}/>}
           {!global && !readonly && (
             <InlineRemove
               onDelete={() =>

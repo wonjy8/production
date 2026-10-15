@@ -20,9 +20,9 @@ async function responseJSON(response: Response) {
     );
   return data;
 }
-export async function listResources() {
+export async function listResources(includePurged=false) {
   return responseJSON(
-    await fetch("/api/database/resources", { cache: "no-store" }),
+    await fetch("/api/database/resources"+(includePurged?"?includePurged=1":""), { cache: "no-store" }),
   );
 }
 export async function saveResource(row: any) {

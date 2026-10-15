@@ -115,3 +115,13 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Reuse the thumbnail pipeline in Materials, reference covers, image modules and the editor image picker; defer loading outside the viewport and use file-type icons for video list covers.
 - Fetch originals for explicit details, editing, downloads and document insertion. Bound decoded-image memory and keep source/thumbnail caches separate.
 - NAS update: replace server.py, browser_gateway.py and requirements.txt; rebuild the container to install Pillow 12.2.0. No .env or database schema changes.
+
+## 0.0.12
+
+- Simplify Materials navigation, rename All Materials, hide sidebar tags and rename classification to tabs. Display archives as a full workspace page.
+- Add one tabbed trash browser for references, portfolios, sources, documents, resources and archives, with selection, restore and confirmed permanent removal. Resource tombstones prevent rediscovery; only unreferenced original files are removed, with 30-day resource retention.
+- Split members from equipment views, show inventory owners only in Equipment, add owner selection and member-to-equipment links, and filter members by account registration. Preserve inventory during member profile changes.
+- Fold completed/elapsed schedules on Home, allow reopening, reveal past history only on upward scrolling, remove sidebar task/schedule shortcuts, and add Home subpage breadcrumbs.
+- Add independent task flags retained in the weekly list until completion and correct the assignee toggle.
+- Add segmented desktop AM/PM/hour/minute controls, 24-hour input normalization, arrow stepping and a cyclic start/end Tab order; retain mobile time wheels.
+- NAS update: replace resources.py and rebuild the existing container. No schema or environment-variable changes.

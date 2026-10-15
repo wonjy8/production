@@ -68,7 +68,8 @@ vm.runInContext('drawEquipmentCatalogSettings(settingsContainer)',context);
 for(const label of ['카메라 바디','렌즈','배터리','기타 장비'])assert.ok(context.settingsContainer.innerHTML.includes('<h3>'+label+'<'));
 assert.match(context.settingsContainer.innerHTML,/data-rename-kind="lens"/);
 console.log('Unified equipment settings and inline rename validation passed');
-// Both viewing modes read the same inventory; simple hides support gear only.
+// Equipment views retain their inventory layout independently of member profiles.
+vm.runInContext("databaseCollection='equipment'",context);
 context.viewMember={id:'view1',name:'사용자A',contact:'연락처B',email:'test@example.com'};
 context.viewInventory=[{id:'v1',kind:'body',name:'Sony FX3',quantity:3},{id:'v2',kind:'lens',name:'Sony 24–70mm F2.8 GM',quantity:2},{id:'v3',kind:'tripod',name:'삼각대 모델',quantity:2},{id:'v4',kind:'lamp',name:'조명 모델',quantity:3},{id:'v6',kind:'lightingOther',name:'라이트 스탠드',equipmentType:'스탠드',quantity:2}];
 const simple=vm.runInContext("memberRecordMarkup(viewMember,viewInventory,'simple')",context),detail=vm.runInContext("memberRecordMarkup(viewMember,viewInventory,'detail')",context);

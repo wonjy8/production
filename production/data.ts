@@ -6,6 +6,7 @@ export type Task = {
   id: string;
   title: string;
   done: boolean;
+  flagged?: boolean;
   stage: string;
   ownerId?: string;
   startTime?: string;
@@ -16,6 +17,7 @@ export type Task = {
   description: string;
 };
 export type Schedule = {
+  done?: boolean;
   projectLinked?: boolean;
   startTime?: string;
   endTime?: string;
@@ -247,6 +249,7 @@ function migrateTasks(value: unknown): Task[] | null {
       id: t.id as string,
       title: t.title as string,
       done: t.done,
+      flagged: !!t.flagged,
       ...(typeof t.startTime==='string'?{startTime:t.startTime}:{}),
       ...(typeof t.endTime==='string'?{endTime:t.endTime}:{}),
       stage: typeof t.stage==='string'&&t.stage.trim()?t.stage:"기획",

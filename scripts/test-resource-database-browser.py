@@ -49,7 +49,7 @@ with tempfile.TemporaryDirectory() as td:
 
     fixture=page.evaluate("""async()=>{const id=crypto.randomUUID();await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'text/plain'},body:'legacy original'});await window.referenceBridge.create({title:'기존 자료',modules:[{id:crypto.randomUUID(),kind:'file',files:[{id,name:'legacy.txt',kind:'file',mime:'text/plain'}]}]});return id}""")
     page.locator('[data-main-space=references]').first.click();page.locator('button[data-source-section=resources]').click()
-    page.get_by_role('heading',name='자료',exact=True).wait_for();page.get_by_role('button',name='legacy.txt',exact=True).wait_for()
+    page.get_by_role('heading',name='자료',exact=True).wait_for();page.get_by_role('navigation',name='자료 유형',exact=True).get_by_role('button',name='전체',exact=True).click();page.get_by_role('button',name='legacy.txt',exact=True).wait_for()
     page.wait_for_function('location.hash==="#/materials/resources"')
     page.get_by_role('button',name='갤러리',exact=True).click()
     from PIL import Image
@@ -154,7 +154,7 @@ with tempfile.TemporaryDirectory() as td:
     page.reload();page.get_by_role('button',name='주일 말씀 '+mode,exact=True).wait_for();assert page.locator('.resource-card',has_text='주일 말씀 '+mode).inner_text().find('감사')>=0
     # Concurrent edits must reject a stale metadata version.
     conflict=page.evaluate("""async id=>{const row=(await fetch('/production/api/database/resources').then(r=>r.json())).find(r=>r.id===id),options={method:'PUT',headers:{'Content-Type':'application/json','If-Match':'"'+row.version+'"'},body:JSON.stringify({...row,title:row.title+' 변경'})};return [(await fetch('/production/api/database/resources/'+id,options)).status,(await fetch('/production/api/database/resources/'+id,options)).status]}""",note['id']);assert conflict==[200,409],conflict
-    page.locator('[data-main-space=references]').first.click();page.locator('button[data-source-section=documents]').click();page.get_by_role('searchbox',name='문서 검색',exact=True).fill('자료');page.locator('.document-library-row',has_text='주일 말씀').wait_for()
+    page.locator('[data-main-space=references]').first.click();page.locator('button[data-source-section=resources]').click();page.get_by_role('navigation',name='자료 유형',exact=True).get_by_role('button',name='문서',exact=True).click();page.get_by_role('searchbox',name='문서 검색',exact=True).fill('자료');page.locator('.document-library-row',has_text='주일 말씀').wait_for()
     page.locator('button[data-source-section=resources]').click();page.set_viewport_size({'width':390,'height':844});page.get_by_role('heading',name='자료',exact=True).wait_for();assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.set_viewport_size({'width':1400,'height':1000})
     page.locator('.sidebar-main-spaces [data-main-space=settings]').first.click();page.locator('[data-settings-category=fonts]').click()

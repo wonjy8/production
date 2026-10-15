@@ -18,11 +18,12 @@ window.referenceBridge={
 };
 let referenceEditorCleanup=null,referenceOpenRequest=0,archiveCleanup=null;
 const archiveHost=document.createElement('div');archiveHost.id='reference-archive-host';archiveHost.hidden=true;$('#refpanel').append(archiveHost);
-window.openReferencesArchive=async()=>{try{if(sourceSection==='gallery'){sourceSection='references';localStorage.setItem('pn-source-section',sourceSection)}await openRefs();if(!productionAssets){const response=await fetch('/production-style');productionAssets=await response.text()}if(!window.mountArchiveLibrary)await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/production-app';script.onload=resolve;script.onerror=reject;document.head.append(script)});archiveHost.hidden=false;archiveCleanup=window.mountArchiveLibrary(archiveHost,productionAssets,()=>{archiveCleanup?.();archiveCleanup=null;archiveHost.hidden=true})}catch(e){toast(e.message||'아카이브를 열지 못했습니다')}};
+window.openReferencesArchive=async()=>{sourceSection='archive';localStorage.setItem('pn-source-section',sourceSection);return openRefs()};
+window.openMaterialsTrash=async()=>{sourceSection='trash';localStorage.setItem('pn-source-section',sourceSection);return openRefs()};
 const referenceModuleHost=document.createElement('div');referenceModuleHost.id='reference-module-host';referenceModuleHost.hidden=true;$('#refpanel').append(referenceModuleHost);
 function closeReferenceModules(){archiveCleanup?.();archiveCleanup=null;archiveHost.hidden=true;window.sourceGalleryVisible=false;referenceOpenRequest++;referenceEditorCleanup?.();referenceEditorCleanup=null;referenceModuleHost.hidden=true;$('#refpanel').classList.remove('reference-open');window.activeReferenceId='';}
 // Navigation wrappers keep the content area and editor lifecycle in sync.
-const referenceHome=openRefs;openRefs=async function(...args){closeReferenceModules();if(sourceSection==='gallery')return openSourceGallery();if(sourceSection==='documents')return openDocumentLibrary();if(sourceSection==='resources')return openResourceLibrary();if(refLoaded){refs=await refApi('')}return referenceHome(...args)};
+const referenceHome=openRefs;openRefs=async function(...args){closeReferenceModules();if(sourceSection==='archive')return openMaterialsPage('archive');if(sourceSection==='trash')return openMaterialsPage('trash');if(sourceSection==='gallery')return openSourceGallery();if(sourceSection==='documents')return openDocumentLibrary();if(sourceSection==='resources')return openResourceLibrary();if(refLoaded){refs=await refApi('')}return referenceHome(...args)};
 $('#references').onclick=()=>openRefs();
 const referenceProduction=openProduction;openProduction=async function(...args){closeReferenceModules();return referenceProduction(...args)};
 const referenceDatabase=openDatabase;openDatabase=async function(...args){closeReferenceModules();return referenceDatabase(...args)};

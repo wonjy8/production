@@ -1,3 +1,4 @@
+import './MaterialsTrash';
 import './FontManager';
 import {DueField} from './OverviewFields';
 import {ProjectIconPicker} from './ProjectIconPicker';
