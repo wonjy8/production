@@ -2023,7 +2023,7 @@ body.document-mode,
 .editor-list-split details:not([open]) [role=menu]{display:none}
 .editor-list-split [role=menu] button{background:white;justify-content:flex-start}
 .editor-list-controls small{font-size:10px;line-height:1.7;color:#999}
-.document-outline{top:32px}
+.document-outline{top:38px;left:34px;width:28px}
 .outline-rail{pointer-events:auto;cursor:pointer;margin-top:0;padding:12px 0;gap:10px;outline-offset:3px}
 @media(max-width:720px){.document-workspace.has-sidebar .document-scroll{margin-right:0;transform:translateX(-14px)}}
 @media(prefers-reduced-motion:reduce){.document-scroll{transition:none}}
@@ -2037,8 +2037,8 @@ body.document-mode #document-editor-root{position:fixed;inset:0;width:100vw;heig
 .document-ruler-y{position:absolute;left:0;top:26px;overflow:hidden;pointer-events:none;border-right:1px solid #dedede}
 .document-ruler-frame svg .ruler-paper{fill:#fafafa}.document-ruler-frame svg .ruler-margin{fill:#eaeaea}.document-ruler-frame svg line{stroke:#aaa;stroke-width:1}.document-ruler-frame svg .ruler-boundary{stroke:#999;stroke-dasharray:2 2}.document-ruler-frame svg text{fill:#777;font:9px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 /* One full-width insertion bar; rulers align with the viewport edges. */
-.document-toolbar{align-self:stretch!important;justify-self:stretch!important;justify-content:flex-start!important;width:100%!important;max-width:none!important;margin:0!important;padding:6px 18px!important;border:0!important;border-bottom:1px solid #e7e7e7!important;border-radius:0!important;box-shadow:none!important;min-height:46px!important;flex-wrap:wrap!important;height:auto!important}
-.document-workspace{padding:0;gap:0}.document-scroll{padding:34px 36px 28px 62px!important;scroll-padding:40px 12px 100px 38px}
+.document-toolbar{align-self:stretch!important;justify-self:stretch!important;justify-content:center!important;width:100%!important;max-width:none!important;margin:0!important;padding:6px 18px!important;border:0!important;border-bottom:1px solid #e7e7e7!important;border-radius:0!important;box-shadow:none!important;min-height:46px!important;flex-wrap:wrap!important;height:auto!important}
+.document-workspace{padding:0;gap:0}.document-scroll{padding:34px 36px 28px 76px!important;scroll-padding:40px 12px 100px 38px}
 .document-ruler-frame{padding:0;margin:0 auto}.document-rulers-viewport{position:absolute;pointer-events:none;z-index:8;overflow:hidden}
 .document-rulers-viewport .document-ruler-top{position:absolute;top:0;left:0;right:0;margin:0;height:26px;overflow:hidden;background:#f5f5f5;border-bottom:1px solid #ddd;z-index:2}
 .document-rulers-viewport .document-ruler-x{position:absolute;top:0;border:0}
@@ -2047,21 +2047,21 @@ body.document-mode #document-editor-root{position:fixed;inset:0;width:100vw;heig
 .document-rulers-viewport>.document-ruler-unit{position:absolute;top:0;left:0;z-index:3;border-right:1px solid #ddd;border-bottom:1px solid #ddd;box-sizing:border-box}
 /* The same formatting controls are rendered in the sidebar and selection menus. */
 .editor-format-tools{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-width:0;font:12px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-.editor-format-tools .format-action,.editor-format-menu>summary{display:inline-flex!important;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;min-width:32px;width:auto;height:34px;min-height:34px;padding:6px;border:0;border-radius:6px;background:transparent;color:#333;cursor:pointer;list-style:none;font:inherit;white-space:nowrap}
-.editor-format-tools button.keep-label{min-height:32px!important;height:auto!important;width:auto!important;padding:6px!important;border:0!important;border-radius:6px!important;background:transparent!important;display:inline-flex!important;align-items:center;justify-content:center;gap:8px;font:inherit;box-shadow:none!important;color:inherit}
+.editor-format-tools .format-action,.editor-format-menu>summary{display:inline-flex!important;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;min-width:28px;width:auto;height:28px;min-height:28px;padding:4px;border:0;border-radius:6px;background:transparent;color:#333;cursor:pointer;list-style:none;font:inherit;white-space:nowrap}
+.editor-format-tools button.keep-label{min-height:28px!important;height:auto!important;width:auto!important;padding:4px!important;border:0!important;border-radius:6px!important;background:transparent!important;display:inline-flex!important;align-items:center;justify-content:center;gap:8px;font:inherit;box-shadow:none!important;color:inherit}
 .editor-format-tools :is(button,summary):hover,.editor-format-menu[open]>summary{background:#f4f4f4!important}.editor-format-tools button[aria-pressed=true]{background:#eeeeef!important}
-.editor-format-tools svg{width:18px;height:18px;flex:none}.editor-format-menu{position:relative;flex:none}.editor-format-menu>summary::-webkit-details-marker{display:none}
-.editor-paragraph-menu>summary>svg,.editor-combined-colors>summary>svg{width:12px;height:12px}.format-color-symbol{font-size:20px;line-height:21px;border-bottom:3px solid #333;min-width:18px;text-align:center}
+.editor-format-tools svg{width:16px;height:16px;flex:none}.editor-format-menu{position:relative;flex:none}.editor-format-menu>summary::-webkit-details-marker{display:none}
+.editor-paragraph-menu>summary>svg,.editor-combined-colors>summary>svg{width:12px;height:12px}.format-color-symbol{font-size:18px;line-height:19px;border-bottom:2px solid #333;min-width:16px;text-align:center}
 .editor-format-popup{position:absolute;top:calc(100% + 8px);left:0;z-index:110;width:228px;max-width:calc(100vw - 16px);max-height:min(65dvh,460px);overflow:auto;overscroll-behavior:contain;box-sizing:border-box;padding:6px;border:1px solid #e5e5e5;border-radius:12px;background:white;color:#333;box-shadow:0 8px 28px #00000018}
 .editor-format-menu:not([open])>.editor-format-popup{display:none!important}
 .editor-format-tools .editor-format-popup>button.keep-label{display:flex!important;width:100%!important;justify-content:flex-start!important;text-align:left;font-weight:400}
-.editor-format-popup>button[aria-checked=true]{background:#f4f4f4!important}.editor-format-popup>button>svg:last-child:not(:first-child){margin-left:auto}.paragraph-heading-icon{width:22px;flex:none;font-size:17px;font-weight:500}.editor-format-popup h4{font-size:12px;color:#888;font-weight:600;margin:8px 4px 10px}
-.editor-format-popup.format-color-popup{width:264px;padding:12px}.format-color-popup .format-color-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-.editor-format-tools .format-color-grid>button.format-color-swatch.keep-label{display:flex!important;align-items:center;justify-content:center;width:100%!important;min-height:36px!important;height:36px!important;padding:3px!important;border:1px solid #ddd!important;border-radius:7px!important;box-sizing:border-box;font:24px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;color:revert-layer;box-shadow:none!important}
+.editor-format-popup>button[aria-checked=true]{background:#f4f4f4!important}.editor-format-popup>button>svg:last-child:not(:first-child){margin-left:auto}.paragraph-heading-icon{width:22px;flex:none;font-size:17px;font-weight:500}.editor-format-popup h4{font-size:11px;color:#888;font-weight:500;margin:5px 2px 8px}
+.editor-format-popup.format-color-popup{width:208px;padding:10px}.format-color-popup .format-color-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.editor-format-tools .format-color-grid>button.format-color-swatch.keep-label{display:flex!important;align-items:center;justify-content:center;width:100%!important;min-height:30px!important;height:30px!important;padding:2px!important;border:1px solid #ddd!important;border-radius:6px!important;box-sizing:border-box;font:20px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;color:revert-layer;box-shadow:none!important}
 .editor-format-tools .format-color-grid>button[aria-pressed=true]{outline:2px solid #333;outline-offset:1px}.format-color-popup .format-color-empty{font-size:11px;color:#aaa;line-height:1.5;margin:4px}.editor-format-tools .format-color-popup>.format-color-reset.keep-label{font-size:11px;width:100%!important;padding:7px 4px!important;color:#888;margin-top:5px}
-.editor-format-tools .format-color-popup h4:not(:first-child){margin-top:16px}.color-background-chip{width:100%;height:100%}
-.editor-selection-menu{position:fixed;z-index:100;background:#fff;border:1px solid #e5e5e5;box-shadow:0 6px 25px #00000016;border-radius:12px;padding:5px;max-width:calc(100vw - 16px)}
-.editor-selection-menu .editor-format-tools{flex-wrap:nowrap}.document-settings .editor-format-tools{padding-bottom:12px;border-bottom:1px solid #eee;margin-bottom:16px}
+.editor-format-tools .format-color-popup h4:not(:first-child){margin-top:12px}.color-background-chip{width:100%;height:100%}
+.editor-selection-menu{position:fixed;z-index:100;background:#fff;border:1px solid #e5e5e5;box-shadow:0 6px 25px #00000016;border-radius:9px;padding:3px;max-width:calc(100vw - 16px)}
+.editor-selection-menu .editor-format-tools{flex-wrap:nowrap}.document-settings .editor-format-tools{padding-bottom:0;border-bottom:0;margin-bottom:12px}
 .editor-clipboard-menu{position:fixed;z-index:160;width:180px;padding:5px;border:1px solid #e5e5e5;border-radius:10px;background:#fff;box-shadow:0 6px 25px #0002}
 .editor-clipboard-menu>button.keep-label{display:block!important;width:100%!important;height:34px!important;min-height:34px!important;border:0!important;border-radius:6px!important;text-align:left!important;background:transparent!important;font:13px/1.4 inherit;padding:6px 12px!important;color:#333!important}
 .editor-clipboard-menu>button:hover{background:#f4f4f4!important}.editor-clipboard-menu>button:disabled{opacity:.35}
@@ -2073,10 +2073,37 @@ body.document-mode #document-editor-root{position:fixed;inset:0;width:100vw;heig
 .editor-mobile-dock .editor-format-popup>button.keep-label{display:flex!important;align-items:center;gap:8px;width:100%!important;border:0!important;background:transparent!important;text-align:left;padding:8px!important;font:12px/1.5 inherit}
 .editor-mobile-dock .mobile-insert-popup{display:flex;align-items:center;gap:6px;overflow:visible}
 .editor-mobile-dock .document-menu{position:relative}.editor-mobile-dock .document-menu>summary{list-style:none;padding:6px}.editor-mobile-dock .document-menu:not([open])>div{display:none}.editor-mobile-dock .table-size-menu{position:absolute;left:0;bottom:100%;width:250px;padding:10px;background:white;border:1px solid #ddd;border-radius:10px;box-shadow:0 6px 20px #0002}.editor-mobile-dock .table-size-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}.editor-mobile-dock .table-size-grid button{height:18px;min-height:18px;min-width:0;padding:0;border:1px solid #ccc}.editor-mobile-dock .table-size-grid button.selected{background:#d9e8ff}
-@media(max-width:720px){.document-toolbar{padding:5px 8px!important}.document-scroll{padding:34px 12px 28px 38px!important}.document-editor:has(.editor-mobile-dock){height:var(--document-visible-height,100%)}.document-editor:has(.editor-mobile-dock)>.document-toolbar,.document-editor:has(.editor-mobile-dock)>.document-footer{display:none!important}.document-editor:has(.editor-mobile-dock) .document-settings{bottom:68px}.document-workspace.has-sidebar .document-scroll{transform:none}}
+@media(max-width:720px){.document-toolbar{padding:5px 8px!important}.document-scroll{padding:34px 12px 28px 68px!important}.document-editor:has(.editor-mobile-dock){height:var(--document-visible-height,100%)}.document-editor:has(.editor-mobile-dock)>.document-toolbar,.document-editor:has(.editor-mobile-dock)>.document-footer{display:none!important}.document-editor:has(.editor-mobile-dock) .document-settings{bottom:68px}.document-workspace.has-sidebar .document-scroll{transform:none}}
 .editor-format-tools .format-color-grid>button.format-color-swatch.keep-label{color:var(--format-swatch-color)!important;background:var(--format-swatch-background)!important;border-color:var(--format-swatch-border)!important}
 .document-sheet mark:not([data-comment-id]){color:inherit}
 .document-sheet blockquote{border-left:3px solid #d0d0d0;padding-left:24px;margin-left:0;margin-right:0;color:inherit}
 @media(max-width:720px){.document-editor{height:var(--document-visible-height,100%)}}
 
 .editor-mobile-dock .table-size-menu{max-height:calc(var(--document-visible-height,100dvh) - 110px);overflow:auto}
+
+/* Compact controls share the app's typography and restrained icon sizes. */
+.editor-format-tools{font-family:inherit;gap:2px}
+.document-settings>.editor-panel-tabs{min-height:38px;margin-bottom:12px;border-radius:9px}
+.document-settings>.editor-panel-tabs button{padding:5px!important;min-height:30px!important;font-size:12px}
+.document-settings .ui-icon{width:16px;height:16px}
+.document-settings :is(input,select){font-size:12px!important;min-height:30px!important;height:30px!important}
+.document-settings .editor-alignment button,.document-settings .editor-indent-actions button{min-height:30px!important;padding:5px!important}
+.document-properties>.paragraph-controls{border-top:0;padding-top:0}
+.document-outline nav{width:min(300px,calc(100vw - 74px))}
+/* Reserve scrollbar space throughout: revealing a thumb never shifts content. */
+.document-editor :is(.document-scroll,.document-settings-body,.editor-format-popup,.document-outline nav,.table-size-menu){scrollbar-width:thin;scrollbar-color:transparent transparent}
+.document-editor :is(.document-scroll,.document-settings-body,.editor-format-popup,.document-outline nav,.table-size-menu).editor-scroll-active{scrollbar-color:#b6b6b6 transparent}
+.document-editor ::-webkit-scrollbar{width:6px;height:6px}
+.document-editor ::-webkit-scrollbar-track,.document-editor ::-webkit-scrollbar-corner{background:transparent}
+.document-editor ::-webkit-scrollbar-thumb{background:transparent;border-radius:6px}
+.document-editor .editor-scroll-active::-webkit-scrollbar-thumb{background:#b6b6b6}
+@media(max-width:720px){
+ .editor-mobile-dock .editor-format-tools .format-action{min-width:32px;min-height:36px!important}
+ .document-outline{left:32px}
+}
+.editor-format-tools>*{margin:0!important}
+.document-properties{gap:8px}
+.document-properties>hr{margin:8px 0}
+.document-properties .paragraph-controls h3,.document-properties .editor-list-controls h3{margin:4px 0 10px}
+.document-properties>h3:not(:first-child){border-top:0;padding-top:0}
+.document-settings button.keep-label{height:30px!important;min-height:30px!important}

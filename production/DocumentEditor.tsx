@@ -1,3 +1,4 @@
+import { useEditorScrollbars } from "./useEditorScrollbars";
 import { DocumentRulerViewport } from "./DocumentRulers";
 import { FormattingTools, editLink } from "./EditorFormatting";
 import { EditorSelectionUI } from "./EditorSelectionUI";
@@ -221,6 +222,7 @@ function DocumentEditor({ file }: { file: any }) {
     [outlineOpen, setOutlineOpen] = useState(false),
     [updateAvailable, setUpdateAvailable] = useState(false),
     [marginMarks] = useState(true);
+  useEditorScrollbars();
   const dismissedUpdate = useRef("");
   const deviceImage = useRef<HTMLInputElement>(null),
     deviceFile = useRef<HTMLInputElement>(null);
@@ -1424,7 +1426,6 @@ function DocumentEditor({ file }: { file: any }) {
                       )}
                       {format !== "text" && (
                         <>
-                          <ParagraphControls editor={editor.current} />
                           <hr />
                           <h3>글자</h3>
                           <select
@@ -1491,6 +1492,7 @@ function DocumentEditor({ file }: { file: any }) {
                             ))}
                           </select>
                           <hr />
+                          <ParagraphControls editor={editor.current} />
                           <ListControls editor={editor.current} />
                         </>
                       )}

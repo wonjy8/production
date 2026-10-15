@@ -213,3 +213,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Combine bookmark, web embed and Figma creation under Link with bookmark/embed display choices; preserve existing embedded content.
 - Fit workspace modules and photo grids immediately when toggling the sidebar, avoiding sequential container/content resize animations while retaining sidebar entry/exit motion.
 - NAS files, database schema and configuration: unchanged.
+
+## 0.0.24
+
+- Compact the shared editor selection controls, color palette and sidebar buttons; keep mobile input touch targets usable.
+- Center insertion toolbar controls and reserve a separate outline lane beside the vertical ruler.
+- Arrange text properties as Text, Font and Paragraph, with consistent section spacing.
+- Reveal editor scrollbars during interaction and hide their thumbs after one second of inactivity without changing layout.
+- NAS configuration and server files do not change in this release.

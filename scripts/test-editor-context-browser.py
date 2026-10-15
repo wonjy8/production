@@ -58,15 +58,31 @@ with tempfile.TemporaryDirectory() as td:
     toolbar=page.get_by_role('toolbar',name='문서 삽입',exact=True);assert toolbar.evaluate('e=>getComputedStyle(e).borderRadius')=='0px';assert toolbar.bounding_box()['x']==0
     ruler=page.locator('.document-rulers-viewport');ruler.wait_for();assert abs(ruler.bounding_box()['x']-toolbar.bounding_box()['x'])<1
     page.evaluate('document.fonts.ready');assert 'Selected text' in body.inner_text()
+    assert toolbar.evaluate("e=>getComputedStyle(e).justifyContent")=='center'
+    outline=page.locator('.document-outline');outline.wait_for()
+    assert outline.bounding_box()['x'] >= page.locator('.document-ruler-left').bounding_box()['x']+26
+    headings=page.locator('.document-properties h3').all_text_contents()
+    assert headings.index('텍스트') < headings.index('글자') < headings.index('문단'),headings
+    scroll=page.locator('.document-scroll')
+    scroll.evaluate("e=>e.dispatchEvent(new Event('scroll'))")
+    assert scroll.evaluate("e=>e.classList.contains('editor-scroll-active')")
+    page.wait_for_function("!document.querySelector('.document-scroll').classList.contains('editor-scroll-active')")
+    assert scroll.evaluate("e=>getComputedStyle(e).scrollbarColor")=='rgba(0, 0, 0, 0) rgba(0, 0, 0, 0)'
+
     def select_text():
      body.locator('p,h4').filter(has_text='Selected text').first.click();body.focus();page.keyboard.press('Home');page.keyboard.press('Shift+End')
     select_text();bubble=page.get_by_role('toolbar',name='선택 텍스트 서식',exact=True);bubble.wait_for()
     sidebar=page.get_by_role('complementary',name='문서 설정 패널');side_tools=sidebar.get_by_role('group',name='텍스트 서식',exact=True)
     labels="e=>[...e.querySelectorAll(':scope>button,:scope>details>summary')].map(n=>n.getAttribute('aria-label'))"
     expected_labels=side_tools.evaluate(labels);assert expected_labels==bubble.locator('.editor-format-tools').evaluate(labels)
+    page.screenshot(path='/tmp/editor24-compact.png')
+    assert bubble.bounding_box()['height']<=40
     bubble.get_by_role('button',name='굵게',exact=True).click();assert side_tools.get_by_role('button',name='굵게',exact=True).get_attribute('aria-pressed')=='true'
     bubble.get_by_label('문단 종류',exact=True).click();bubble.get_by_role('menuitemradio',name='제목 4',exact=True).click();body.locator('h4',has_text='Selected text').wait_for()
     bubble.get_by_label('색상',exact=True).click();colors=bubble.get_by_role('group',name='글자색과 배경색',exact=True);assert colors.locator('.format-color-grid').nth(1).get_by_role('button').count()==10
+    page.screenshot(path='/tmp/editor24-palette-'+mode+'.png')
+    assert colors.bounding_box()['width']<=212
+    assert colors.get_by_role('button',name='글자색 빨강',exact=True).bounding_box()['height']<=32
     colors.get_by_role('button',name='글자색 빨강',exact=True).click();assert body.locator('[style*="color"]').count()>0
     bubble.get_by_label('색상',exact=True).click();colors.get_by_role('button',name='배경색 노랑',exact=True).click();assert body.locator('mark').count()>0
     page.once('dialog',lambda dialog:dialog.accept('https://example.com/editor-link'));bubble.get_by_role('button',name='링크',exact=True).click();body.locator('a[href="https://example.com/editor-link"]').first.wait_for()
