@@ -53,7 +53,7 @@ function DeleteButton({
   return (
     <>
       <button
-        className="icon-button"
+        className="icon-button context-remove"
         aria-label={`${label} 삭제`}
         onClick={() => setOpen(true)}
       >

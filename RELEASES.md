@@ -134,3 +134,10 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Add repeated header/footer/page-number fields with native DOCX relationships and selectable PDF text, preserving existing untouched Word parts. Retain nested list styles, text marks and object placement through DOCX round trips.
 - Add confirmed document trash in Settings and a dismissible editor update prompt using the save-before-update coordinator; retain native unsaved-exit warnings and recovery drafts.
 - NAS files, schema and configuration: unchanged from 0.0.12.
+
+## 0.0.14
+
+- Reveal contextual removal icons on row/card hover or within pointer proximity; retain keyboard focus, open confirmation and touch access. Apply shared behavior to modules, schedules, tasks, members and other item removal controls; keep dialog close and labeled destructive actions visible.
+- Measure intrinsic module heights even when fixed, update automatic layout as content changes, and magnetically return to content height with hysteresis during pointer or keyboard resizing. Manual heights persist until reset; double-click/Home also restores automatic height.
+- Preserve independent neighboring sizes, snapped responsive width layout and drag cancellation. Coalesce content/resize observation and removal proximity work into animation frames.
+- NAS files, database schema and configuration: unchanged.
