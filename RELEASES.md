@@ -125,3 +125,12 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Add independent task flags retained in the weekly list until completion and correct the assignee toggle.
 - Add segmented desktop AM/PM/hour/minute controls, 24-hour input normalization, arrow stepping and a cyclic start/end Tab order; retain mobile time wheels.
 - NAS update: replace resources.py and rebuild the existing container. No schema or environment-variable changes.
+
+## 0.0.13
+
+- Rebuild document chrome around a floating, animated Document/Properties/Settings drawer, contextual controls, compact insertion toolbar, heading outline and page/word/zoom status bar.
+- Move PDF/Word exports to Document; add margin markers, HEX color controls, text highlights, subscript/superscript, bullet/number variants and list indentation.
+- Add anchored table-size selection, device/library images, PNG-backed shapes, file attachments that open on click, and contextual image/shape/table alignment.
+- Add repeated header/footer/page-number fields with native DOCX relationships and selectable PDF text, preserving existing untouched Word parts. Retain nested list styles, text marks and object placement through DOCX round trips.
+- Add confirmed document trash in Settings and a dismissible editor update prompt using the save-before-update coordinator; retain native unsaved-exit warnings and recovery drafts.
+- NAS files, schema and configuration: unchanged from 0.0.12.

@@ -71,12 +71,30 @@ export async function loadDocument(blob: Blob, format: string) {
       if (match) styles.set(val(s, "styleId"), Number(match[1]));
     }
   const numberingText = await zip.file("word/numbering.xml")?.async("string"),
-    numbering = new Map<string, string>();
+    numbering = new Map<string, string>(),
+    listStyles = new Map<string, string>();
   if (numberingText) {
     const n = parse(numberingText),
-      abstracts = new Map<string, string>();
+      abstracts = new Map<string, string>(),
+      abstractStyles = new Map<string, string>();
     for (const a of Array.from(n.getElementsByTagNameNS(W, "abstractNum"))) {
       const level = child(a, "lvl");
+      const fmt = val(level && child(level, "numFmt")),
+        glyph = val(level && child(level, "lvlText"));
+      abstractStyles.set(
+        val(a, "abstractNumId"),
+        fmt === "bullet"
+          ? glyph === "○"
+            ? "circle"
+            : glyph === "▪"
+              ? "square"
+              : "disc"
+          : fmt === "lowerLetter"
+            ? "lower-alpha"
+            : fmt === "upperRoman"
+              ? "upper-roman"
+              : "decimal",
+      );
       abstracts.set(
         val(a, "abstractNumId"),
         val(level && child(level, "numFmt")) === "bullet"
@@ -84,11 +102,16 @@ export async function loadDocument(blob: Blob, format: string) {
           : "orderedList",
       );
     }
-    for (const num of Array.from(n.getElementsByTagNameNS(W, "num")))
+    for (const num of Array.from(n.getElementsByTagNameNS(W, "num"))) {
+      listStyles.set(
+        val(num, "numId"),
+        abstractStyles.get(val(child(num, "abstractNumId"))) || "disc",
+      );
       numbering.set(
         val(num, "numId"),
         abstracts.get(val(child(num, "abstractNumId"))) || "orderedList",
       );
+    }
   }
   const relsText = await zip
       .file("word/_rels/document.xml.rels")
@@ -157,6 +180,36 @@ export async function loadDocument(blob: Blob, format: string) {
           if (prop && !["0", "false", "none"].includes(val(prop)))
             marks.push({ type });
         }
+        const vert = val(child(props, "vertAlign"));
+        if (["subscript", "superscript"].includes(vert))
+          marks.push({ type: vert });
+        const shade = val(child(props, "shd"), "fill"),
+          highlight = val(child(props, "highlight"));
+        const palette: any = {
+          yellow: "#ffff00",
+          green: "#00ff00",
+          cyan: "#00ffff",
+          magenta: "#ff00ff",
+          blue: "#0000ff",
+          red: "#ff0000",
+          darkBlue: "#000080",
+          darkCyan: "#008080",
+          darkGreen: "#008000",
+          darkMagenta: "#800080",
+          darkRed: "#800000",
+          darkYellow: "#808000",
+          lightGray: "#c0c0c0",
+          darkGray: "#808080",
+          black: "#000000",
+          white: "#ffffff",
+        };
+        if (shade && shade !== "auto")
+          marks.push({ type: "highlight", attrs: { color: "#" + shade } });
+        else if (palette[highlight])
+          marks.push({
+            type: "highlight",
+            attrs: { color: palette[highlight] },
+          });
         const color = val(child(props, "color")),
           size = Number(val(child(props, "sz"))),
           font =
@@ -213,6 +266,13 @@ export async function loadDocument(blob: Blob, format: string) {
                       ";base64," +
                       (await file.async("base64")),
                     docxXml: xml(part),
+                    alt:
+                      part
+                        .getElementsByTagNameNS(
+                          "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
+                          "docPr",
+                        )[0]
+                        ?.getAttribute("descr") || "",
                     width:
                       Number(
                         part
@@ -319,7 +379,11 @@ export async function loadDocument(blob: Blob, format: string) {
       }
       const props = child(n, "pPr"),
         style = props && val(child(props, "pStyle")),
-        level = style && styles.get(style),
+        level =
+          style &&
+          (styles.get(style) ||
+            Number(/^Heading([1-6])$/i.exec(style)?.[1]) ||
+            null),
         align = props && val(child(props, "jc"));
       return {
         type: level ? "heading" : "paragraph",
@@ -387,6 +451,12 @@ export async function loadDocument(blob: Blob, format: string) {
         attrs: {
           docxProperties: child(n, "tblPr") ? xml(child(n, "tblPr")) : null,
           docxGrid: child(n, "tblGrid") ? xml(child(n, "tblGrid")) : null,
+          objectAlign:
+            val(child(n, "tblPr") && child(child(n, "tblPr"), "jc")) || "left",
+          objectWidth: (() => {
+            const w = child(n, "tblPr") && child(child(n, "tblPr"), "tblW");
+            return val(w, "type") === "pct" ? Number(val(w, "w")) / 50 : null;
+          })(),
         },
         content: rows,
       };
@@ -409,7 +479,11 @@ export async function loadDocument(blob: Blob, format: string) {
           level = 0;
           const list = {
             type,
-            attrs: { docxNumId: id, docxNumKind: type },
+            attrs: {
+              docxNumId: id,
+              docxNumKind: type,
+              listStyle: listStyles.get(id) || null,
+            },
             content: [],
           };
           output.push(list);
@@ -424,7 +498,11 @@ export async function loadDocument(blob: Blob, format: string) {
           ) {
             const list = {
               type,
-              attrs: { docxNumId: id, docxNumKind: type },
+              attrs: {
+                docxNumId: id,
+                docxNumKind: type,
+                listStyle: listStyles.get(id) || null,
+              },
               content: [],
             };
             if (level > 0)
@@ -441,10 +519,44 @@ export async function loadDocument(blob: Blob, format: string) {
     }
     return output.length ? output : [{ type: "paragraph" }];
   }
+  const furniture: any = { custom: false };
+  const section = children(body, "sectPr").at(-1);
+  for (const key of ["header", "footer"]) {
+    const ref =
+      section &&
+      children(section, key + "Reference").find(
+        (r) => val(r, "type") === "default",
+      );
+    const target = ref && rels.get(ref.getAttributeNS(R, "id") || "");
+    if (target && !target.includes("..")) {
+      const source = await zip
+        .file(target.startsWith("/") ? target.slice(1) : "word/" + target)
+        ?.async("string");
+      if (source) {
+        const part = parse(source);
+        furniture[key] = Array.from(part.getElementsByTagNameNS(W, "t"))
+          .filter((n) => !n.closest("fldSimple"))
+          .map((n) => n.textContent)
+          .join("")
+          .replace(/ · $/, "");
+        if (key === "footer") {
+          const field =
+            Array.from(part.getElementsByTagNameNS(W, "instrText")).some((n) =>
+              /\bPAGE\b/.test(n.textContent || ""),
+            ) ||
+            Array.from(part.getElementsByTagNameNS(W, "fldSimple")).some((n) =>
+              /\bPAGE\b/.test(val(n, "instr")),
+            );
+          furniture.pageNumber = field;
+        }
+      }
+    }
+  }
   return {
     content: {
       type: "doc",
       attrs: {
+        docxFurniture: furniture,
         docxLayout: (() => {
           const sect = children(body, "sectPr").at(-1),
             m = sect && child(sect, "pgMar"),
@@ -583,7 +695,7 @@ export async function saveDocument(
         (n) => Number(val(n, "abstractNumId")),
       ),
     );
-  function listId(bullet: boolean) {
+  function listId(bullet: boolean, style = "disc") {
     const id = ++numId,
       a = ++absId;
     const fragment = parse(
@@ -598,9 +710,21 @@ export async function saveDocument(
             '<w:lvl w:ilvl="' +
             level +
             '"><w:start w:val="1"/><w:numFmt w:val="' +
-            (bullet ? "bullet" : "decimal") +
+            (bullet
+              ? "bullet"
+              : style === "lower-alpha"
+                ? "lowerLetter"
+                : style === "upper-roman"
+                  ? "upperRoman"
+                  : "decimal") +
             '"/><w:lvlText w:val="' +
-            (bullet ? "•" : "%" + (level + 1) + ".") +
+            (bullet
+              ? style === "circle"
+                ? "○"
+                : style === "square"
+                  ? "▪"
+                  : "•"
+              : "%" + (level + 1) + ".") +
             '"/><w:pPr><w:ind w:left="' +
             720 * (level + 1) +
             '" w:hanging="360"/></w:pPr></w:lvl>',
@@ -629,6 +753,12 @@ export async function saveDocument(
         const node = el.ownerDocument.createElementNS(W, "w:" + key);
         if (key === "numPr") {
           node.innerHTML = value;
+        } else if (key === "tblW") {
+          node.setAttributeNS(W, "w:w", value);
+          node.setAttributeNS(W, "w:type", "pct");
+        } else if (key === "shd") {
+          node.setAttributeNS(W, "w:fill", value);
+          node.setAttributeNS(W, "w:val", "clear");
         } else if (key === "rFonts") {
           for (const name of ["ascii", "hAnsi", "eastAsia", "cs"])
             node.setAttributeNS(W, "w:" + name, value);
@@ -661,7 +791,19 @@ export async function saveDocument(
   function inline(n: any): string {
     if (n.type === "hardBreak") return "<w:r><w:br/></w:r>";
     if (n.type === "image") {
-      if (n.attrs.docxXml) return "<w:r>" + n.attrs.docxXml + "</w:r>";
+      if (n.attrs.docxXml) {
+        const drawing = parse(n.attrs.docxXml);
+        for (const tag of ["extent", "ext"])
+          for (const el of Array.from(drawing.getElementsByTagName("*")).filter(
+            (el) => el.localName === tag && el.hasAttribute("cx"),
+          )) {
+            if (n.attrs.width)
+              el.setAttribute("cx", String(Math.round(n.attrs.width * 9525)));
+            if (n.attrs.height)
+              el.setAttribute("cy", String(Math.round(n.attrs.height * 9525)));
+          }
+        return "<w:r>" + xml(drawing.documentElement) + "</w:r>";
+      }
       const match = /^data:image\/(png|jpeg|gif);base64,(.+)$/s.exec(
         n.attrs.src || "",
       );
@@ -682,7 +824,9 @@ export async function saveDocument(
         cy +
         '"/><wp:docPr id="' +
         seq +
-        '" name="image"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="image"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="' +
+        '" name="image" descr="' +
+        escape(n.attrs.alt || "") +
+        '"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="image"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="' +
         id +
         '"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' +
         cx +
@@ -701,6 +845,18 @@ export async function saveDocument(
       i: has("italic") ? "1" : "",
       u: has("underline") ? "single" : "",
       strike: has("strike") ? "1" : "",
+      vertAlign: has("subscript")
+        ? "subscript"
+        : has("superscript")
+          ? "superscript"
+          : "",
+      highlight: "",
+      shd: has("highlight")
+        ? (
+            marks.find((m: any) => m.type === "highlight")?.attrs.color ||
+            "#fff29a"
+          ).replace("#", "")
+        : "",
       color: style.color ? style.color.replace("#", "") : "",
       ...(style.fontFamily &&
       (!raw ||
@@ -740,7 +896,7 @@ export async function saveDocument(
       const id =
         original && n.attrs?.docxNumId && n.attrs.docxNumKind === n.type
           ? Number(n.attrs.docxNumId)
-          : listId(n.type === "bulletList");
+          : listId(n.type === "bulletList", n.attrs?.listStyle);
       return (n.content || [])
         .map((c: any) => node(c, { id, level: list ? list.level + 1 : 0 }))
         .join("");
@@ -805,7 +961,12 @@ export async function saveDocument(
               "</w:tblGrid>";
       return (
         "<w:tbl>" +
-        property(n.attrs?.docxProperties, "tblPr", {}) +
+        property(n.attrs?.docxProperties, "tblPr", {
+          jc: n.attrs?.objectAlign || "left",
+          ...(n.attrs?.objectWidth
+            ? { tblW: String(n.attrs.objectWidth * 50) }
+            : {}),
+        }) +
         grid +
         rows +
         "</w:tbl>"
@@ -936,6 +1097,60 @@ export async function saveDocument(
         .replaceWith(document.importNode(result.documentElement, true));
     }
   }
+  const furniture = content.attrs?.docxFurniture;
+  const furnitureParts: any[] = [];
+  if (furniture?.custom) {
+    const body = document.getElementsByTagNameNS(W, "body")[0];
+    let sect = children(body, "sectPr").at(-1);
+    if (!sect) {
+      sect = document.createElementNS(W, "w:sectPr");
+      body.append(sect);
+    }
+    for (const kind of ["header", "footer"]) {
+      for (const ref of children(sect, kind + "Reference"))
+        if (val(ref, "type") === "default") ref.remove();
+      if (!furniture[kind] && !(kind === "footer" && furniture.pageNumber))
+        continue;
+      const path = "production-" + kind + ".xml",
+        tag = kind === "header" ? "hdr" : "ftr";
+      const text =
+        '<w:r><w:t xml:space="preserve">' +
+        escape(furniture[kind] || "") +
+        "</w:t></w:r>";
+      const number =
+        kind === "footer" && furniture.pageNumber
+          ? (furniture.footer ? "<w:r><w:t> · </w:t></w:r>" : "") +
+            '<w:fldSimple w:instr="PAGE"><w:r><w:t>1</w:t></w:r></w:fldSimple>'
+          : "";
+      zip.file(
+        "word/" + path,
+        "<w:" +
+          tag +
+          ' xmlns:w="' +
+          W +
+          '"><w:p><w:pPr><w:jc w:val="' +
+          (kind === "footer" ? "center" : "left") +
+          '"/></w:pPr>' +
+          text +
+          number +
+          "</w:p></w:" +
+          tag +
+          ">",
+      );
+      const ref = document.createElementNS(W, "w:" + kind + "Reference");
+      ref.setAttributeNS(W, "w:type", "default");
+      ref.setAttributeNS(R, "r:id", relation(kind, path));
+      sect.prepend(ref);
+      furnitureParts.push({ path: "/word/" + path, kind });
+    }
+    let margins = child(sect, "pgMar");
+    if (!margins) {
+      margins = document.createElementNS(W, "w:pgMar");
+      sect.append(margins);
+    }
+    margins.setAttributeNS(W, "w:header", "340");
+    margins.setAttributeNS(W, "w:footer", "340");
+  }
   zip.file("word/document.xml", xml(document));
   if (numId) {
     zip.file(numPath, xml(numbering));
@@ -957,6 +1172,26 @@ export async function saveDocument(
   }
   zip.file(relPath, xml(rels));
   const types = parse(await zip.file("[Content_Types].xml").async("string"));
+  for (const part of furnitureParts) {
+    if (
+      Array.from(types.documentElement.children).some(
+        (n) => n.getAttribute("PartName") === part.path,
+      )
+    )
+      continue;
+    const n = types.createElementNS(
+      types.documentElement.namespaceURI,
+      "Override",
+    );
+    n.setAttribute("PartName", part.path);
+    n.setAttribute(
+      "ContentType",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml." +
+        part.kind +
+        "+xml",
+    );
+    types.documentElement.append(n);
+  }
   if (
     numId &&
     !Array.from(types.documentElement.children).some(

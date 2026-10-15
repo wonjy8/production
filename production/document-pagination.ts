@@ -160,6 +160,43 @@ export const documentPagination = Extension.create({
             sheet.dataset.pageCount = String(
               Math.max(1, Math.ceil((total + pageGap) / (height + pageGap))),
             );
+            const overlay =
+              sheet.querySelector(".document-page-overlays") ||
+              sheet.appendChild(document.createElement("div"));
+            overlay.className = "document-page-overlays";
+            overlay.setAttribute("contenteditable", "false");
+            overlay.replaceChildren();
+            const furniture = view.state.doc.attrs.docxFurniture || {};
+            for (let i = 0; i < Number(sheet.dataset.pageCount); i++) {
+              const page = document.createElement("div");
+              page.className = "document-page-overlay";
+              page.style.top = i * (height + pageGap) + "px";
+              page.style.height = height + "px";
+              for (const edge of ["tl", "tr", "bl", "br"]) {
+                const mark = document.createElement("i");
+                mark.className = "document-margin-mark " + edge;
+                mark.setAttribute("aria-hidden", "true");
+                page.append(mark);
+              }
+              if (furniture.header) {
+                const h = document.createElement("div");
+                h.className = "page-header-text";
+                h.textContent = furniture.header;
+                page.append(h);
+              }
+              if (furniture.footer || furniture.pageNumber) {
+                const f = document.createElement("div");
+                f.className = "page-footer-text";
+                f.textContent = [
+                  furniture.footer,
+                  furniture.pageNumber ? String(i + 1) : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
+                page.append(f);
+              }
+              overlay.append(page);
+            }
             view.dispatch(
               view.state.tr
                 .setMeta(key, DecorationSet.create(view.state.doc, decorations))

@@ -33,6 +33,14 @@ with tempfile.TemporaryDirectory() as td:
   with sync_playwright() as p:
    browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH'),headless=True,args=['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-proxy-server','--host-resolver-rules=MAP pages.test 127.0.0.1, MAP nas.test 127.0.0.1','--ignore-certificate-errors-spki-list='+spki])
    context=browser.new_context(viewport={'width':1400,'height':1000});engine_requests=[];context.on('request',lambda request:engine_requests.append(request.url) if '.wasm' in request.url else None);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+   def open_sidebar():
+    toggle=page.get_by_role('button',name='사이드바',exact=True)
+    if toggle.get_attribute('aria-expanded')!='true':toggle.click()
+   def close_sidebar():
+    toggle=page.get_by_role('button',name='사이드바',exact=True)
+    if toggle.get_attribute('aria-expanded')=='true':toggle.click()
+   def open_panel(label):
+    open_sidebar();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name=label,exact=True).click()
    page.goto('https://pages.test:9443/production/')
    page.wait_for_function('window.appAccount?.localMode === true')
    import io,zipfile,json
@@ -162,19 +170,19 @@ with tempfile.TemporaryDirectory() as td:
    assert page.locator('.document-toolbar [aria-label=\"실행 취소\"] svg g').get_attribute('transform')=='translate(24 0) scale(-1 1)'
    assert page.locator('.document-autosave-label').count()==0
    assert page.locator('.document-header [role=status]').count()==1
-   assert page.locator('.document-toolbar').get_by_role('button',name='주석',exact=True).count()==1
+   assert page.locator('.document-toolbar').get_by_role('button',name='주석',exact=True).count()==0
    missing=page.locator('.document-toolbar button').evaluate_all("nodes=>nodes.filter(b=>b.querySelector('svg')&&!b.title).map(b=>b.textContent)")
    assert not missing,missing
    assert page.locator('.document-editor').evaluate('e=>getComputedStyle(e).fontFamily===getComputedStyle(document.body).fontFamily')
-   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='설정',exact=True).click()
+   open_sidebar();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='설정',exact=True).click()
    panel=page.get_by_role('complementary',name='문서 설정 패널',exact=True)
    panel.locator('.font-list>div',has_text='NanumMyeongjo').wait_for()
    page.get_by_label('글꼴 파일 추가',exact=True).set_input_files({'name':'bad.ttf','mimeType':'font/ttf','buffer':b'invalid font'})
    panel.get_by_role('alert').wait_for()
-   page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
-   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='문서',exact=True).click()
+   close_sidebar()
+   open_sidebar();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='문서',exact=True).click()
    page.get_by_label('용지 크기',exact=True).select_option('a4')
-   page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
+   close_sidebar()
    body=page.get_by_role('textbox',name='문서 본문',exact=True);body.click();page.keyboard.press('Control+End')
    for i in range(75):
     page.keyboard.press('Enter');page.keyboard.insert_text('일정 말씀 노트 PDF selectable line '+str(i))
@@ -182,31 +190,31 @@ with tempfile.TemporaryDirectory() as td:
    page.keyboard.press('Enter')
    png=page.evaluate("()=>{const c=document.createElement('canvas');c.width=128;c.height=96;const ctx=c.getContext('2d');ctx.fillStyle='#2563eb';ctx.fillRect(0,0,128,96);ctx.fillStyle='#facc15';ctx.fillRect(20,20,40,40);return c.toDataURL('image/png').split(',')[1]}")
    image_id=page.evaluate('''async data=>{const id=crypto.randomUUID(),blob=await fetch('data:image/png;base64,'+data).then(r=>r.blob());await fetch('/production/api/ref-files/'+id,{method:'PUT',headers:{'Content-Type':'image/png'},body:blob});const result=await fetch('/production/api/database/resources/'+id,{method:'PUT',headers:{'Content-Type':'application/json','If-Match':'"0"'},body:JSON.stringify({id,fileId:id,title:'diagram resource',filename:'diagram.png',kind:'image',mime:'image/png',tags:[],properties:{},version:0})});if(!result.ok)throw Error('resource fixture failed');return id}''',png)
-   page.get_by_role('button',name='이미지 추가',exact=True).click()
+   page.get_by_label('이미지 추가',exact=True).click();page.get_by_role('button',name='자료에서 이미지 추가',exact=True).click()
    picker=page.get_by_role('dialog',name='자료에서 이미지 선택',exact=True)
    picker.get_by_role('searchbox',name='자료 이미지 검색').fill('diagram resource')
    picker.get_by_role('button',name='diagram resource',exact=True).click()
    picker.wait_for(state='detached')
    page.locator('.document-sheet img[src]').click()
-   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='속성',exact=True).click()
+   open_sidebar();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='속성',exact=True).click()
    page.get_by_label('이미지 너비',exact=True).wait_for()
    page.get_by_label('이미지 너비',exact=True).fill('120')
    assert page.locator('.document-sheet img[src]').get_attribute('width')=='120'
    assert page.get_by_label('이미지 너비',exact=True).input_value()=='120'
    page.screenshot(path='/tmp/editor-v10-image-properties.png')
    print('PASS materials image picker, embedded copy and contextual image properties',flush=True)
-   page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
+   close_sidebar()
    page.locator('.document-sheet img[src]').wait_for()
    page.wait_for_timeout(1400)
    assert int(page.locator('.document-sheet').get_attribute('data-page-count'))>=2
-   body.click();page.keyboard.press('Control+a');page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='속성',exact=True).click();page.get_by_label('글꼴',exact=True).select_option('NanumMyeongjo');page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
+   body.click();page.keyboard.press('Control+a');open_sidebar();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='속성',exact=True).click();page.get_by_label('글꼴',exact=True).select_option('NanumMyeongjo');close_sidebar()
    page.wait_for_timeout(1000)
    assert page.locator('.document-sheet [style*="NanumMyeongjo"]').count()>0
    assert page.evaluate("document.fonts.check('14px NanumMyeongjo')")
    print('PASS formatting in properties drawer and custom font selection',flush=True)
    page.evaluate("() => {window.print=()=>{throw Error('Browser printing forbidden')}; window.open=()=>{throw Error('Print popup forbidden')};}")
    # Font validation lazily loads the PDF codec; export reuses it.
-   page.get_by_label('내보내기',exact=True).click()
+   open_panel('문서')
    with page.expect_download(timeout=60000) as export:
     page.get_by_role('menuitem',name='PDF (.pdf)',exact=True).click()
    pdf=pathlib.Path(export.value.path()).read_bytes();(t/'export.pdf').write_bytes(pdf);pathlib.Path('/tmp/editor-v8.pdf').write_bytes(pdf)
@@ -224,25 +232,25 @@ with tempfile.TemporaryDirectory() as td:
    assert 'LONGEND' in ''.join(text.split()),text[-1000:]
    assert 'café' in text,text[-1000:]
    subprocess.run(['pdftoppm','-f','1','-singlefile','-scale-to','1024','-png',str(t/'export.pdf'),'/tmp/editor-v8-pdf'],check=True,capture_output=True)
-   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='문서',exact=True).click()
+   open_sidebar();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='문서',exact=True).click()
    page.get_by_label('용지 크기',exact=True).select_option('a5')
    page.get_by_role('button',name='용지 방향 전환',exact=True).click()
-   page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
-   page.get_by_label('내보내기',exact=True).click()
+   close_sidebar()
+   open_panel('문서')
    with page.expect_download(timeout=60000) as smaller:page.get_by_role('menuitem',name='PDF (.pdf)',exact=True).click()
    smallinfo=subprocess.run(['pdfinfo',smaller.value.path()],check=True,capture_output=True,text=True).stdout
    assert '595.276 x 419.528' in smallinfo,smallinfo
-   page.get_by_label('내보내기',exact=True).click()
+   open_panel('문서')
    with page.expect_download() as word:page.get_by_role('menuitem',name='Word (.docx)',exact=True).click()
    with zipfile.ZipFile(word.value.path()) as saved:
     xml=saved.read('word/document.xml').decode();assert 'document-page-break' not in xml and 'LONGEND' in xml
-   page.get_by_role('button',name='문서 설정',exact=True).click();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='문서',exact=True).click()
+   open_sidebar();page.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='문서',exact=True).click()
    page.screenshot(path='/tmp/editor-v9-desktop.png')
-   page.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
+   close_sidebar()
    page.set_viewport_size({'width':390,'height':844});page.wait_for_timeout(300)
    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
    assert page.locator('.document-toolbar select').count()==0
-   page.get_by_label('내보내기',exact=True).click()
+   open_panel('문서')
    with page.expect_download(timeout=60000) as mobile:page.get_by_role('menuitem',name='PDF (.pdf)',exact=True).click()
    mobiletext=subprocess.run(['pdftotext',mobile.value.path(),'-'],check=True,capture_output=True,text=True).stdout
    pathlib.Path('/tmp/editor-v9-mobile.txt').write_text(mobiletext);pathlib.Path('/tmp/editor-v9-mobile.pdf').write_bytes(pathlib.Path(mobile.value.path()).read_bytes())

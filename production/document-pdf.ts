@@ -173,55 +173,59 @@ export async function documentPDF(
   for (const el of Array.from(
     sheet.querySelectorAll("td,th,mark,.docx-comment"),
   ) as HTMLElement[]) {
-    const style = getComputedStyle(el),
-      rect = el.getBoundingClientRect();
-    const sourceTop = (rect.top - bounds.top) / zoom,
-      sourceBottom = (rect.bottom - bounds.top) / zoom;
-    for (
-      let i = Math.max(0, Math.floor(sourceTop / step));
-      i < count && i * step < sourceBottom;
-      i++
-    ) {
-      const start = Math.max(sourceTop, i * step + (layout.top * 96) / 25.4),
-        end = Math.min(
-          sourceBottom,
-          i * step + height - (layout.bottom * 96) / 25.4,
-        );
-      if (end <= start) continue;
-      const p = {
-        page: pages[i],
-        x: (rect.left - bounds.left) * scale,
-        y: layout.height * mm - (start - i * step) * zoom * scale,
-      };
-      const width = rect.width * scale,
-        h = (end - start) * zoom * scale,
-        background = style.backgroundColor;
-      if (background !== "transparent" && background !== "rgba(0, 0, 0, 0)")
-        p.page.drawRectangle({
-          x: p.x,
-          y: p.y - h,
-          width,
-          height: h,
-          color: color(background),
-        });
-      if (el.matches("td,th")) {
-        for (const [side, start, end] of [
-          ["Top", [p.x, p.y], [p.x + width, p.y]],
-          ["Bottom", [p.x, p.y - h], [p.x + width, p.y - h]],
-          ["Left", [p.x, p.y], [p.x, p.y - h]],
-          ["Right", [p.x + width, p.y], [p.x + width, p.y - h]],
-        ] as any[]) {
-          const thickness =
-            parseFloat((style as any)["border" + side + "Width"]) *
-            zoom *
-            scale;
-          if (thickness)
-            p.page.drawLine({
-              start: { x: start[0], y: start[1] },
-              end: { x: end[0], y: end[1] },
-              thickness,
-              color: color((style as any)["border" + side + "Color"]),
-            });
+    const style = getComputedStyle(el);
+    const rects = el.matches("td,th")
+      ? [el.getBoundingClientRect()]
+      : Array.from(el.getClientRects());
+    for (const rect of rects) {
+      const sourceTop = (rect.top - bounds.top) / zoom,
+        sourceBottom = (rect.bottom - bounds.top) / zoom;
+      for (
+        let i = Math.max(0, Math.floor(sourceTop / step));
+        i < count && i * step < sourceBottom;
+        i++
+      ) {
+        const start = Math.max(sourceTop, i * step + (layout.top * 96) / 25.4),
+          end = Math.min(
+            sourceBottom,
+            i * step + height - (layout.bottom * 96) / 25.4,
+          );
+        if (end <= start) continue;
+        const p = {
+          page: pages[i],
+          x: (rect.left - bounds.left) * scale,
+          y: layout.height * mm - (start - i * step) * zoom * scale,
+        };
+        const width = rect.width * scale,
+          h = (end - start) * zoom * scale,
+          background = style.backgroundColor;
+        if (background !== "transparent" && background !== "rgba(0, 0, 0, 0)")
+          p.page.drawRectangle({
+            x: p.x,
+            y: p.y - h,
+            width,
+            height: h,
+            color: color(background),
+          });
+        if (el.matches("td,th")) {
+          for (const [side, start, end] of [
+            ["Top", [p.x, p.y], [p.x + width, p.y]],
+            ["Bottom", [p.x, p.y - h], [p.x + width, p.y - h]],
+            ["Left", [p.x, p.y], [p.x, p.y - h]],
+            ["Right", [p.x + width, p.y], [p.x + width, p.y - h]],
+          ] as any[]) {
+            const thickness =
+              parseFloat((style as any)["border" + side + "Width"]) *
+              zoom *
+              scale;
+            if (thickness)
+              p.page.drawLine({
+                start: { x: start[0], y: start[1] },
+                end: { x: end[0], y: end[1] },
+                thickness,
+                color: color((style as any)["border" + side + "Color"]),
+              });
+          }
         }
       }
     }
@@ -229,10 +233,7 @@ export async function documentPDF(
 
   const canvas = document.createElement("canvas"),
     ctx = canvas.getContext("2d")!;
-  const walker = document.createTreeWalker(
-    sheet.querySelector(".tiptap") || sheet,
-    NodeFilter.SHOW_TEXT,
-  );
+  const walker = document.createTreeWalker(sheet, NodeFilter.SHOW_TEXT);
   let node: Node | null;
   while ((node = walker.nextNode())) {
     const parent = node.parentElement!;
@@ -314,12 +315,50 @@ export async function documentPDF(
       rect = li.getBoundingClientRect(),
       p = point(rect),
       ordered = li.parentElement?.tagName === "OL";
+    const listStyle = getComputedStyle(li.parentElement!).listStyleType;
+    const index =
+      Number(li.parentElement?.getAttribute("start") || 1) +
+      Array.from(li.parentElement!.children).indexOf(li);
+    const roman = (n: number) => {
+      let out = "";
+      for (const [v, t] of [
+        [1000, "M"],
+        [900, "CM"],
+        [500, "D"],
+        [400, "CD"],
+        [100, "C"],
+        [90, "XC"],
+        [50, "L"],
+        [40, "XL"],
+        [10, "X"],
+        [9, "IX"],
+        [5, "V"],
+        [4, "IV"],
+        [1, "I"],
+      ] as [number, string][]) {
+        while (n >= v) {
+          out += t;
+          n -= v;
+        }
+      }
+      return out;
+    };
+    const alpha = (n: number): string =>
+      n > 26
+        ? alpha(Math.floor((n - 1) / 26)) +
+          String.fromCharCode(97 + ((n - 1) % 26))
+        : String.fromCharCode(96 + n);
     const marker = ordered
-      ? String(
-          Number(li.parentElement?.getAttribute("start") || 1) +
-            Array.from(li.parentElement!.children).indexOf(li),
-        ) + "."
-      : "•";
+      ? (listStyle === "lower-alpha"
+          ? alpha(index)
+          : listStyle === "upper-roman"
+            ? roman(index)
+            : String(index)) + "."
+      : listStyle === "circle"
+        ? "○"
+        : listStyle === "square"
+          ? "▪"
+          : "•";
     const { font } = await fontFor(style, marker[0]),
       size = parseFloat(style.fontSize) * zoom * scale;
     p.page.drawText(marker, {

@@ -85,16 +85,20 @@ with tempfile.TemporaryDirectory() as td:
     with page.expect_popup() as popup:page.get_by_role('button',name='만들고 문서 열기',exact=True).click()
     editor=popup.value;editor.get_by_role('textbox',name='문서 본문',exact=True).wait_for(timeout=60000)
     editor.get_by_role('textbox',name='문서 본문',exact=True).click();editor.keyboard.press('Control+End');editor.keyboard.press('Enter');editor.keyboard.type('Saved sermon content',delay=20)
-    editor.keyboard.press('Control+a');editor.get_by_role('button',name='문서 설정',exact=True).click();editor.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='속성',exact=True).click();editor.get_by_label('글꼴',exact=True).select_option('Liberation Sans')
+    editor.keyboard.press('Control+a');
+    if editor.get_by_role('button',name='사이드바',exact=True).get_attribute('aria-expanded')!='true':editor.get_by_role('button',name='사이드바',exact=True).click()
+    editor.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='속성',exact=True).click();editor.get_by_label('글꼴',exact=True).select_option('Liberation Sans')
     editor.wait_for_timeout(1200);editor.wait_for_function("document.querySelector('.document-header [role=status]')?.textContent.endsWith('저장됨')",timeout=30000)
-    editor.get_by_role('button',name='페이지 설정 닫기',exact=True).click()
+
+    if editor.get_by_role('button',name='사이드바',exact=True).get_attribute('aria-expanded')=='true':editor.get_by_role('button',name='사이드바',exact=True).click()
     editor.get_by_role('textbox',name='문서 본문',exact=True).click();editor.keyboard.press('Control+End');editor.keyboard.press('Enter')
-    editor.get_by_role('button',name='이미지 추가',exact=True).click()
+    editor.get_by_label('이미지 추가',exact=True).click();editor.get_by_role('button',name='자료에서 이미지 추가',exact=True).click()
     picker=editor.get_by_role('dialog',name='자료에서 이미지 선택',exact=True)
     picker.get_by_role('searchbox',name='자료 이미지 검색').fill('pixel.png')
     picker.get_by_role('button',name='pixel.png',exact=True).click();picker.wait_for(state='detached')
     editor.locator('.document-sheet img[src]').wait_for()
-    editor.get_by_label('내보내기',exact=True).click()
+    if editor.get_by_role('button',name='사이드바',exact=True).get_attribute('aria-expanded')!='true':editor.get_by_role('button',name='사이드바',exact=True).click()
+    editor.get_by_role('navigation',name='문서 설정 종류').get_by_role('button',name='문서',exact=True).click()
     with editor.expect_download(timeout=60000) as pdf_export:editor.get_by_role('menuitem',name='PDF (.pdf)',exact=True).click()
     fontinfo=subprocess.run(['pdffonts',pdf_export.value.path()],check=True,capture_output=True,text=True).stdout
     assert 'LiberationSans' in fontinfo,fontinfo
