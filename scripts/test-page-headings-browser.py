@@ -42,11 +42,16 @@ with tempfile.TemporaryDirectory() as td:
    page.locator('#account-form button').click()
    page.wait_for_function('window.appAccount?.role === "superadmin"')
    page.wait_for_function('typeof window.mountProduction === "function"')
+   release=(root/'VERSION').read_text().strip()
+   assert page.locator('.app-release-version').inner_text()=='v'+release
+   assert page.locator('meta[name=pn-release]').get_attribute('content')==release
    measurements={}
    def measure(key,selector):
     heading=page.locator(selector);heading.wait_for();page.wait_for_timeout(260)
     measurements[key]=heading.evaluate("e=>({x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y,height:e.getBoundingClientRect().height,font:getComputedStyle(e.querySelector('h1')).fontSize,margin:getComputedStyle(e).marginBottom,nextY:e.nextElementSibling.getBoundingClientRect().y})")
    page.locator('[data-main-space=settings]').click()
+   page.locator('[data-settings-category=general]').click()
+   assert page.locator('.app-version-row').inner_text().replace('\n','').endswith('v'+release)
    page.locator('[data-settings-category=projects]').click()
    measure('settings','#settings-panel>.workspace-page-heading')
    page.locator('[data-main-space=database]').click()

@@ -35,7 +35,7 @@ import {
   Plus,
   RotateCcw,
   Trash2,
-} from "lucide-react";
+} from "../ui/design-system/Icons";
 import { dateLabel, newTask, priorities, safeUrl, stages } from "./data";
 import type { Asset, Feedback, Project, Schedule, Task } from "./data";
 import { minutes, timeLabel } from "./timetable-model.js";

@@ -1,0 +1,11 @@
+/* Navigation states use a surface and weight, never color alone. */
+.ui-sidebar{padding:16px 12px;background:var(--ui-subtle);border-inline-end:1px solid var(--ui-line)}
+.ui-nav-item,.sidebar-ref-link{min-height:40px;gap:8px;text-align:start}
+.ui-nav-item[aria-current="page"],.sidebar-ref-link.active{background:var(--ui-accent-soft);font-weight:600}
+.ui-tabs{display:flex;gap:4px;align-items:center;overflow-x:auto;padding:4px 0}
+.ui-tab{white-space:nowrap;min-height:40px;padding:8px 12px;background:transparent;border:1px solid transparent}
+.ui-tab[aria-selected="true"],.ui-tab[aria-pressed="true"]{background:var(--ui-accent-soft);font-weight:600;border-color:var(--ui-line)}
+/* Existing screens share the same navigation presentation. */
+.merge-sections,.project-sections,.resource-type-tabs{gap:4px}
+.merge-sections>button,.project-sections>button,.resource-type-tabs>button{min-height:40px;font-weight:500}
+.merge-sections>button.active,.project-sections>button.active,.resource-type-tabs>button.active{font-weight:600}

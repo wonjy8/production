@@ -1,6 +1,6 @@
 import { taskStatusGroups, stageGroup } from "./task-status.js";
 import { useRef, useState } from "react";
-import { CalendarDays, Check, Circle, Flag, ListChecks } from "lucide-react";
+import { CalendarDays, Check, Circle, Flag, ListChecks } from "../ui/design-system/Icons";
 import { AssigneePicker } from "./AssigneePicker";
 import { newTask, priorities, stages } from "./data";
 import type { Member, Task } from "./data";

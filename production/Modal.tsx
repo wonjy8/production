@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
-import { X } from "lucide-react";
+import {Button} from "../ui/design-system/Components";
 export function Modal({
   title,
   onClose,
@@ -29,7 +29,7 @@ export function Modal({
     <dialog
       ref={dialog}
       tabIndex={-1}
-      className="create-dialog editor-dialog"
+      className="create-dialog editor-dialog ui-dialog"
       aria-label={title}
       onCancel={(e) => {
         e.preventDefault();
@@ -37,16 +37,16 @@ export function Modal({
         onClose();
       }}
     >
-      <div className="section-heading">
+      <div className="section-heading ui-dialog-header">
         <h2>{title}</h2>
-        <button
+        <Button
+          icon="close"
+          variant="quiet"
           className="icon-button"
           data-control-icon="close"
           aria-label={`${title} 닫기`}
           onClick={onClose}
-        >
-          <X size={18} />
-        </button>
+        />
       </div>
       {children}
     </dialog>

@@ -2,7 +2,7 @@ import {sortMembers,reorderMembers} from './member-sort.js';
 import {MemberSort} from './MemberSort';
 import {memberLabel,assigneeLabel} from './people-model.js';
 import { useEffect, useId, useRef, useState } from "react";
-import { Check, ChevronDown, Plus } from "lucide-react";
+import { Check, ChevronDown, Plus } from "../ui/design-system/Icons";
 import type { Member } from "./data";
 export function AssigneePicker({
   members,

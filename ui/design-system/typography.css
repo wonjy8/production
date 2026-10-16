@@ -1,0 +1,12 @@
+/* App chrome only: never override user-authored document typography. */
+:root,:host{font-family:var(--ui-font);font-size:var(--ui-text-body);color:var(--ui-text);font-synthesis:none}
+button,input,select,textarea{font-family:inherit}
+button{font-weight:var(--ui-weight-control)}
+.ui-body{font-size:var(--ui-text-body);font-weight:400;line-height:1.5}
+.ui-caption{font-size:var(--ui-text-small);line-height:1.5;color:var(--ui-muted)}
+.ui-section-title,.section-heading>h2{font-size:var(--ui-text-section);font-weight:var(--ui-weight-title);line-height:1.35;margin:0;text-align:start}
+.ui-page-heading,.workspace-page-heading{display:flex;align-items:center;gap:var(--ui-space-3);min-height:40px;min-width:0;margin:0 0 var(--ui-space-5)!important;padding:0;text-align:start}
+.ui-page-heading>h1,.workspace-page-heading h1{font-size:var(--ui-text-title)!important;font-weight:var(--ui-weight-title);line-height:1.35;letter-spacing:-.02em;margin:0!important;min-width:0;overflow-wrap:anywhere}
+.ui-page-heading>.ui-heading-actions{margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+.app-release-version{display:block;padding:8px 12px;font-size:var(--ui-text-small);line-height:1.5;color:var(--ui-muted);font-variant-numeric:tabular-nums}.app-version-row{font-variant-numeric:tabular-nums}

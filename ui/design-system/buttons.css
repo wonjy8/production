@@ -1,0 +1,15 @@
+/* Native corner-shape preserves hit targets, focus rings and shadows. */
+button,.button,[role="button"],input[type="button"],input[type="submit"]{border-radius:var(--ui-control-radius)!important;corner-shape:squircle;transition:background-color var(--ui-fast) ease,color var(--ui-fast) ease,border-color var(--ui-fast) ease;}
+.ui-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--ui-control-height);padding:8px 12px;border:1px solid var(--ui-line);background:var(--ui-surface);color:var(--ui-text);font:500 14px/1.4 var(--ui-font);cursor:pointer;text-decoration:none}
+.ui-button:hover:not(:disabled){background:var(--ui-subtle)}
+.ui-button[data-variant="primary"]{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent)}
+.ui-button[data-variant="quiet"]{background:transparent;border-color:transparent}
+.ui-button[data-variant="danger"],button[data-variant="danger"]{color:var(--ui-danger);background:var(--ui-danger-soft)}
+.ui-button[data-size="compact"]{min-height:32px;padding:4px 8px}
+.ui-button[data-icon-only="true"]{width:40px;height:40px;padding:0;flex-shrink:0}
+button:disabled,.ui-button[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+:where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:2px solid var(--ui-focus)!important;outline-offset:3px}
+.ui-icon{width:18px;height:18px;flex-shrink:0;vertical-align:middle}
+@media(pointer:coarse){.ui-button{min-height:44px}.ui-button[data-icon-only="true"]{width:44px;height:44px}}
+.ui-button[data-variant="primary"]:hover:not(:disabled){background:var(--accent-hover,#363739)}
+.ui-button[data-variant="danger"]:hover:not(:disabled){background:var(--ui-danger-soft);border-color:var(--ui-danger)}

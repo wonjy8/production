@@ -1,0 +1,14 @@
+/* Structural spacing, forms, windows, and menus. */
+.ui-screen{min-width:0;padding:24px;max-width:100%}
+.ui-stack{display:flex;flex-direction:column;gap:16px}.ui-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.ui-card{padding:16px;background:var(--ui-surface);border:1px solid var(--ui-line);border-radius:var(--ui-panel-radius)}
+.ui-divider{border:0;border-block-start:1px solid var(--ui-line);margin:16px 0}
+.ui-dialog,.create-dialog,.editor-dialog{border:1px solid var(--ui-line);border-radius:var(--ui-panel-radius);box-shadow:var(--ui-shadow)}
+.ui-dialog{padding:24px;width:560px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow:auto;background:var(--ui-surface);color:var(--ui-text)}
+.ui-dialog::backdrop{background:#0006}
+.ui-dialog-header,.section-heading{display:flex;align-items:center;gap:12px}
+.ui-dialog-header{margin-bottom:20px}.ui-dialog-header>h2{flex:1;min-width:0;margin:0;font-size:18px;font-weight:600}
+.ui-dialog-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:24px}
+.ui-field{display:grid;gap:8px}.ui-input{min-height:40px;padding:8px 12px;border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-surface);font:400 14px/1.5 var(--ui-font)}
+.ui-menu{padding:6px;border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-surface);box-shadow:var(--ui-shadow)}
+@media(max-width:600px){.ui-screen{padding:16px 12px}.ui-dialog{padding:16px}.ui-input{font-size:16px}}

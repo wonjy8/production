@@ -1,6 +1,6 @@
 import {useRef,useState,useEffect} from 'react';
 import {Modal} from './Modal';
-import {Undo2,Redo2,MousePointer2,Crop,Scan,Shapes,ChevronDown,Trash2,RotateCcw,RotateCw} from 'lucide-react';
+import {Undo2,Redo2,MousePointer2,Crop,Scan,Shapes,ChevronDown,Trash2,RotateCcw,RotateCw} from '../ui/design-system/Icons';
 import {fullCrop,normalizedRect,validPhotoEdit,renderPhoto,normalizeRotation,rotationBounds,originalPhotoPoint} from './photo-model.js';
 import {moveLayer,resizeLayer,commitEdit,undoEdit,redoEdit} from './photo-interactions.js';
 const names:any={crop:'자르기',mosaic:'모자이크',blur:'블러',rect:'사각형',ellipse:'원',line:'선',arrow:'화살표'};
