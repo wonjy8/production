@@ -1,3 +1,4 @@
+import './ShareSettings';
 import '../ui/completion-policy.js';
 import {transferOwnerModule} from './module-transfer.js';
 import './MaterialsTrash';

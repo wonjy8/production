@@ -22,3 +22,7 @@ await writeFile('worker/document-assets.js','export const documentPDFJS='+JSON.s
 
 const fontFiles=(await readdir('assets/document-fonts')).filter(n=>n.endsWith('.ttf'));
 await writeFile('worker/document-font-assets.js','export const documentFonts='+JSON.stringify(Object.fromEntries(await Promise.all(fontFiles.map(async n=>[n.slice(0,-4),(await readFile('assets/document-fonts/'+n)).toString('base64')]))))+';\nexport const documentFontLicense='+JSON.stringify((await Promise.all(['OFL-NanumGothic.txt','OFL-NanumMyeongjo.txt','LICENSE-Liberation.txt'].map(n=>readFile('assets/document-fonts/'+n,'utf8')))).join('\n\n'))+';\n');
+
+// The public NAS viewer uses the same design tokens and has no workspace/account bootstrap.
+const shareViewer=(await readFile('ui/share-view.html','utf8')).replace('{{DESIGN_CSS}}',designCSS).replace('{{VIEWER_JS}}',await readFile('ui/share-view.js','utf8')).replace('{{APP_RELEASE_VERSION}}',(await readFile('VERSION','utf8')).trim());
+await writeFile('nas/share-view.html',shareViewer);

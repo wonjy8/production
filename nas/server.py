@@ -223,7 +223,7 @@ def save_workspace(conn, data):
 def health():
     with database() as conn:
         conn.execute('SELECT 1')
-    return {'ok': True, 'schemaVersion': 1, 'storage': 'nas', 'features': {'archiveScopes': 1, 'completionCopies': 1}}
+    return {'ok': True, 'schemaVersion': 1, 'storage': 'nas', 'features': {'archiveScopes': 1, 'completionCopies': 1, 'publicShares': 1}}
 
 
 @app.get('/api/data')
@@ -552,6 +552,10 @@ install(app,database,write_lock,save_workspace,now)
 from local_auth import install_local
 install_local(app,database,write_lock,save_workspace,now,TOKEN)
 
+from sharing import install_sharing
+install_sharing(app,database,write_lock,now,json_body,DATA)
+
 # Optional GitHub Pages entry point; existing Worker routes remain protected.
 from browser_gateway import BrowserGateway
-app = BrowserGateway(app, TOKEN, os.environ.get('PAGES_ORIGINS', ''))
+from public_gateway import PublicGateway
+app = PublicGateway(BrowserGateway(app, TOKEN, os.environ.get('PAGES_ORIGINS', '')),TOKEN)

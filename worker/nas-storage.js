@@ -16,6 +16,7 @@ export async function nasStorage(request,env){const url=new URL(request.url),pat
    return Response.json({done:false,phase:list.truncated?phase:phase==='files'?'references':'workspace',cursor:list.truncated?list.cursor:null,copied});
   }catch{return Response.json({error:'NAS 복사 실패'},{status:502})}
  }
+ if(path==='/api/shares'||/^\/api\/shares\/[a-f0-9-]{36}$/.test(path)){if(env.NAS_STORAGE_MODE!=='nas'||!configured(env))return Response.json({error:'NAS 연결 필요'},{status:503});if(!['GET','POST','PUT'].includes(request.method))return new Response('Method not allowed',{status:405});if(request.method!=='GET'&&!mutationAllowed(request))return new Response('Forbidden',{status:403});try{const headers=new Headers();for(const name of ['Content-Type','If-Match','X-Auth-Session'])if(request.headers.has(name))headers.set(name,request.headers.get(name));const r=await call(env,path,{method:request.method,headers,...(request.method!=='GET'?{body:request.body}:{})});return new Response(r.body,{status:r.status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}})}catch{return Response.json({error:'NAS 연결 실패'},{status:502})}}
  const supported=path==='/api/data'||path==='/api/references'||/^\/api\/(references|ref-files)\/[a-f0-9-]{36}$/.test(path)||/^\/api\/database\/[a-z-]+(?:\/[a-f0-9-]{36})?$/.test(path);
  if(!supported)return null;
  const master=path.startsWith('/api/database/');if(env.NAS_STORAGE_MODE!=='nas'){if(master)return Response.json({error:'NAS 연결 필요'},{status:503});return null;}

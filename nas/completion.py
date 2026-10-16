@@ -113,6 +113,8 @@ def apply_completion(conn,before,after,actor,stamp,catalog_entries,resource_orig
                 return value
             for item in scoped:
                 updated=rewrite(item,item['id']);item.clear();item.update(updated)
+            from sharing import remap_shares
+            remap_shares(conn,mapping,{p['id'] for p in scoped})
             old_archive_ids={a['id'] for a in old.get('archives',[])}
             owner['completion']={'completedAt':stamp,'resourceIds':list(mapping.values()),'archiveIds':[a['id'] for a in owner.get('archives',[]) if a['id'] not in old_archive_ids]}
             # Unique project uploads are retired to recoverable trash, never physically deleted here.

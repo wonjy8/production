@@ -53,3 +53,8 @@ CREATE TABLE IF NOT EXISTS local_session_preferences(token_hash TEXT PRIMARY KEY
 CREATE TABLE IF NOT EXISTS resource_records(id TEXT PRIMARY KEY,file_id TEXT,owner_user_id TEXT NOT NULL DEFAULT '',payload TEXT NOT NULL CHECK(json_valid(payload)),version INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS resource_file ON resource_records(file_id);
 INSERT OR IGNORE INTO schema_versions VALUES(2,datetime('now'));
+
+-- Public links contain only explicit selectors; all reads recheck current authorization.
+CREATE TABLE IF NOT EXISTS public_shares(id TEXT PRIMARY KEY,token TEXT NOT NULL UNIQUE,created_by TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),version INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS public_shares_creator ON public_shares(created_by);
+INSERT OR IGNORE INTO schema_versions VALUES(3,datetime('now'));

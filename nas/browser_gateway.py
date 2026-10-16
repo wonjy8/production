@@ -64,7 +64,7 @@ class BrowserGateway:
         transport = httpx.ASGITransport(app=self.app)
         async with httpx.AsyncClient(transport=transport, base_url='http://nas.internal', headers=internal_headers) as client:
             if path == '/api/auth/connection' and method == 'GET':
-                return await reply({'nasReachable': True, 'authenticationInstalled': True, 'features': {'archiveScopes': 1, 'completionCopies': 1}})
+                return await reply({'nasReachable': True, 'authenticationInstalled': True, 'features': {'archiveScopes': 1, 'completionCopies': 1, 'publicShares': 1}})
             if path.startswith('/api/auth/'):
                 part = path[len('/api/auth/'):]
                 if part not in AUTH and not re.fullmatch(r'users/[a-f0-9-]{36}', part):
@@ -131,7 +131,7 @@ class BrowserGateway:
                 except (httpx.HTTPError, ValueError):
                     pass
                 return await reply({'id': ident, 'title': title, 'thumbnail': f'https://i.ytimg.com/vi/{ident}/hqdefault.jpg'})
-            if not (path in {'/api/data', '/api/references'} or re.fullmatch(r'/api/(references|ref-files)/[a-f0-9-]{36}', path) or re.fullmatch(r'/api/database/[a-z-]+(?:/[a-f0-9-]{36})?', path)):
+            if not (path in {'/api/data', '/api/references','/api/shares'} or re.fullmatch(r'/api/shares/[a-f0-9-]{36}',path) or re.fullmatch(r'/api/(references|ref-files)/[a-f0-9-]{36}', path) or re.fullmatch(r'/api/database/[a-z-]+(?:/[a-f0-9-]{36})?', path)):
                 return await reply({'error': 'Not found'}, 404)
         # Stream uploads/downloads without buffering files. Never trust browser X-Auth-*.
         forwarded = [(k, v) for k, v in scope['headers'] if k.decode().lower() in HEADERS]

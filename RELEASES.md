@@ -278,3 +278,13 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Add Library completed-project folders with a persistent hide/show switch, including document browsing/search. Existing completed projects offer explicit preparation of current preservation copies.
 - Reopen using the same preserved IDs as editable working originals, remove the current completion record, and keep other projects' originals independent. Preserve a child's own completion when reopening its parent.
 - NAS update: add `completion.py`; replace `resources.py`, `server.py`, `browser_gateway.py`, and `Dockerfile` together. Run `sh update.sh` to rebuild/recreate. Preserve `.env` and `data/`; no schema, dependency or environment-variable changes. See `nas/UPDATE-0.1.2.md`.
+
+
+## 0.1.3
+
+- Add server-authorized live external links for selected project/work-group/reference tabs, modules, schedules, tasks and files. Whole tabs include new items; individual selectors remain narrow.
+- Support anyone-with-link or explicitly listed registered NAS users, optional expiry, download controls, settings updates and immediate revocation. Public reads recheck publisher membership, source/file access and recipient identity.
+- Serve a separate read-only public viewer from NAS, with same-origin secure cookie login, no service token exposure, text-safe rendering, media/PDF viewing and TXT/DOCX content previews.
+- Remap only the completed owner's individual file selections to preservation IDs in the completion transaction. Keep the same link on completion/reopening and leave other projects' links independent.
+- Browser-only storage explains the NAS requirement. Download restrictions govern original-file delivery and controls; rendered content/media can still be saved.
+- NAS update: add `sharing.py`, `public_gateway.py`, `share-view.html`; replace `server.py`, `browser_gateway.py`, `completion.py`, `schema.sql`, `Dockerfile`. Rebuild/recreate with `sh update.sh`; preserve `.env` and `data/`. A new additive table is created automatically; no new dependencies or environment variables. See `nas/UPDATE-0.1.3.md` and route `/public/` through the existing HTTPS proxy.

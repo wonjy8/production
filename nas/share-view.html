@@ -1,0 +1,117 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>공유 자료 · Production</title><style>/* Shared values: document UI and every shadow root use this same source. */
+:root,:host {
+ --ui-font:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
+ --ui-text:#242526; --ui-muted:#65666a; --ui-surface:#fff; --ui-subtle:#f5f5f6;
+ --ui-line:#e7e7e8; --ui-danger:#b42318; --ui-danger-soft:#fff0ee;
+ --ui-accent:var(--user-accent,#242526); --ui-accent-soft:var(--user-accent-soft,#f0f0f0);
+ --ui-focus:#2563eb; --ui-drop:#2563eb;
+ --ui-space-1:4px; --ui-space-2:8px; --ui-space-3:12px; --ui-space-4:16px; --ui-space-5:20px; --ui-space-6:24px; --ui-space-8:32px;
+ --ui-text-small:12px; --ui-text-body:14px; --ui-text-section:18px; --ui-text-title:24px;
+ --ui-weight-body:400; --ui-weight-control:500; --ui-weight-title:600;
+ --ui-control-height:40px; --ui-control-radius:12px; --ui-panel-radius:16px;
+ --ui-fast:160ms; --ui-panel:240ms; --ui-ease:cubic-bezier(.22,1,.36,1);
+ --ui-shadow:0 12px 36px #0000001a;
+ --control-height:var(--ui-control-height); --control-radius:var(--ui-control-radius);
+ --workspace-title-size:var(--ui-text-title); --workspace-heading-height:40px; --workspace-heading-gap:20px;
+ --motion-fast:var(--ui-fast); --motion-panel:var(--ui-panel); --motion-ease:var(--ui-ease);
+}
+
+/* App chrome only: never override user-authored document typography. */
+:root,:host{font-family:var(--ui-font);font-size:var(--ui-text-body);color:var(--ui-text);font-synthesis:none}
+button,input,select,textarea{font-family:inherit}
+button{font-weight:var(--ui-weight-control)}
+.ui-body{font-size:var(--ui-text-body);font-weight:400;line-height:1.5}
+.ui-caption{font-size:var(--ui-text-small);line-height:1.5;color:var(--ui-muted)}
+.ui-section-title,.section-heading>h2{font-size:var(--ui-text-section);font-weight:var(--ui-weight-title);line-height:1.35;margin:0;text-align:start}
+.ui-page-heading,.workspace-page-heading{display:flex;align-items:center;gap:var(--ui-space-3);min-height:40px;min-width:0;margin:0 0 var(--ui-space-5)!important;padding:0;text-align:start}
+.ui-page-heading>h1,.workspace-page-heading h1{font-size:var(--ui-text-title)!important;font-weight:var(--ui-weight-title);line-height:1.35;letter-spacing:-.02em;margin:0!important;min-width:0;overflow-wrap:anywhere}
+.ui-page-heading>.ui-heading-actions{margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+.app-release-version{display:block;padding:8px 12px;font-size:var(--ui-text-small);line-height:1.5;color:var(--ui-muted);font-variant-numeric:tabular-nums}.app-version-row{font-variant-numeric:tabular-nums}
+
+/* Native corner-shape preserves hit targets, focus rings and shadows. */
+button,.button,[role="button"],input[type="button"],input[type="submit"]{border-radius:var(--ui-control-radius)!important;corner-shape:squircle;transition:background-color var(--ui-fast) ease,color var(--ui-fast) ease,border-color var(--ui-fast) ease;}
+.ui-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--ui-control-height);padding:8px 12px;border:1px solid var(--ui-line);background:var(--ui-surface);color:var(--ui-text);font:500 14px/1.4 var(--ui-font);cursor:pointer;text-decoration:none}
+.ui-button:hover:not(:disabled){background:var(--ui-subtle)}
+.ui-button[data-variant="primary"]{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent)}
+.ui-button[data-variant="quiet"]{background:transparent;border-color:transparent}
+.ui-button[data-variant="danger"],button[data-variant="danger"]{color:var(--ui-danger);background:var(--ui-danger-soft)}
+.ui-button[data-size="compact"]{min-height:32px;padding:4px 8px}
+.ui-button[data-icon-only="true"]{width:40px;height:40px;padding:0;flex-shrink:0}
+button:disabled,.ui-button[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+:where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:2px solid var(--ui-focus)!important;outline-offset:3px}
+.ui-icon{width:18px;height:18px;flex-shrink:0;vertical-align:middle}
+@media(pointer:coarse){.ui-button{min-height:44px}.ui-button[data-icon-only="true"]{width:44px;height:44px}}
+.ui-button[data-variant="primary"]:hover:not(:disabled){background:var(--accent-hover,#363739)}
+.ui-button[data-variant="danger"]:hover:not(:disabled){background:var(--ui-danger-soft);border-color:var(--ui-danger)}
+
+/* Navigation states use a surface and weight, never color alone. */
+.ui-sidebar{padding:16px 12px;background:var(--ui-subtle);border-inline-end:1px solid var(--ui-line)}
+.ui-nav-item,.sidebar-ref-link{min-height:40px;gap:8px;text-align:start}
+.ui-nav-item[aria-current="page"],.sidebar-ref-link.active{background:var(--ui-accent-soft);font-weight:600}
+.ui-tabs{display:flex;gap:4px;align-items:center;overflow-x:auto;padding:4px 0}
+.ui-tab{white-space:nowrap;min-height:40px;padding:8px 12px;background:transparent;border:1px solid transparent}
+.ui-tab[aria-selected="true"],.ui-tab[aria-pressed="true"]{background:var(--ui-accent-soft);font-weight:600;border-color:var(--ui-line)}
+/* Existing screens share the same navigation presentation. */
+.merge-sections,.project-sections,.resource-type-tabs{gap:4px}
+.merge-sections>button,.project-sections>button,.resource-type-tabs>button{min-height:40px;font-weight:500}
+.merge-sections>button.active,.project-sections>button.active,.resource-type-tabs>button.active{font-weight:600}
+
+/* Two workspaces plus Settings, consistently on desktop and mobile. */
+.sidebar-main-spaces.nav-icons-only{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.sidebar-materials-trash{order:100;border-top:1px solid var(--ui-line)!important;padding-top:8px!important;margin-top:8px!important}
+.sidebar-materials-trash[hidden],.sidebar-document-editor[hidden]{display:none!important}
+.materials-divider{width:100%;flex:none}
+.workspace-landing-items>.materials-divider{grid-column:1/-1}
+@media(max-width:720px){.mobile-bottom-nav .sidebar-main-spaces{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+
+/* Every rounded UI corner uses Squircle; existing radii keep their size. */
+*,*::before,*::after{corner-shape:squircle}
+/* Structural spacing, forms, windows, and menus. */
+.ui-screen{min-width:0;padding:24px;max-width:100%}
+.ui-stack{display:flex;flex-direction:column;gap:16px}.ui-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.ui-card{padding:16px;background:var(--ui-surface);border:1px solid var(--ui-line);border-radius:var(--ui-panel-radius)}
+.ui-divider{border:0;border-block-start:1px solid var(--ui-line);margin:16px 0}
+.ui-dialog,.create-dialog,.editor-dialog{border:1px solid var(--ui-line);border-radius:var(--ui-panel-radius);box-shadow:var(--ui-shadow)}
+.ui-dialog{padding:24px;width:560px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow:auto;background:var(--ui-surface);color:var(--ui-text)}
+.ui-dialog::backdrop{background:#0006}
+.ui-dialog-header,.section-heading{display:flex;align-items:center;gap:12px}
+.ui-dialog-header{margin-bottom:20px}.ui-dialog-header>h2{flex:1;min-width:0;margin:0;font-size:18px;font-weight:600}
+.ui-dialog-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:24px}
+.ui-field{display:grid;gap:8px}.ui-input{min-height:40px;padding:8px 12px;border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-surface);font:400 14px/1.5 var(--ui-font)}
+.ui-menu{padding:6px;border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-surface);box-shadow:var(--ui-shadow)}
+@media(max-width:600px){.ui-screen{padding:16px 12px}.ui-dialog{padding:16px}.ui-input{font-size:16px}}
+
+.resource-usage{max-width:100%;font-size:14px;line-height:1.5}.resource-usage ul{padding-inline-start:20px;max-height:240px;overflow:auto}.resource-usage li{margin-block:8px;overflow-wrap:anywhere}.resource-usage li>span{display:block;color:var(--ui-muted)}
+
+.completion-banner{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 16px;margin-bottom:20px;border:1px solid var(--ui-line);border-radius:16px;background:var(--ui-subtle)}.completed-project-folders{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.completed-project-folders h2{width:100%;margin:0;font-size:18px;font-weight:600}[data-document-frozen=true] .document-toolbar{pointer-events:none;opacity:.55}
+.share-settings{font-size:14px;line-height:1.6;min-width:0}.share-settings form,.share-link-card{display:grid;gap:16px;margin:16px 0;padding:16px;border:1px solid var(--ui-line);border-radius:var(--ui-panel-radius)}.share-settings label{display:grid;gap:8px;min-width:0}.share-settings input,.share-settings select,.share-settings textarea{box-sizing:border-box;max-width:100%;min-width:0;width:100%;font:inherit;padding:8px 12px;min-height:40px;border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-surface)}.share-targets{max-height:320px;overflow:auto;border:1px solid var(--ui-line);border-radius:12px;padding:12px}.share-targets label,.share-settings .share-checkbox{display:flex;align-items:center;gap:8px;padding:6px 0;overflow-wrap:anywhere}.share-targets input,.share-settings .share-checkbox input{width:18px;min-height:18px;flex:none}.share-actions{display:flex;flex-wrap:wrap;gap:8px}.share-link-card p{margin:0}.share-settings .muted{color:var(--ui-muted)}
+
+/* Only presentation is shared; each domain retains its drop semantics. */
+.ui-enter,.ui-screen,.merged-workspace,.refpanel,.paper,.database-page,.settings-page,.workspace-landing{animation:none!important}
+.ui-drag-handle{cursor:grab;touch-action:none}.ui-drag-handle:active{cursor:grabbing}
+.ui-drag-source,[aria-grabbed="true"]{opacity:.5}
+.ui-drop-target{outline:2px solid var(--ui-drop);outline-offset:2px;background:color-mix(in srgb,var(--ui-drop) 8%,white)}
+.ui-drop-line,.tab-drop-line{background:var(--ui-drop)}
+.ui-drag-ghost{pointer-events:none;box-shadow:var(--ui-shadow);border-radius:12px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.tab-drag-source{opacity:.5}
+.draghandle{cursor:grab}.draghandle:active{cursor:grabbing}
+.tab-drag-ghost,.dragghost{pointer-events:none;box-shadow:var(--ui-shadow)}
+.module-drop-target,.member-drop-target,.team-drop-target,.calendar-drop-target{outline:2px solid var(--ui-drop);outline-offset:2px}
+
+body{margin:0;background:var(--ui-subtle);font-family:var(--ui-font);color:var(--ui-text)}main{max-width:960px;margin:0 auto;padding:32px 20px}.public-header{display:flex;align-items:center;justify-content:space-between;gap:16px}h1{font-size:24px}article,form{padding:20px;margin:16px 0;background:var(--ui-surface);border:1px solid var(--ui-line);border-radius:16px}h2{font-size:18px;margin-top:0}p,pre{white-space:pre-wrap;overflow-wrap:anywhere;font:400 14px/1.65 var(--ui-font)}label{display:grid;gap:8px;margin:12px 0}input,button{font:inherit;min-height:40px;padding:8px 12px;border:1px solid var(--ui-line);border-radius:12px;background:white}button{cursor:pointer}img,video,iframe{max-width:100%;display:block;border-radius:12px}iframe{width:100%;height:70vh;border:1px solid var(--ui-line)}audio{max-width:100%}a{color:var(--ui-accent,#245bd6)}.public-file{border-top:1px solid var(--ui-line);padding-top:12px;margin-top:12px}.public-actions{display:flex;gap:12px;flex-wrap:wrap}.muted{color:var(--ui-muted)}[hidden]{display:none!important}
+</style><main><header class="public-header"><h1 id="title">공유 자료</h1><button id="refresh">새로고침</button></header><p id="status" role="status">불러오는 중…</p><form id="login" hidden><h2>지정 사용자 로그인</h2><p>이 링크에 지정된 NAS 계정으로 로그인하세요.</p><label>이메일<input name="email" type="email" autocomplete="username" required></label><label>비밀번호<input name="password" type="password" autocomplete="current-password" required></label><button type="submit">로그인</button></form><div class="public-actions"><button id="logout" hidden>로그아웃</button></div><section id="content" aria-label="공유 내용"></section><footer><p class="muted">선택한 항목만 표시하는 읽기 전용 공유입니다. 다운로드 제한은 다운로드 동작과 원본 전달을 제한하며, 화면에 표시되는 내용·미디어의 저장까지 막지는 못합니다.</p><small>Production 0.1.3</small></footer></main><script>(()=>{'use strict';const token=location.pathname.split('/').pop(),endpoint='/public/shares/'+token,$=id=>document.getElementById(id);let requestNumber=0;
+const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el};
+async function api(path,options){const r=await fetch(path,{cache:'no-store',credentials:'same-origin',...options}),data=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(Error(data.detail||data.error||'공유를 열 수 없습니다.'),{status:r.status});return data}
+function link(href,label){const a=node('a',label);a.href=href;a.target='_blank';a.rel='noopener noreferrer';return a}
+async function load(){const request=++requestNumber;$('content').replaceChildren();$('status').textContent='불러오는 중…';$('login').hidden=true;
+try{const data=await api(endpoint);if(request!==requestNumber)return;$('title').textContent=data.title;document.title=data.title+' · 공유';$('status').textContent=(data.completed?'완료 보존본 · 읽기 전용':'실시간 공유 · 읽기 전용')+(data.expiresAt?' · '+new Date(data.expiresAt).toLocaleString()+'까지':'');if(!data.items.length)$('content').append(node('p','공유된 항목이 없거나 삭제되었습니다.'));
+for(const item of data.items){const article=node('article');article.append(node('h2',item.title||item.name||item.section||'자료'));if(item.text||item.body||item.description)article.append(node('p',item.text||item.body||item.description));const date=[item.date,item.startTime,item.endDate,item.endTime,item.due].filter(Boolean).join(' ');if(date)article.append(node('p',date));if(item.url)article.append(link(item.url,'외부 링크 열기'));if(item.headers?.length)article.append(node('p',item.headers.join(' · ')));for(const row of item.table||[])article.append(node('p',row.join(' · ')));for(const row of item.items||[])article.append(node('p',Object.values(row).join(' · ')));for(const record of item.records||[]){article.append(node('h3',record.title));for(const v of record.values)article.append(node('p',v.label+': '+v.value))}
+for(const file of item.files||[]){const box=node('div');box.className='public-file';box.append(node('h3',file.name));const address=endpoint+'/files/'+encodeURIComponent(file.id),mime=file.mime||'';
+if(/^image\/(png|jpeg|webp|gif)$/.test(mime)){const img=node('img');img.src=address;img.alt=file.name;img.loading='lazy';box.append(img)}else if(/^(video|audio)\//.test(mime)){const media=node(mime.startsWith('video/')?'video':'audio');media.src=address;media.controls=true;media.preload='metadata';media.setAttribute('controlsList',data.allowDownload?'':'nodownload');box.append(media)}else if(mime==='application/pdf'){const frame=node('iframe');frame.title=file.name;frame.src=address+'#toolbar='+(data.allowDownload?'1':'0');box.append(frame)}else if(/^text\//.test(mime)||/\.docx$/i.test(file.name)){const preview=node('pre','문서 불러오는 중…');box.append(preview);api(address+'?preview=1').then(d=>{if(request===requestNumber)preview.textContent=d.text+(d.truncated?'\n\n미리보기는 앞부분 2MB까지 표시합니다. 전체 내용은 다운로드가 허용된 경우 파일로 확인하세요.':'')}).catch(e=>{preview.textContent=e.message})}else box.append(node('p','이 파일 형식은 미리보기를 지원하지 않습니다.'));
+if(data.allowDownload)box.append(link(address+'?download=1','파일 다운로드'));article.append(box)}$('content').append(article)}
+}catch(e){if(request!==requestNumber)return;$('status').textContent=e.message;if(e.status===401){$('login').hidden=false;$('logout').hidden=false}else if(e.status===403){$('login').hidden=false;$('logout').hidden=false}}}
+$('refresh').onclick=load;for(const [id,path] of [['login','login']])$(id).onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector('button');button.disabled=true;try{await api('/public/auth/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(form)))});if(id==='login')form.elements.password.value='';$('logout').hidden=false;await load()}catch(error){$('status').textContent=error.message}finally{button.disabled=false}};
+$('logout').onclick=async()=>{try{await api('/public/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});$('logout').hidden=true;await load()}catch(e){$('status').textContent=e.message}};load();})();
+</script></html>
