@@ -1,3 +1,5 @@
+import {taskOccurrences,expandRepeats} from './recurrence.js';
+import {shiftCalendarDate} from './calendar-drag.js';
 import {planningSnapshot,planningUniverse} from './planning-model.js';
 import {localDay} from './admin-home-model.js';
 import {categoryFor} from './people-model.js';
@@ -5,7 +7,7 @@ import {referenceTabs,resolveSharedModule} from './shared-modules.js';
 const clone=value=>JSON.parse(JSON.stringify(value));
 export function scopedOwners(w,kind,id){const owner=(kind==='production'?w.productions:w.projects).find(p=>p.id===id&&!p.deleted);return owner?[{kind,owner},...(kind==='production'?w.projects.filter(p=>p.productionId===id&&!p.deleted).map(owner=>({kind:'project',owner})):[])]:[]}
 export function projectHealth(w,kind,id,{today=localDay(),now=new Date(),refs=[]}={}){
- const owners=scopedOwners(w,kind,id),tasks=owners.flatMap(({kind,owner})=>(owner.tasks||[]).filter(t=>!t.deleted).map(t=>({...t,origin:{kind,ownerId:owner.id}}))),pending=tasks.filter(t=>!t.done),feedback=owners.flatMap(({kind,owner})=>(owner.feedback||[]).filter(f=>!f.deleted&&!f.resolved).map(f=>({...f,origin:{kind,ownerId:owner.id}}))),schedules=owners.flatMap(({kind,owner})=>(owner.schedules||[]).filter(s=>!s.deleted&&!((owner.tasks||[]).find(t=>t.id===s.taskId)?.done)).map(s=>({...s,title:s.projectLinked?owner.name:s.title,endDate:s.projectLinked?owner.due||s.endDate:s.endDate,origin:{kind,ownerId:owner.id}})));
+ const owners=scopedOwners(w,kind,id),tasks=owners.flatMap(({kind,owner})=>taskOccurrences(owner.tasks||[],today).filter(t=>!t.deleted).map(t=>({...t,origin:{kind,ownerId:owner.id}}))),pending=tasks.filter(t=>!t.done),feedback=owners.flatMap(({kind,owner})=>(owner.feedback||[]).filter(f=>!f.deleted&&!f.resolved).map(f=>({...f,origin:{kind,ownerId:owner.id}}))),schedules=owners.flatMap(({kind,owner})=>expandRepeats(owner.schedules||[],today,shiftCalendarDate(today,366)).filter(s=>!s.deleted&&!((owner.tasks||[]).find(t=>t.id===s.taskId)?.done)).map(s=>({...s,title:s.projectLinked?owner.name:s.title,endDate:s.projectLinked?owner.due||s.endDate:s.endDate,origin:{kind,ownerId:owner.id}})));
  for(const s of w.timetableSchedules||[])if(!s.deleted&&(s.productionId===id&&kind==='production'||owners.some(({owner})=>owner.id===s.projectId)))schedules.push({...s,origin:{kind:s.projectId?'project':'production',ownerId:s.projectId||id}});
  const currentTime=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
  const upcoming=schedules.filter(s=>(s.endDate||s.date)>today||(s.endDate||s.date)===today&&(!s.endTime||s.endTime>=currentTime)).sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.startTime||'').localeCompare(String(b.startTime||'')));

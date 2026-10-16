@@ -3,6 +3,7 @@ export type Status = (typeof statuses)[number];
 export const stages = ["기획", "프리프로덕션", "촬영", "편집", "납품"] as const;
 export const priorities = ["낮음", "보통", "높음"] as const;
 export type Task = {
+ repeat?:any;repeatBaseId?:string;repeatDate?:string;
   id: string;
   title: string;
   done: boolean;
@@ -17,6 +18,7 @@ export type Task = {
   description: string;
 };
 export type Schedule = {
+ repeat?:any;repeatBaseId?:string;repeatDate?:string;
   done?: boolean;
   projectLinked?: boolean;
   startTime?: string;
@@ -58,6 +60,7 @@ export type Project = {
   archives?:any[];
   customTabs?: CustomTab[];
   icon?: string;
+  iconColor?: string;
   tabOrder?:string[];
   tabLabels?:Record<string,string>;
   tabIcons?:Record<string,string>;
@@ -90,6 +93,7 @@ export type Production = {
   schedules?:Schedule[];
   customTabs?: CustomTab[];
   icon?: string;
+  iconColor?: string;
   tabOrder?:string[];
   tabLabels?:Record<string,string>;
   tabIcons?:Record<string,string>;

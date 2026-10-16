@@ -1,3 +1,4 @@
+import {RepeatFields,readRepeat} from './RepeatFields';
 import { taskStatusGroups, stageGroup } from "./task-status.js";
 import { useRef, useState } from "react";
 import { CalendarDays, Check, Circle, Flag, ListChecks } from "../ui/design-system/Icons";
@@ -25,6 +26,7 @@ export function TaskComposer({
   const [title, setTitle] = useState(""),
     [expanded, setExpanded] = useState(false),
     [owner, setOwner] = useState("미지정");
+  const [repeatKey,setRepeatKey]=useState(0),[error,setError]=useState('');
   const input = useRef<HTMLInputElement>(null);
   return (
     <form
@@ -36,7 +38,10 @@ export function TaskComposer({
         if (!name) return;
         const form = e.currentTarget,
           d = new FormData(form);
+        let repeat;try{repeat=readRepeat(d,String(d.get('due')||''),undefined)}catch(error:any){setError(error.message);return;}
+        setError('');
         onAdd({
+          repeat,
           ...newTask(name),
           owner,
           ownerId: members.find((m) => m.name === owner)?.id || "",
@@ -48,7 +53,7 @@ export function TaskComposer({
         });
         setTitle("");
         setOwner("미지정");
-        form.reset();
+        form.reset();setRepeatKey(n=>n+1);
         input.current?.focus();
       }}
     >
@@ -89,6 +94,7 @@ export function TaskComposer({
             rows={1}
             maxLength={2000}
           />
+          <RepeatFields key={repeatKey}/>{error&&<p role="alert" className="form-error">{error}</p>}
           <div className="task-composer-options">
             <label className="task-composer-option">
               <CalendarDays size={15} />

@@ -221,6 +221,58 @@ body:not(.workspace-layout-ready):has(>.workspace-rail)>.topbar,body:not(.worksp
 
 [data-project-readonly="true"] .column-slot-tools,[data-project-readonly="true"] .column-boundary{display:none}
 
+/* One project identity beside the common page title; shared by shell and modules. */
+#app-page-title{display:flex;align-items:center;gap:8px;min-width:0}
+.app-page-icon:empty{display:none}.app-page-icon{display:inline-flex;flex:none;font-size:14px;font-weight:400;letter-spacing:normal}
+.project-icon-choice{position:relative;display:inline-flex;flex:none}
+.project-icon-choice>.project-identity-icon{display:grid;place-items:center;width:30px!important;height:30px!important;min-height:0!important;padding:3px!important;border:0!important;background:transparent!important;color:inherit}
+.project-identity-icon>.ui-icon{width:24px;height:24px}.project-identity-icon .ui-emoji{font-size:23px;line-height:1}.ui-photo-icon{object-fit:cover;border-radius:6px}
+.project-icon-popover{z-index:3000;width:min(420px,calc(100vw - 24px));max-height:min(70dvh,560px);overflow:auto;overscroll-behavior:contain;box-sizing:border-box;padding:14px;border:1px solid var(--ui-line);border-radius:14px;background:var(--ui-surface);color:var(--ui-text);box-shadow:var(--ui-shadow);font:400 14px/1.4 var(--ui-font);text-align:left}
+.project-icon-picker>label{display:grid;gap:6px}.project-icon-picker input[type=search]{width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--ui-line);background:var(--ui-surface);border-radius:8px;font:inherit}
+.icon-pack-tabs{display:flex;gap:4px;margin:10px 0}.icon-pack-tabs button{flex:1;border:0;background:transparent;padding:7px;font:inherit;cursor:pointer}.icon-pack-tabs button[aria-selected=true]{background:var(--ui-subtle);font-weight:600}
+.project-icon-picker section>strong{display:block;margin:12px 0 6px;font-size:12px;color:var(--ui-muted)}
+.project-icon-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.project-icon-grid button{display:grid;place-items:center;padding:5px;min-width:0;min-height:32px;height:36px;border:1px solid var(--ui-line);background:var(--ui-surface);cursor:pointer;color:inherit}
+.project-icon-grid .ui-icon{width:21px;height:21px}.project-icon-grid .ui-emoji{font-size:24px;line-height:1}
+.emoji-icon-grid button{border:0!important;background:transparent!important;box-shadow:none!important}.emoji-icon-grid button:hover,.emoji-icon-grid button[aria-pressed=true]{background:var(--ui-subtle)!important}
+.project-color-picker{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--ui-line)}
+.project-color-picker .project-color-swatch{width:24px!important;height:24px!important;min-width:24px!important;min-height:24px!important;padding:0!important;border:2px solid var(--ui-surface)!important;cursor:pointer}
+.project-color-swatch[aria-pressed=true]{outline:1px solid var(--ui-text);outline-offset:1px}
+.icon-photo-editor{display:grid;gap:12px}.icon-photo-upload{display:grid;gap:6px;padding:16px;border:1px dashed var(--ui-line);border-radius:12px;cursor:pointer}.icon-photo-upload small{font-size:11px;color:var(--ui-muted)}.icon-photo-upload input{max-width:100%}.icon-photo-preview{width:128px;height:128px;max-width:100%;border-radius:12px}
+button.sidebar-project>.sidebar-project-icon{display:inline-flex;flex:0 0 18px;width:18px;align-items:center;justify-content:center}
+
+/* Scheduling follows project identity; editing fields follow neutral app surfaces. */
+.editor-dialog:has(.schedule-entry-form) input:not([type=checkbox]):not([type=radio]),.editor-dialog:has(.schedule-entry-form) textarea,.editor-dialog:has(.schedule-entry-form) select,.editor-dialog:has(.repeat-fields) input:not([type=checkbox]):not([type=radio]),.editor-dialog:has(.repeat-fields) textarea,.editor-dialog:has(.repeat-fields) select{background:var(--ui-subtle)!important;color:var(--ui-text);border-color:transparent!important}
+.editor-dialog .time-segments{background:var(--ui-subtle)!important}
+.repeat-fields{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0;padding:12px 0;border:0;border-top:1px solid var(--ui-line)}.repeat-fields legend{font-size:12px;color:var(--ui-muted);padding-right:8px}.repeat-fields label{display:grid;gap:6px;flex:1;min-width:100px}.repeat-fields small{font-size:10px;color:var(--ui-muted)}
+.repeat-scope-options{display:grid;gap:8px}.repeat-scope-options button{width:100%;justify-content:flex-start;padding:10px 12px;background:var(--ui-surface);border:1px solid var(--ui-line);font:inherit}
+.work-task{border-left:3px solid var(--project-color,var(--ui-accent))}.work-task input[type=checkbox]{accent-color:var(--project-color,var(--ui-accent))}
+.work-task .task-source{color:var(--project-color,var(--ui-muted))}
+.work-task-list>.task-list-group+.task-list-group,.task-board-completed{border-top:1px solid var(--ui-line);margin-top:16px;padding-top:12px}
+.task-board{grid-template-columns:repeat(2,minmax(0,1fr))!important}.task-board-completed{background:transparent!important;border-radius:0;padding-inline:0}.task-board-completed>h3{display:flex;gap:8px;align-items:center}
+.calendar-resizable{resize:vertical;min-height:400px;max-height:none;padding-bottom:12px;overflow:auto}.calendar-height-tools{display:flex;justify-content:flex-end;padding:0 0 8px}.calendar-height-tools button{font-size:11px;min-height:28px;height:28px;background:transparent;border:0;color:var(--ui-muted)}
+.calendar-resizable .calendar-grid{grid-template-rows:32px;grid-auto-rows:minmax(100px,1fr)}
+.calendar-day{display:flex;flex-direction:column;gap:3px}.calendar-day-heading{order:0}.calendar-all-day{order:1}.calendar-timed{order:2}.calendar-task-row{order:3}.calendar-deadline{order:4}
+.calendar-day .calendar-event{display:flex!important;align-items:center;gap:5px;width:100%!important;min-width:0;min-height:24px!important;height:24px!important;padding:2px 6px!important;margin:0!important;border:0!important;font-size:12px!important;font-weight:500;line-height:1.4;box-shadow:none!important;border-radius:7px!important}
+.calendar-day .calendar-all-day{background:var(--project-soft)!important;color:var(--project-color)!important}
+.calendar-day .calendar-timed{position:relative;background:transparent!important;color:var(--ui-text)!important;padding-left:10px!important}
+.calendar-timed:before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:4px;border-radius:3px;background:var(--project-color)}
+.calendar-event-title,.calendar-task-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.calendar-event-time{flex:none;font-size:10px;font-weight:400;color:var(--ui-muted);white-space:nowrap}
+.calendar-day .calendar-task-row{border:0!important;background:transparent!important;padding:0!important;min-height:24px;gap:5px}
+.calendar-task-row .calendar-task{display:flex!important;align-items:center;gap:4px;padding:2px 0!important;background:transparent!important;color:var(--ui-text)!important;font-size:12px!important;min-height:24px!important;height:24px!important}
+.calendar-task-row .calendar-task-check{border-color:var(--project-color)!important;color:var(--project-color)!important;width:14px!important;height:14px!important;min-height:14px!important;min-width:14px!important;padding:0!important;background:transparent!important}
+.calendar-task-row.pending .calendar-task-check{background:var(--project-soft)!important}
+.calendar-event .project-name-chip,.calendar-task .project-name-chip{display:none}
+@media(max-width:650px){.task-board{grid-template-columns:1fr!important}.calendar-grid{min-width:650px}.project-icon-popover .project-icon-grid{grid-template-columns:repeat(7,minmax(0,1fr))}}
+.calendar-resizable{display:flex;flex-direction:column}.calendar-resizable .calendar-grid{flex:1;flex-shrink:0}.calendar-height-tools{flex:none}
+.work-task{border-left:3px solid var(--project-color,var(--ui-accent))!important}
+@media(max-width:650px){.calendar-grid{min-width:550px}}
+.task-composer .repeat-fields{width:100%;font-size:11px}.task-composer .repeat-fields select,.task-composer .repeat-fields input{height:32px;min-height:32px}
+.calendar-resizable{box-sizing:border-box}.calendar-day-heading{order:-1}.calendar-deadline{order:2000}
+.calendar-day .calendar-all-day{color:color-mix(in srgb,var(--project-color) 65%,var(--ui-text))!important}
+.calendar-task-row .calendar-task-check.keep-label{border-color:var(--project-color)!important;color:var(--project-color)!important;background:transparent!important}
+
 body{margin:0;background:var(--ui-subtle);font-family:var(--ui-font);color:var(--ui-text)}main{max-width:960px;margin:0 auto;padding:32px 20px}.public-header{display:flex;align-items:center;justify-content:space-between;gap:16px}h1{font-size:24px}article,form{padding:20px;margin:16px 0;background:var(--ui-surface);border:1px solid var(--ui-line);border-radius:16px}h2{font-size:18px;margin-top:0}p,pre{white-space:pre-wrap;overflow-wrap:anywhere;font:400 14px/1.65 var(--ui-font)}label{display:grid;gap:8px;margin:12px 0}input,button{font:inherit;min-height:40px;padding:8px 12px;border:1px solid var(--ui-line);border-radius:12px;background:white}button{cursor:pointer}img,video,iframe{max-width:100%;display:block;border-radius:12px}iframe{width:100%;height:70vh;border:1px solid var(--ui-line)}audio{max-width:100%}a{color:var(--ui-accent,#245bd6)}.public-file{border-top:1px solid var(--ui-line);padding-top:12px;margin-top:12px}.public-actions{display:flex;gap:12px;flex-wrap:wrap}.muted{color:var(--ui-muted)}[hidden]{display:none!important}
 </style><main><header class="public-header"><h1 id="title">공유 자료</h1><button id="refresh">새로고침</button></header><p id="status" role="status">불러오는 중…</p><form id="login" hidden><h2>지정 사용자 로그인</h2><p>이 링크에 지정된 NAS 계정으로 로그인하세요.</p><label>이메일<input name="email" type="email" autocomplete="username" required></label><label>비밀번호<input name="password" type="password" autocomplete="current-password" required></label><button type="submit">로그인</button></form><div class="public-actions"><button id="logout" hidden>로그아웃</button></div><section id="content" aria-label="공유 내용"></section><footer><p class="muted">선택한 항목만 표시하는 읽기 전용 공유입니다. 다운로드 제한은 다운로드 동작과 원본 전달을 제한하며, 화면에 표시되는 내용·미디어의 저장까지 막지는 못합니다.</p><small>Production</small></footer></main><script>(()=>{'use strict';const token=location.pathname.split('/').pop(),endpoint='/public/shares/'+token,$=id=>document.getElementById(id);let requestNumber=0;
 const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el};

@@ -1,3 +1,5 @@
+import {readRepeat} from '../production/recurrence.js';
+import * as taskStatus from '../production/task-status.js';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
@@ -7,7 +9,7 @@ const source=readFileSync('production/TaskComposer.tsx','utf8');
 const code=esbuild.transformSync(source,{loader:'tsx',format:'cjs',jsx:'automatic'}).code;
 let cursor=0;const values=[],added=[];let reset=0,focused=0;
 const jsx=(type,props)=>({type,props});
-const context={exports:{},module:{exports:{}},FormData:class{get(key){return {due:'2026-10-20',stage:'촬영',priority:'높음',description:' 메모 '}[key]||''}},require(name){if(name==='react')return {useState(initial){const i=cursor++;if(!(i in values))values[i]=initial;return [values[i],value=>values[i]=value]},useRef(){return {current:{focus(){focused++}}}}};if(name==='react/jsx-runtime')return {jsx,jsxs:jsx};if(name==='lucide-react')return Object.fromEntries(['CalendarDays','Check','Circle','Flag','ListChecks'].map(n=>[n,n]));if(name==='./AssigneePicker')return {AssigneePicker:'AssigneePicker'};if(name==='./data')return {newTask:title=>({id:'fresh',title,done:false,owner:'미지정',due:'',stage:'기획',priority:'보통',description:''}),stages:['기획','촬영'],priorities:['보통','높음']};throw Error(name)}};
+const context={exports:{},module:{exports:{}},FormData:class{has(){return false}get(key){return {due:'2026-10-20',stage:'촬영',priority:'높음',description:' 메모 '}[key]||''}},require(name){if(name==='./RepeatFields')return {RepeatFields:'RepeatFields',readRepeat};if(name==='./task-status.js')return taskStatus;if(name==='react')return {useState(initial){const i=cursor++;if(!(i in values))values[i]=initial;return [values[i],value=>values[i]=typeof value==='function'?value(values[i]):value]},useRef(){return {current:{focus(){focused++}}}}};if(name==='react/jsx-runtime')return {jsx,jsxs:jsx};if(name==='lucide-react'||name==='../ui/design-system/Icons')return Object.fromEntries(['CalendarDays','Check','Circle','Flag','ListChecks'].map(n=>[n,n]));if(name==='./AssigneePicker')return {AssigneePicker:'AssigneePicker'};if(name==='./data')return {newTask:title=>({id:'fresh',title,done:false,owner:'미지정',due:'',stage:'기획',priority:'보통',description:''}),stages:['기획','촬영'],priorities:['보통','높음']};throw Error(name)}};
 vm.runInNewContext(code,context);
 function render(){cursor=0;return context.module.exports.TaskComposer({members:[],onAddMember(){},onAdd:task=>added.push(task)})}
 function nodes(root){return [root,...[root?.props?.children].flat(Infinity).filter(x=>x&&typeof x==='object').flatMap(nodes)]}

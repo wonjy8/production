@@ -1,0 +1,31 @@
+/* Scheduling follows project identity; editing fields follow neutral app surfaces. */
+.editor-dialog:has(.schedule-entry-form) input:not([type=checkbox]):not([type=radio]),.editor-dialog:has(.schedule-entry-form) textarea,.editor-dialog:has(.schedule-entry-form) select,.editor-dialog:has(.repeat-fields) input:not([type=checkbox]):not([type=radio]),.editor-dialog:has(.repeat-fields) textarea,.editor-dialog:has(.repeat-fields) select{background:var(--ui-subtle)!important;color:var(--ui-text);border-color:transparent!important}
+.editor-dialog .time-segments{background:var(--ui-subtle)!important}
+.repeat-fields{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0;padding:12px 0;border:0;border-top:1px solid var(--ui-line)}.repeat-fields legend{font-size:12px;color:var(--ui-muted);padding-right:8px}.repeat-fields label{display:grid;gap:6px;flex:1;min-width:100px}.repeat-fields small{font-size:10px;color:var(--ui-muted)}
+.repeat-scope-options{display:grid;gap:8px}.repeat-scope-options button{width:100%;justify-content:flex-start;padding:10px 12px;background:var(--ui-surface);border:1px solid var(--ui-line);font:inherit}
+.work-task{border-left:3px solid var(--project-color,var(--ui-accent))}.work-task input[type=checkbox]{accent-color:var(--project-color,var(--ui-accent))}
+.work-task .task-source{color:var(--project-color,var(--ui-muted))}
+.work-task-list>.task-list-group+.task-list-group,.task-board-completed{border-top:1px solid var(--ui-line);margin-top:16px;padding-top:12px}
+.task-board{grid-template-columns:repeat(2,minmax(0,1fr))!important}.task-board-completed{background:transparent!important;border-radius:0;padding-inline:0}.task-board-completed>h3{display:flex;gap:8px;align-items:center}
+.calendar-resizable{resize:vertical;min-height:400px;max-height:none;padding-bottom:12px;overflow:auto}.calendar-height-tools{display:flex;justify-content:flex-end;padding:0 0 8px}.calendar-height-tools button{font-size:11px;min-height:28px;height:28px;background:transparent;border:0;color:var(--ui-muted)}
+.calendar-resizable .calendar-grid{grid-template-rows:32px;grid-auto-rows:minmax(100px,1fr)}
+.calendar-day{display:flex;flex-direction:column;gap:3px}.calendar-day-heading{order:0}.calendar-all-day{order:1}.calendar-timed{order:2}.calendar-task-row{order:3}.calendar-deadline{order:4}
+.calendar-day .calendar-event{display:flex!important;align-items:center;gap:5px;width:100%!important;min-width:0;min-height:24px!important;height:24px!important;padding:2px 6px!important;margin:0!important;border:0!important;font-size:12px!important;font-weight:500;line-height:1.4;box-shadow:none!important;border-radius:7px!important}
+.calendar-day .calendar-all-day{background:var(--project-soft)!important;color:var(--project-color)!important}
+.calendar-day .calendar-timed{position:relative;background:transparent!important;color:var(--ui-text)!important;padding-left:10px!important}
+.calendar-timed:before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:4px;border-radius:3px;background:var(--project-color)}
+.calendar-event-title,.calendar-task-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.calendar-event-time{flex:none;font-size:10px;font-weight:400;color:var(--ui-muted);white-space:nowrap}
+.calendar-day .calendar-task-row{border:0!important;background:transparent!important;padding:0!important;min-height:24px;gap:5px}
+.calendar-task-row .calendar-task{display:flex!important;align-items:center;gap:4px;padding:2px 0!important;background:transparent!important;color:var(--ui-text)!important;font-size:12px!important;min-height:24px!important;height:24px!important}
+.calendar-task-row .calendar-task-check{border-color:var(--project-color)!important;color:var(--project-color)!important;width:14px!important;height:14px!important;min-height:14px!important;min-width:14px!important;padding:0!important;background:transparent!important}
+.calendar-task-row.pending .calendar-task-check{background:var(--project-soft)!important}
+.calendar-event .project-name-chip,.calendar-task .project-name-chip{display:none}
+@media(max-width:650px){.task-board{grid-template-columns:1fr!important}.calendar-grid{min-width:650px}.project-icon-popover .project-icon-grid{grid-template-columns:repeat(7,minmax(0,1fr))}}
+.calendar-resizable{display:flex;flex-direction:column}.calendar-resizable .calendar-grid{flex:1;flex-shrink:0}.calendar-height-tools{flex:none}
+.work-task{border-left:3px solid var(--project-color,var(--ui-accent))!important}
+@media(max-width:650px){.calendar-grid{min-width:550px}}
+.task-composer .repeat-fields{width:100%;font-size:11px}.task-composer .repeat-fields select,.task-composer .repeat-fields input{height:32px;min-height:32px}
+.calendar-resizable{box-sizing:border-box}.calendar-day-heading{order:-1}.calendar-deadline{order:2000}
+.calendar-day .calendar-all-day{color:color-mix(in srgb,var(--project-color) 65%,var(--ui-text))!important}
+.calendar-task-row .calendar-task-check.keep-label{border-color:var(--project-color)!important;color:var(--project-color)!important;background:transparent!important}

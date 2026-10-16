@@ -4,6 +4,7 @@ const appPageHeading=document.createElement('h1');appPageHeading.id='app-page-ti
 const appHeadingLabel=document.createElement('span');appHeadingLabel.className='app-page-title-label';
 const appDocumentTitleButton=document.createElement('button');appDocumentTitleButton.className='keep-label app-document-title';appDocumentTitleButton.setAttribute('aria-label','페이지 제목 편집');appDocumentTitleButton.title='페이지 제목 편집';appDocumentTitleButton.innerHTML='<span class="app-editable-title-label"></span>';appDocumentTitleButton.hidden=true;
 const appDocumentTitleInput=document.createElement('input');appDocumentTitleInput.className='app-document-title-input';appDocumentTitleInput.setAttribute('aria-label','페이지 제목');appDocumentTitleInput.maxLength=190;appDocumentTitleInput.hidden=true;
+const appPageIconHost=document.createElement('span');appPageIconHost.className='app-page-icon';window.appPageIconHost=appPageIconHost;appPageHeading.append(appPageIconHost);
 appPageHeading.append(appHeadingLabel,appDocumentTitleButton,appDocumentTitleInput);appHeadingStack.append(appPageHeading);document.querySelector('.topbar .brand').append(appHeadingStack);
 let appPageTitleEditor=null;
 const appDocumentTools=document.createElement('div');appDocumentTools.className='app-document-tools';appDocumentTools.hidden=true;

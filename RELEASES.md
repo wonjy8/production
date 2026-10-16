@@ -329,3 +329,13 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Column containers have no card border or inner padding, with 16px gutters. Gutters reveal a resize line and top X on proximity/focus; X appends right-hand blocks below left-hand blocks, and the final boundary unwraps the container without deleting content.
 - Keep imported content placement-independent, transfer descendant modules together, and exclude structural shells from reusable-content and external-share choices. Existing completion locks and disabled document editor remain in effect.
 - NAS 0.1.7 baseline: replace `sharing.py` and `share-view.html` and rebuild/recreate the container using `sh update.sh`; preserve `.env`, data, database and keys. Deliver versioned ZIP in chat.
+
+## 0.1.9
+
+- Add daily/weekly/monthly/yearly schedule and task recurrence with intervals, optional end dates, per-occurrence completion history, and one/from-now/all edit/delete scopes. Keep civil-date arithmetic independent of DST and clamp month/year boundaries.
+- Share recurrence settings across editors, inline task creation and linked schedule-list editing; show recurring work in Home and project health without storing endless copied rows.
+- Put project icon editing beside the common app title; add project colors shared by SVG identity, schedules and tasks, preserving original emoji/photo artwork. Child groups without a color inherit their parent color.
+- Use neutral scheduling inputs, all-day project tint bars above timed entries with a slim left color marker and right-aligned time, and a vertically resizable calendar with per-project saved height.
+- Place completed board tasks in a list below the two active columns; separate list status groups with dividers.
+- Simplify emoji/upload tabs and integrate Korean search annotations for all 1,914 emojis, with Unicode CLDR license attribution. Show upload format, size and crop/output specifications.
+- NAS 0.1.8 baseline: replace `share-view.html`, rebuild/recreate with `sh update.sh`; preserve configuration, database, data and keys. Provide the versioned ZIP in chat. No NAS API, schema, environment or dependency changes.

@@ -13,7 +13,7 @@ export function ProductionTasks({
   onChange: (update: (w: Workspace) => Workspace) => void;
   onAddMember: (name: string) => void;
 }) {
-  const { project, sources,stageOptions,stageGroups,memberOptions } = productionTaskView(workspace, productionId);
+  const { project, sources,colors,stageOptions,stageGroups,memberOptions } = productionTaskView(workspace, productionId);
   return (
     <>
       <ProjectWorkspace
@@ -28,7 +28,7 @@ export function ProductionTasks({
         section="tasks"
         onSectionChange={() => {}}
         hideNavigation
-        taskSources={sources}
+        taskSources={sources} itemColors={colors}
         onChange={(update) =>
           onChange((current) =>
             updateProductionTasks(current, productionId, update),

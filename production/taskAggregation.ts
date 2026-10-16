@@ -3,6 +3,7 @@ import type { Project, Workspace, Task } from "./data";
 export function productionTaskView(workspace: Workspace, productionId: string) {
   const production = workspace.productions.find((p) => p.id === productionId)!;
   const sources: Record<string, string> = {};
+  const colors:Record<string,string>={};
   const origins = new Map<
     string,
     { projectId: string | null; taskId: string }
@@ -14,6 +15,7 @@ export function productionTaskView(workspace: Workspace, productionId: string) {
     const id = JSON.stringify([projectId, task.id]);
     origins.set(id, { projectId, taskId: task.id });
     sources[id] = label;
+    colors[id]=workspace.projects.find(p=>p.id===projectId)?.iconColor||production.iconColor||"#444444";
     tasks.push({ ...task, id });
     const origin=workspace.projects.find(p=>p.id===projectId);stageOptions[id]=origin?categoryFor(workspace,origin).stages:["기획","진행","검토","완료"];stageGroups[id]=origin?categoryFor(workspace,origin).stageGroups||{}:{};memberOptions[id]=origin?projectMembers(workspace,origin):productionMembers(workspace,production);
   }
@@ -27,6 +29,7 @@ export function productionTaskView(workspace: Workspace, productionId: string) {
     id: production.id,
     productionId,
     name: production.name,
+    iconColor:production.iconColor,
     format: "Production",
     status: "진행 중",
     owner: "미지정",
@@ -37,7 +40,7 @@ export function productionTaskView(workspace: Workspace, productionId: string) {
     assets: [],
     feedback: [],
   };
-  return { project, sources, origins,stageOptions,stageGroups,memberOptions };
+  return { project, sources, colors, origins,stageOptions,stageGroups,memberOptions };
 }
 export function updateProductionTasks(
   workspace: Workspace,

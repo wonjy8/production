@@ -819,6 +819,7 @@ export function ModuleTab({
                   />
                 ) : p ? (
                   <ProjectWorkspace
+                    defaultColor={w.productions.find(owner=>owner.id===p.productionId)?.iconColor}
                     key={p.id}
                     project={p}
                     members={projectMembers(w, p)}

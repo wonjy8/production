@@ -30,3 +30,10 @@ Squircle는 버튼을 포함한 모든 둥근 UI 모서리에 적용하며 각 �
 - 배치 구조: `production/column-layout.js`의 슬롯 소속 관계와 `snap-layout.js` 공통 레이아웃/드롭 진입점을 사용한다. 일반 모듈은 기존 저장 컬렉션과 ID를 유지한다.
 - UI 예외: `columns.css`와 `ColumnControls.tsx`가 카드 없는 2·3·4단, 16px 열 간격, 접근 시 구분선/X, 빈 열 추가, 너비 조절을 정의한다. 중첩 포함 동시 최대 4칸이며 X는 콘텐츠를 보존해 왼쪽 열 아래로 합친다.
 - 아이콘: 공통 `icon-pack.js`의 `columns-2`, `columns-3`, `columns-4`, `plus`, `close`.
+
+## 0.1.9 프로젝트 색상·반복·일정
+
+- 제목 아이콘/선택기/색상: `ProjectIconPicker.tsx`, `IconPhoto.tsx`, `project-colors.js`, `project-identity.css`. 셸 제목 옆에는 React portal로 같은 선택기를 사용한다.
+- 이모지 검색: `emoji-pack.js`, `emoji-ko.json`의 한국어 이름·검색어, 공통 검색 입력. 항목 테두리와 분류 드롭다운, 탭의 개수 표시를 제거했다.
+- 반복: `recurrence.js`, `RepeatFields.tsx`; 프로젝트·통합 일정/할일, 빠른 할일 추가, 일정 목록 편집, 홈/프로젝트 현황이 같은 규칙/예외를 사용한다.
+- 일정/할일 표현: `scheduling.css`의 프로젝트색 종일 배경·시간 표시·할일 체크, 캘린더 높이, 보드 하단 완료 목록 및 상태 사이 구분선.

@@ -1,3 +1,6 @@
+import {baseId,expandRepeats,taskOccurrences,changeRepeating,repeatAt,sameRepeat} from './recurrence.js';
+import {RepeatFields,readRepeat} from './RepeatFields';
+import {projectColorStyle} from './project-colors.js';
 import {
   taskStatusGroups,
   stageGroup,
@@ -6,7 +9,7 @@ import {
   saveTaskStage,
 } from "./task-status.js";
 import { ScheduleDateTime, TimeInput } from "./ScheduleDateTime";
-import { defaultScheduleTimes } from "./schedule-time.js";
+import { defaultScheduleTimes, displayTime } from "./schedule-time.js";
 import {
   CALENDAR_DRAG_TYPE,
   moveCalendarItem,
@@ -107,6 +110,8 @@ export function ProjectWorkspace({
   onSectionChange,
   hideNavigation = false,
   taskSources,
+  itemColors,
+  defaultColor,
   sourceFilter = "전체",
   stageOptions = stages as readonly string[],
   allowMemberAdd = true,
@@ -123,6 +128,8 @@ export function ProjectWorkspace({
   taskMemberOptions?: Record<string, Member[]>;
   hideNavigation?: boolean;
   taskSources?: Record<string, string>;
+  itemColors?:Record<string,string>;
+  defaultColor?:string;
   sourceFilter?: string;
   project: Project;
   members: Member[];
@@ -181,16 +188,14 @@ export function ProjectWorkspace({
       id,
       setTimeout(() => {
         timers.delete(id);
-        onChange((p) => ({
-          ...p,
-          tasks: p.tasks.map((t) => (t.id === id ? { ...t, done: true } : t)),
-        }));
+        const item=calendarTasks.find(t=>t.id===id);if(item)mutate('task',item,{...item,done:true},false,false);
         setCalendarPending((ids) => ids.filter((v) => v !== id));
       }, 1500),
     );
   }
 
   const [scheduleEditor, setScheduleEditor] = useState<Schedule | null>(null);
+  const [calendarHeight,setCalendarHeight]=useState(()=>{try{return Number(localStorage.getItem('pn-calendar-height:'+project.id))||660}catch{return 660}});
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -224,13 +229,13 @@ export function ProjectWorkspace({
       ? target.entityId
       : JSON.stringify([null, target.entityId]);
     if (target.kind === "task") {
-      const task = project.tasks.find((t) => t.id === id);
+      const task = taskOccurrences(project.tasks,dateString(new Date())).find((t) => t.id === id)||project.tasks.find(t=>t.id===id);
       if (task) {
         setTaskEditor(task);
         window.productionSearchTarget = undefined;
       }
     } else if (target.kind === "schedule") {
-      const item = project.schedules.find((s) => s.id === id);
+      const targetDay=id.split('::repeat::').at(-1);const item=(targetDay?.match(/^\d{4}-\d{2}-\d{2}$/)?expandRepeats(project.schedules,targetDay,targetDay):project.schedules).find((s) => s.id === id);
       if (item) {
         setScheduleEditor(item);
         window.productionSearchTarget = undefined;
@@ -251,12 +256,15 @@ export function ProjectWorkspace({
     }
   }, [project.id, section]);
   const today = dateString(new Date());
-  const tasks = project.tasks.filter(
+  const displayedTasks = taskOccurrences(project.tasks,today);
+  const sourceFor=(item:any)=>taskSources?.[baseId(item)];
+  const colorFor=(item:any)=>projectColorStyle(itemColors?.[baseId(item)]||project.iconColor||defaultColor) as any;
+  const tasks = displayedTasks.filter(
     (t) =>
       (taskFilter === "전체" || (taskFilter === "완료" ? t.done : !t.done)) &&
       (!taskSources ||
         (taskSource === "전체" ? sourceFilter : taskSource) === "전체" ||
-        taskSources[t.id] ===
+        sourceFor(t) ===
           (taskSource === "전체" ? sourceFilter : taskSource)) &&
       `${t.title} ${t.owner}`.toLowerCase().includes(taskQuery.toLowerCase()),
   );
@@ -269,7 +277,7 @@ export function ProjectWorkspace({
           ? priorities.indexOf(b.priority) - priorities.indexOf(a.priority)
           : 0,
   );
-  const mappingFor = (t: Task) => taskStageGroups?.[t.id] || stageGroups;
+  const mappingFor = (t: Task) => taskStageGroups?.[baseId(t)] || stageGroups;
   const parentGroup = (t: Task) => statusGroup(t, mappingFor(t));
   function groupLabel(t: Task) {
     return taskGroup === "프로젝트"
@@ -281,44 +289,36 @@ export function ProjectWorkspace({
           : t.stage;
   }
   const editorStages = taskEditor
-    ? taskStageOptions?.[taskEditor.id] || stageOptions
+    ? taskStageOptions?.[baseId(taskEditor)] || stageOptions
     : stageOptions;
   const editorGroups = taskEditor ? mappingFor(taskEditor) : stageGroups;
   const editorMembers = taskEditor
-    ? taskMemberOptions?.[taskEditor.id] || members
+    ? taskMemberOptions?.[baseId(taskEditor)] || members
     : members;
+  const [repeatAction,setRepeatAction]=useState<any>(null);
+  function mutate(kind:string,item:any,patch:any={},remove=false,ask=true){
+    const field=kind==='task'?'tasks':'schedules';
+    const original=(project[field]||[]).find((i:any)=>i.id===baseId(item));
+    const target=original?.repeat?.frequency&&!item.repeatDate?{...item,repeatBaseId:original.id,repeatDate:item.date||item.due}:item;
+    const apply=(scope:string)=>onChange(p=>{const next=changeRepeating(p[field],target,patch,scope,remove);const detached=kind==='task'&&!next.some(i=>i.id===baseId(target));return {...p,[field]:next,...(detached?{schedules:p.schedules.map(s=>s.taskId===baseId(target)?{...s,taskId:''}:s),feedback:p.feedback.map(f=>f.taskId===baseId(target)?{...f,taskId:''}:f)}:{})};});
+    if(ask&&original?.repeat?.frequency)setRepeatAction({apply,remove,title:item.title,oneAllowed:remove||sameRepeat(repeatAt(original,target.repeatDate),patch.repeat)});else apply('one');
+  }
   function saveTask(task: Task) {
     task = saveTaskStage(
       task,
-      project.tasks.find((t) => t.id === task.id),
+      displayedTasks.find((t) => t.id === task.id),
       mappingFor(task),
     );
-    onChange((p) => ({
-      ...p,
-      tasks: p.tasks.some((t) => t.id === task.id)
-        ? p.tasks.map((t) => (t.id === task.id ? task : t))
-        : [...p.tasks, task],
-    }));
+    mutate('task',task,task);
     setTaskEditor(null);
     setCalendarDraft(false);
   }
   function toggleTask(id: string) {
-    onChange((p) => ({
-      ...p,
-      tasks: p.tasks.map((t) =>
-        t.id === id
-          ? t.done && stageGroup(t.stage, mappingFor(t)) === "완료"
-            ? moveTaskGroup(
-                t,
-                "시작 전",
-                taskStageOptions?.[t.id] || stageOptions,
-                mappingFor(t),
-              )
-            : { ...t, done: !t.done }
-          : t,
-      ),
-    }));
+    const item=[...displayedTasks,...calendarTasks].find(t=>t.id===id);if(!item)return;
+    const next=item.done&&stageGroup(item.stage,mappingFor(item))==='완료'?moveTaskGroup(item,'시작 전',stageOptions,mappingFor(item)):{...item,done:!item.done};
+    mutate('task',item,next,false,false);
   }
+
   function openCalendarDraft(date: string) {
     setCalendarDraft(true);
     setScheduleEditor({
@@ -397,14 +397,7 @@ export function ProjectWorkspace({
         label: "삭제",
         icon: "trash",
         danger: true,
-        run: () =>
-          onChange((p) => ({
-            ...p,
-            tasks: p.tasks.filter((item) => item.id !== t.id),
-            schedules: p.schedules.map((s) =>
-              s.taskId === t.id ? { ...s, taskId: "" } : s,
-            ),
-          })),
+        run: () => mutate('task',t,{},true),
       },
     ]);
   }
@@ -414,9 +407,9 @@ export function ProjectWorkspace({
       setCalendarDropDay("");
       return;
     }
-    onChange((p) =>
-      moveCalendarItem(p, payload.kind, payload.id, target, payload.anchor),
-    );
+    const item=(payload.kind==='task'?calendarTasks:calendarSchedules).find(i=>i.id===payload.id);
+    if(item?.repeatBaseId){const shifted=moveCalendarItem({tasks:payload.kind==='task'?[item]:[],schedules:payload.kind==='schedule'?[item]:[]},payload.kind,item.id,target,payload.anchor);mutate(payload.kind,item,payload.kind==='task'?shifted.tasks[0]:shifted.schedules[0]);}
+    else onChange((p) => moveCalendarItem(p, payload.kind, payload.id, target, payload.anchor));
     suppressCalendarClick.current = Date.now() + 600;
     calendarGesture.current = null;
     setCalendarDropDay("");
@@ -494,11 +487,7 @@ export function ProjectWorkspace({
         label: "삭제",
         icon: "trash",
         danger: true,
-        run: () =>
-          onChange((p) => ({
-            ...p,
-            schedules: p.schedules.filter((item) => item.id !== s.id),
-          })),
+        run: () => mutate('schedule',s,{},true),
       },
     ]);
   }
@@ -512,8 +501,11 @@ export function ProjectWorkspace({
     suppressCalendarClick.current = Date.now() + 600;
   }
   function placeTask(targetId: string, stage?: string, after = false) {
-    const id = taskDragId.current;
+    let id = taskDragId.current;
     if (!id || id === targetId) return;
+    const dragged=displayedTasks.find(t=>t.id===id);
+    if(dragged?.repeatBaseId&&stage){mutate('task',dragged,moveTaskGroup(dragged,stage,stageOptions,mappingFor(dragged)));finishTaskDrag();return;}
+    id=dragged?baseId(dragged):id;targetId=baseId(displayedTasks.find(t=>t.id===targetId)||{id:targetId});
     onChange((p) => {
       const item = p.tasks.find((t) => t.id === id);
       if (!item) return p;
@@ -623,6 +615,7 @@ export function ProjectWorkspace({
         data-task-id={t.id}
         data-task-stage={parentGroup(t)}
         key={t.id}
+        style={colorFor(t)}
         className={`work-task ${t.done ? "is-done" : ""} ${taskDrop === t.id + "|before" ? "task-order-before" : taskDrop === t.id + "|after" ? "task-order-after" : ""}`}
       >
         <input
@@ -645,7 +638,7 @@ export function ProjectWorkspace({
           </strong>
           <small>
             {taskSources && (
-              <span className="task-source">{taskSources[t.id]}</span>
+              <span className="task-source">{sourceFor(t)}</span>
             )}
             {assigneeLabel(members, t.owner, t.ownerId)} · {t.stage}
           </small>
@@ -658,15 +651,7 @@ export function ProjectWorkspace({
         </span>
         <DeleteButton
           label={t.title}
-          onDelete={() =>
-            onChange((p) => ({
-              ...p,
-              tasks: p.tasks.filter((task) => task.id !== t.id),
-              feedback: p.feedback.map((f) =>
-                f.taskId === t.id ? { ...f, taskId: "" } : f,
-              ),
-            }))
-          }
+          onDelete={() => mutate('task',t,{},true)}
         />
       </div>
     );
@@ -732,6 +717,9 @@ export function ProjectWorkspace({
     { length: Math.ceil((startDay + monthDays) / 7) * 7 },
     (_, i) => new Date(month.getFullYear(), month.getMonth(), i - startDay + 1),
   );
+  const calendarFrom=dateString(calendarDays[0]),calendarTo=dateString(calendarDays.at(-1)!);
+  const calendarSchedules=expandRepeats(project.schedules,calendarFrom,calendarTo).sort((a,b)=>Number(!!a.startTime)-Number(!!b.startTime)||(a.startTime||'').localeCompare(b.startTime||''));
+  const calendarTasks=expandRepeats(project.tasks,calendarFrom,calendarTo);
   return (
     <div className="production-workbench">
       {!hideNavigation && (
@@ -877,8 +865,9 @@ export function ProjectWorkspace({
               ))}
             </div>
           ) : (
+            <>
             <div className="task-board">
-              {taskStatusGroups.map((stage) => (
+              {taskStatusGroups.filter(stage=>stage!=="완료").map((stage) => (
                 <section
                   key={stage}
                   data-task-stage={stage}
@@ -957,6 +946,8 @@ export function ProjectWorkspace({
                 </section>
               ))}
             </div>
+            <section className="task-list-group task-board-completed" data-task-status="완료" data-task-stage="완료" onDragOver={e=>{if(taskDragId.current)e.preventDefault();}} onDrop={e=>{e.preventDefault();placeTask('','완료');}}><h3><button className="keep-label task-completed-toggle" aria-expanded={completedTasksOpen} onClick={()=>setCompletedTasksOpen(!completedTasksOpen)}><span aria-hidden="true">{completedTasksOpen?'⌄':'›'}</span> 완료</button><span className="count">{tasks.filter(t=>parentGroup(t)==='완료').length}</span></h3><div hidden={!completedTasksOpen}>{tasks.filter(t=>parentGroup(t)==='완료').map(taskRow)}</div></section>
+            </>
           )}
         </section>
       )}
@@ -1010,8 +1001,9 @@ export function ProjectWorkspace({
               </button>
             </div>
           </div>
-          <div className="calendar-scroll">
-            <div className="calendar-grid">
+          <div className="calendar-scroll calendar-resizable" style={{height:calendarHeight}} onPointerUp={e=>{const height=Math.round(e.currentTarget.getBoundingClientRect().height);if(Math.abs(height-calendarHeight)>1){setCalendarHeight(height);localStorage.setItem('pn-calendar-height:'+project.id,String(height));}}}>
+            <div className="calendar-height-tools"><button type="button" className="keep-label" aria-label="일정 높이 늘리기" onClick={()=>{const h=calendarHeight+140;setCalendarHeight(h);localStorage.setItem('pn-calendar-height:'+project.id,String(h));}}>높이 늘리기</button></div>
+            <div className="calendar-grid" style={{minHeight:calendarHeight-48}}>
               {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
                 <div className="weekday" key={d}>
                   {d}
@@ -1068,7 +1060,7 @@ export function ProjectWorkspace({
                         <Plus size={14} />
                       </button>
                     </div>
-                    {project.schedules
+                    {calendarSchedules
                       .filter(
                         (s) =>
                           s.date <= value && (s.endDate || s.date) >= value,
@@ -1078,7 +1070,8 @@ export function ProjectWorkspace({
                           key={s.id}
                           {...scheduleMenu(s)}
                           {...dragBindings("schedule", s.id, value)}
-                          className="calendar-event"
+                          className={"calendar-event keep-label "+(!s.startTime?"calendar-all-day":"calendar-timed")}
+                          style={{...colorFor(s),order:s.startTime?100+(minutes(s.startTime)||0):0}}
                           onClick={() => {
                             if (suppressCalendarClick.current > Date.now())
                               return;
@@ -1090,20 +1083,22 @@ export function ProjectWorkspace({
                           <span className="calendar-event-title">
                             {s.title}
                           </span>
+                          {s.startTime&&<time className="calendar-event-time">{displayTime(s.startTime)}</time>}
                           {taskSources?.[s.id] && (
                             <small className="project-name-chip">
-                              {taskSources[s.id]}
+                              {sourceFor(s)}
                             </small>
                           )}
                         </button>
                       ))}
-                    {project.tasks
+                    {calendarTasks
                       .filter((t) => t.due === value && !t.done)
                       .map((t) => (
                         <div
                           key={t.id}
                           {...taskMenu(t)}
                           {...dragBindings("task", t.id, value)}
+                          style={{...colorFor(t),order:t.startTime?100+(minutes(t.startTime)||0):1}}
                           className={
                             "calendar-task-row " +
                             (calendarPending.includes(t.id) ? "pending" : "")
@@ -1133,9 +1128,10 @@ export function ProjectWorkspace({
                             <span className="calendar-task-title">
                               {t.title}
                             </span>
+                            {t.startTime&&<time className="calendar-event-time">{displayTime(t.startTime)}</time>}
                             {taskSources?.[t.id] && (
                               <small className="project-name-chip">
-                                {taskSources[t.id]}
+                                {sourceFor(t)}
                               </small>
                             )}
                           </button>
@@ -1368,6 +1364,7 @@ export function ProjectWorkspace({
           </div>
         </Modal>
       )}
+      {repeatAction&&<Modal title={repeatAction.remove?'반복 항목 삭제':'반복 항목 수정'} onClose={()=>setRepeatAction(null)}><p>{repeatAction.title} — 적용 범위를 선택하세요.</p><div className="repeat-scope-options">{!repeatAction.oneAllowed&&<p>반복 주기 변경은 이번부터 이후 또는 전체에 적용합니다.</p>}{[['one','이번 항목만'],['future','이번부터 이후'],['all','반복 전체']].map(([scope,label])=><button type="button" className="keep-label" disabled={scope==='one'&&!repeatAction.oneAllowed} key={scope} onClick={()=>{repeatAction.apply(scope);setRepeatAction(null);}}>{label}</button>)}</div></Modal>}
       {(taskEditor || scheduleEditor) && (
         <Modal
           key="calendar-entry-editor"
@@ -1397,9 +1394,11 @@ export function ProjectWorkspace({
                   setError("날짜와 시간을 확인하세요");
                   return;
                 }
+                let repeat;try{repeat=readRepeat(d,field(d,'due'),taskEditor.repeat)}catch(error:any){setError(error.message);return;}
                 setError("");
                 saveTask({
                   ...taskEditor,
+                  repeat,
                   startTime,
                   endTime,
                   title,
@@ -1501,19 +1500,14 @@ export function ProjectWorkspace({
                   rows={4}
                 />
               </label>
+              <RepeatFields value={taskEditor.repeat}/>{error&&<p role="alert" className="form-error">{error}</p>}
               <div className="dialog-actions">
-                {project.tasks.some((t) => t.id === taskEditor.id) && (
+                {project.tasks.some((t) => t.id === baseId(taskEditor)) && (
                   <button
                     type="button"
                     className="button danger keep-label"
                     onClick={() => {
-                      onChange((p) => ({
-                        ...p,
-                        tasks: p.tasks.filter((t) => t.id !== taskEditor.id),
-                        schedules: p.schedules.map((s) =>
-                          s.taskId === taskEditor.id ? { ...s, taskId: "" } : s,
-                        ),
-                      }));
+                      mutate('task',taskEditor,{},true);
                       setTaskEditor(null);
                       setCalendarDraft(false);
                     }}
@@ -1528,26 +1522,16 @@ export function ProjectWorkspace({
             <ScheduleForm
               value={scheduleEditor}
               onDelete={
-                project.schedules.some((s) => s.id === scheduleEditor.id)
+                project.schedules.some((s) => s.id === baseId(scheduleEditor))
                   ? () => {
-                      onChange((p) => ({
-                        ...p,
-                        schedules: p.schedules.filter(
-                          (s) => s.id !== scheduleEditor.id,
-                        ),
-                      }));
+                      mutate('schedule',scheduleEditor,{},true);
                       setScheduleEditor(null);
                       setCalendarDraft(false);
                     }
                   : undefined
               }
               onSave={(s) => {
-                onChange((p) => ({
-                  ...p,
-                  schedules: p.schedules.some((item) => item.id === s.id)
-                    ? p.schedules.map((item) => (item.id === s.id ? s : item))
-                    : [...p.schedules, s],
-                }));
+                mutate('schedule',s,s);
                 setMonth(new Date(`${s.date}T12:00:00`));
                 setScheduleEditor(null);
                 setCalendarDraft(false);
@@ -1618,7 +1602,7 @@ export function ProjectWorkspace({
     </div>
   );
 }
-function ScheduleForm({
+export function ScheduleForm({
   value,
   onSave,
   onDelete,
@@ -1655,8 +1639,10 @@ function ScheduleForm({
           setError("시간을 확인하세요");
           return;
         }
+        let repeat;try{repeat=readRepeat(d,date,value.repeat)}catch(error:any){setError(error.message);return;}
         onSave({
           ...value,
+          repeat,
           startTime,
           endTime,
           title,
@@ -1680,6 +1666,7 @@ function ScheduleForm({
         />
       </label>
       <ScheduleDateTime value={dates} onChange={setDates} />
+      <RepeatFields value={value.repeat}/>
       {error && (
         <p role="alert" className="form-error">
           {error}

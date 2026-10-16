@@ -1,4 +1,8 @@
+import korean from './emoji-ko.json' with {type:'json'};
 import groups from 'unicode-emoji-json/data-by-group.json' with {type:'json'};
 const labels=['표정·감정','사람·몸','동물·자연','음식·음료','여행·장소','활동','사물','기호','깃발'];
-export const emojiGroups=groups.map((group,index)=>({...group,label:labels[index]||group.name}));
+export const emojiGroups=groups.map((group,index)=>({...group,label:labels[index]||group.name,emojis:group.emojis.map(item=>({...item,nameKo:korean[item.emoji]?.name||'',keywords:korean[item.emoji]?.keywords||[]}))}));
 export const emojiCount=emojiGroups.reduce((sum,group)=>sum+group.emojis.length,0);
+
+const emojiAliases={smile:'웃음 미소 웃는 행복',laugh:'웃음 웃는',grin:'웃음 미소',heart:'하트 사랑',face:'얼굴 표정',sad:'슬픔 슬픈',cry:'눈물 울음',angry:'화남 화난',cat:'고양이',dog:'개 강아지',sun:'해 태양 맑음',moon:'달 밤',star:'별',fire:'불',water:'물',rain:'비 우산',cloud:'구름 날씨',snow:'눈 겨울',flower:'꽃',tree:'나무',leaf:'잎 자연',book:'책 공부',pencil:'연필 필기',pen:'펜 필기',calendar:'달력 일정',clock:'시계 시간',camera:'카메라 사진',film:'영화 영상',music:'음악 노래',note:'음표 메모',church:'교회 예배',cross:'십자가',pray:'기도 감사',folded:'기도 감사',hand:'손',thumb:'엄지 좋아요',check:'체크 완료 확인',warning:'경고 주의',party:'파티 축하',ball:'공 운동',coffee:'커피',tea:'차 음료',food:'음식',apple:'사과',car:'자동차 차',house:'집',home:'집',rocket:'로켓',light:'빛 전구',computer:'컴퓨터',laptop:'노트북',phone:'전화 휴대폰',money:'돈',gift:'선물',flag:'깃발',work:'업무 작업',tool:'도구',people:'사람',person:'사람',family:'가족'};
+export function emojiMatches(item,group,query){const words=String(query||'').trim().toLowerCase().split(/\s+/).filter(Boolean);const name=item.name.toLowerCase();const aliases=Object.entries(emojiAliases).filter(([term])=>name.includes(term)).map(([,value])=>value).join(' ');const text=[item.emoji,item.nameKo,...(item.keywords||[]),name,group.label,group.name,aliases].join(' ').toLowerCase();return words.every(word=>text.includes(word));}

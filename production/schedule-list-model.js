@@ -1,3 +1,4 @@
+import {changeRepeating} from './recurrence.js';
 // Lists store origin keys, never copies of schedules. Calendar edits stay authoritative.
 export function scheduleRows(workspace,{productionId='',projectIds=[]}={}) {
   const parents=(workspace.productions||[]).filter(p=>!p.deleted&&(!productionId&&!projectIds.length||p.id===productionId));
@@ -12,13 +13,13 @@ export function scheduleRows(workspace,{productionId='',projectIds=[]}={}) {
     rows.push({...s,key:JSON.stringify(['standalone','',s.id]),origin:{kind:'standalone',ownerId:'',id:s.id},ownerName:'일정'});
   return rows.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.startTime||'').localeCompare(b.startTime||'')||a.key.localeCompare(b.key));
 }
-export function updateListedSchedule(workspace,origin,update) {
+export function updateListedSchedule(workspace,origin,update,scope='all') {
   if(origin.kind==='standalone')return {...workspace,timetableSchedules:(workspace.timetableSchedules||[]).map(s=>s.id===origin.id?{...s,...update,id:s.id}:s)};
   const key=origin.kind==='production'?'productions':'projects';
   return {...workspace,[key]:workspace[key].map(owner=>{
     if(owner.id!==origin.ownerId)return owner;
     const linked=(owner.schedules||[]).find(s=>s.id===origin.id)?.projectLinked;
-    return {...owner,...(linked?{due:update.endDate||owner.due,description:update.note??owner.description}:{}),schedules:(owner.schedules||[]).map(s=>s.id===origin.id?{...s,...update,id:s.id}:s)};
+    return {...owner,...(linked?{due:update.endDate||owner.due,description:update.note??owner.description}:{}),schedules:changeRepeating(owner.schedules||[],{...(owner.schedules||[]).find(s=>s.id===origin.id),repeatBaseId:origin.id,repeatDate:(owner.schedules||[]).find(s=>s.id===origin.id)?.date},update,scope)};
   })};
 }
 export function addListedSchedule(workspace,{productionId='',projectId=''},schedule) {
