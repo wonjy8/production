@@ -284,6 +284,7 @@ async function openMemberEquipment(id){await openDatabase('equipment');const mem
 function chooseEquipmentMember(){modal('장비를 추가할 멤버','<form id="equipment-owner-form" class="formgrid"><label>멤버<select name="member" aria-label="장비 소유 멤버" required>'+databaseRows.map(m=>'<option value="'+esc(m.id)+'">'+esc(memberDisplayName(m))+'</option>').join('')+'</select></label><button class="keep-label" type="submit" '+(!databaseRows.length?'disabled':'')+'>장비 추가</button></form>');$('#equipment-owner-form').onsubmit=e=>{e.preventDefault();const id=new FormData(e.currentTarget).get('member'),member=databaseRows.find(m=>m.id===id);$('#dialog').close();if(member)memberEquipmentForm(member,true)}}
 window.openDatabaseMember=async id=>{await openDatabase('members');const member=databaseRows.find(m=>m.id===id);if(member)memberEquipmentForm(member)};
 {{source:ui/catalog.js}}
+{{source:ui/app-page-heading.js}}
 {{source:ui/navigation.js}}
 {{source:ui/storage.js}}{{source:ui/project-catalog.js}}
 function searchText(value){if(value==null)return '';if(typeof value!=='object')return String(value).normalize('NFKC');if(Array.isArray(value))return value.map(searchText).join(' ');return Object.entries(value).filter(([key])=>!['id','fileId','ownerId','taskId','deleted','image','x','y','width','height','span','photoEdit'].includes(key)).map(([,v])=>searchText(v)).join(' ')}

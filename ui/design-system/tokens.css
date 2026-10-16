@@ -8,6 +8,7 @@
  --ui-space-1:4px; --ui-space-2:8px; --ui-space-3:12px; --ui-space-4:16px; --ui-space-5:20px; --ui-space-6:24px; --ui-space-8:32px;
  --ui-text-small:12px; --ui-text-body:14px; --ui-text-section:18px; --ui-text-title:24px;
  --ui-weight-body:400; --ui-weight-control:500; --ui-weight-title:600;
+ --ui-inspector-width:360px; --ui-inspector-padding:20px; --ui-inspector-radius:18px;
  --ui-control-height:40px; --ui-control-radius:12px; --ui-panel-radius:16px;
  --ui-fast:160ms; --ui-panel:240ms; --ui-ease:cubic-bezier(.22,1,.36,1);
  --ui-shadow:0 12px 36px #0000001a;

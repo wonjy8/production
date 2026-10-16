@@ -305,3 +305,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Run documents in the right content pane without opening a window. Reuse the current editor when returning, restore the last document on reload, and block navigation until edits save. Route Library, resource, file-card, planning and text-conversion document actions into the pane; retain direct document URLs.
 - Keep version in Settings → General. Update the shared UI language specification and verify document original/copy consent in browser and NAS storage.
 - NAS 0.1.4 update: replace only `share-view.html` to synchronize shared design CSS, then rebuild/recreate with `sh update.sh`. No API, schema, dependency or environment changes. Preserve `.env` and `data/`. See nas/UPDATE-0.1.5.md and the replacement-only ZIP delivered in chat.
+
+## 0.1.6
+
+- Promote primary workspace headings into the app top bar with a smaller navigable directory below. Register DOM/shadow roots in the common UI language, retain heading actions and project identity controls alongside tabs, and exclude dialogs, modules and authored document headings.
+- Put inline document naming, saved state and inspector control into the same top bar. Keep original-edit consent, rename authorization and save-before-navigation behavior.
+- Move insertion tools into the 44px top tab lane. Share module/document inspector width, padding and border surface; use plain tabs and an explicit close action.
+- Use a white editor canvas and subtle page boundaries, rulers, margin indicators and tick marks. Preserve ruler/paper geometry, zoom, scrolling, custom paper sizes, DOCX and PDF exclusion.
+- NAS 0.1.5 update: replace `share-view.html` to synchronize shared design CSS, then rebuild/recreate with `sh update.sh`. No API, schema, dependency or environment changes. Preserve `.env` and `data/`. Deliver the replacement-only ZIP in chat; see nas/UPDATE-0.1.6.md.

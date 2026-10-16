@@ -76,7 +76,7 @@ export function HubSidebar({
   );
   return (
     <aside
-      className={"hub-sidebar" + (wide ? " hub-sidebar-wide" : "")}
+      className={"ui-workspace-panel hub-sidebar" + (wide ? " hub-sidebar-wide" : "")}
       aria-label="모듈 허브"
     >
       <header>

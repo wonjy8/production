@@ -40,6 +40,14 @@ with tempfile.TemporaryDirectory() as td:
    nav=page.locator('.workspace-rail .sidebar-main-spaces');expect(nav).to_be_visible()
    assert nav.locator('[data-main-space]').evaluate_all('(buttons)=>buttons.map(b=>b.dataset.mainSpace)')==['home','references','documents','settings']
    assert page.locator('#menu').count()==0
+   page.evaluate("window.openHomeSection('tasks')")
+   expect(page.get_by_role('heading',name='모든 할 일',exact=True)).to_be_visible()
+   page.evaluate("async()=>{const id=crypto.randomUUID();state.productions.push({id,name:'상단 제목 프로젝트',status:'진행 중',tasks:[],schedules:[],customTabs:[],memberIds:[]});await openProduction(undefined,'overview',false,id)}")
+   expect(page.get_by_role('heading',name='상단 제목 프로젝트',exact=True)).to_be_visible()
+   expect(page.locator('#production-panel .workspace-page-heading h1')).to_be_hidden()
+   page.screenshot(path='/tmp/production-project-title.png',full_page=True)
+   page.evaluate("window.openHomeSection('dashboard')")
+   expect(page.get_by_role('heading',name='홈',exact=True)).to_be_visible()
    metrics=page.evaluate("""()=>{const rail=document.querySelector('.workspace-rail').getBoundingClientRect(),side=document.querySelector('#sidebar').getBoundingClientRect(),settings=document.querySelector('.workspace-rail [data-main-space=settings]').getBoundingClientRect();return {outside:rail.right<=side.left,size:getComputedStyle(document.querySelector('.workspace-rail svg')).width,bottom:innerHeight-settings.bottom}}""")
    assert metrics['outside'] and metrics['size']=='18px' and 5<=metrics['bottom']<=25,metrics
    home=nav.locator('[data-main-space=home]');home.click()
@@ -65,12 +73,36 @@ with tempfile.TemporaryDirectory() as td:
    page.screenshot(path='/tmp/production-sidebar-materials.png',full_page=True)
    nav.locator('[data-main-space=settings]').click()
    page.locator('#sidebar [data-settings-category=general]').click()
-   expect(page.locator('.app-version-row')).to_contain_text('v0.1.5')
+   expect(page.locator('.app-version-row')).to_contain_text('v0.1.6')
+   expect(page.get_by_role('heading',name='일반',exact=True)).to_be_visible()
+   assert page.locator('.app-heading-stack .breadcrumbs').bounding_box()['y']>page.locator('#app-page-title').bounding_box()['y']
+   expect(page.locator('#settings-panel .workspace-page-heading')).to_be_hidden()
    page.screenshot(path='/tmp/production-sidebar-settings.png',full_page=True)
    page_count=len(context.pages)
    nav.locator('[data-main-space=documents]').click()
    document=page.frame_locator('#inline-document-panel iframe')
    editor=document.get_by_role('textbox',name='문서 본문',exact=True);editor.wait_for()
+   expect(page.locator('#app-page-title')).to_contain_text('제목 없는 문서')
+   expect(document.locator('.document-header')).to_be_hidden()
+   expect(page.locator('.app-document-tools')).to_be_visible()
+   expect(page.locator('.app-heading-stack .breadcrumbs')).to_contain_text('보관함')
+   panel=document.locator('.document-settings');expect(panel).to_be_visible()
+   assert document.locator('.document-toolbar').bounding_box()['height']==44
+   frame_top=page.locator('#inline-document-panel iframe').bounding_box()['y'];bar_bottom=page.locator('.topbar').bounding_box()['height'];assert abs(frame_top-bar_bottom)<2,(frame_top,bar_bottom)
+   assert panel.evaluate('(p)=>getComputedStyle(p).boxShadow')=='none'
+   assert document.locator('.document-workspace').evaluate('(p)=>getComputedStyle(p).backgroundColor')=='rgb(255, 255, 255)'
+   assert document.locator('.document-ruler-top').evaluate('(p)=>getComputedStyle(p).backgroundColor')=='rgb(255, 255, 255)'
+   page.get_by_role('button',name='문서 이름 바꾸기',exact=True).click()
+   page.get_by_role('textbox',name='문서 제목',exact=True).fill('앱 안의 문서')
+   page.get_by_role('textbox',name='문서 제목',exact=True).press('Enter')
+   expect(page.locator('#app-page-title')).to_contain_text('앱 안의 문서')
+   page.get_by_role('button',name='문서 속성',exact=True).click();expect(panel).to_be_hidden()
+   page.get_by_role('button',name='문서 속성',exact=True).click();expect(panel).to_be_visible()
+   expect(page.locator('.app-document-tools svg')).to_be_visible()
+   document.locator('.document-sheet').evaluate('(sheet)=>new Promise(resolve=>setTimeout(resolve,400))')
+   metrics=document.locator('.document-sheet').evaluate('(sheet)=>{const s=sheet.getBoundingClientRect(),v=document.querySelector(".document-scroll").getBoundingClientRect(),p=document.querySelector(".document-settings").getBoundingClientRect();return {sheet:{left:s.left,right:s.right,width:s.width},viewport:{left:v.left,right:v.right,width:v.width},panel:{left:p.left,width:p.width},zoom:getComputedStyle(sheet).zoom}}')
+   print('Document fit:',metrics,flush=True)
+   assert metrics['sheet']['right']<=metrics['panel']['left']+1,metrics
    assert len(context.pages)==page_count
    box=page.locator('#inline-document-panel iframe').bounding_box();side=page.locator('#sidebar').bounding_box()
    assert box['x']>=side['x']+side['width'] and box['x']+box['width']<=1401,box

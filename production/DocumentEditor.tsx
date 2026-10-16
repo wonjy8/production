@@ -488,9 +488,9 @@ function DocumentEditor({ file }: { file: any }) {
       document.removeEventListener("keydown", escape);
     };
   }, []);
-  async function rename() {
-    if (!editingTitle||!originalConsent.current) return;
-    const title = titleDraft.trim().replace(/[\/\\\r\n]/g, " ");
+  async function rename(nextTitle?: string) {
+    if ((typeof nextTitle!=="string"&&!editingTitle)||!originalConsent.current) return false;
+    const title = (typeof nextTitle==="string"?nextTitle:titleDraft).trim().replace(/[\/\\\r\n]/g, " ");
     if (!title) {
       setTitleDraft(name.replace(/\.[^.]+$/, ""));
       setEditingTitle(false);
@@ -511,13 +511,21 @@ function DocumentEditor({ file }: { file: any }) {
       url.searchParams.set("name", file.name);
       history.replaceState(null, "", url);
       window.opener?.dispatchEvent(new Event("resources-changed"));
+      if(window.parent!==window)window.parent.dispatchEvent(new Event("resources-changed"));
       setEditingTitle(false);
+      return true;
     } catch (e: any) {
       setError(e.message);
     } finally {
       pendingOperations.current--;
     }
   }
+  useEffect(() => {
+    const chrome={title:name.replace(/\.[^.]+$/, ""),status,settingsOpen:showLayout,canRename:ready&&originalConsent.current&&!frozenDocument,
+      rename:(title:string)=>rename(title),toggleSettings:()=>setShowLayout(value=>!value)};
+    (window as any).documentWorkspaceChrome=chrome;
+    if(window.parent!==window){try{(window.parent as any).updateInlineDocumentChrome?.(window,chrome)}catch{}}
+  },[name,status,showLayout,ready,originalPrompt,frozenDocument]);
   async function exportPDF() {
     if (exporting) return;
     setExporting(true);
@@ -1010,7 +1018,7 @@ function DocumentEditor({ file }: { file: any }) {
               value={titleDraft}
               maxLength={190}
               onChange={(e) => setTitleDraft(e.target.value)}
-              onBlur={rename}
+              onBlur={() => {void rename()}}
               onKeyDown={(e) => {
                 if (e.key === "Enter") e.currentTarget.blur();
                 if (e.key === "Escape") {
@@ -1031,6 +1039,7 @@ function DocumentEditor({ file }: { file: any }) {
               </button>
             </h1>
           )}
+          <p className="document-location">자료 / 보관함</p>
         </div>
         <button
           className="keep-label document-title-edit"
@@ -1309,7 +1318,8 @@ function DocumentEditor({ file }: { file: any }) {
           />
         )}
         {showLayout && (
-          <aside className="document-settings" aria-label="문서 설정 패널">
+          <aside className="document-settings ui-workspace-panel" aria-label="문서 설정 패널">
+            <header className="ui-workspace-panel-heading"><h2>문서 설정</h2><button className="keep-label" aria-label="문서 설정 닫기" onClick={()=>setShowLayout(false)}><Icon name="close"/></button></header>
             <nav
               className="editor-panel-tabs"
               aria-label="문서 설정 종류"

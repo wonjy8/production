@@ -15,17 +15,18 @@ const documentScope=document.createElement('div');documentScope.className='sideb
 documentScope.innerHTML='<button class="sidebar-ref-link keep-label" data-new-inline-document>'+packIcon('plus')+'<span>새 문서</span></button><button class="sidebar-ref-link keep-label" data-document-library>'+packIcon('folder')+'<span>보관함의 문서</span></button>';
 const inlineDocumentPanel=document.createElement('section');inlineDocumentPanel.id='inline-document-panel';inlineDocumentPanel.hidden=true;inlineDocumentPanel.setAttribute('aria-label','문서 편집기');document.querySelector('.canvas').append(inlineDocumentPanel);
 let inlineDocumentFrame=null,inlineDocumentOpening=false;
+window.getInlineDocumentWindow=()=>inlineDocumentFrame?.contentWindow;
 const inlineDocumentStorageKey='pn-open-document:'+location.pathname;
 window.flushInlineDocument=async()=>{if(!inlineDocumentFrame)return;const child=inlineDocumentFrame.contentWindow;const prepare=child?.prepareDocumentNavigation||child?.prepareAppUpdate;if(prepare&&await prepare()===false)throw Error('문서 저장을 마친 뒤 이동하세요.');};
-window.hideInlineDocument=()=>{window.inlineDocumentActive=false;inlineDocumentPanel.hidden=true;documentScope.hidden=true};
+window.hideInlineDocument=()=>{window.inlineDocumentActive=false;document.body.classList.remove('inline-document-active');inlineDocumentPanel.hidden=true;documentScope.hidden=true};
 window.openInlineDocument=async address=>{
  try{
   await prepareWorkspaceNavigation();
   closeHub();closeSpaceMenu();dismissMobileWorkspaceHome();closeSettings();leaveProduction();refPage=false;
   $('#paper').hidden=true;$('#refpanel').hidden=true;$('#loading').hidden=true;productionHost.hidden=true;
-  if(address){const url=new URL(address,location.href);url.searchParams.set('embedded','1');const next=document.createElement('iframe');next.title='문서 편집기';next.src=url.href;localStorage.setItem(inlineDocumentStorageKey,url.href);next.onload=()=>{try{localStorage.setItem(inlineDocumentStorageKey,next.contentWindow.location.href)}catch{}};inlineDocumentFrame=next;inlineDocumentPanel.replaceChildren(next)}
+  if(address){window.inlineDocumentChrome=null;const url=new URL(address,location.href);url.searchParams.set('embedded','1');const next=document.createElement('iframe');next.title='문서 편집기';next.src=url.href;localStorage.setItem(inlineDocumentStorageKey,url.href);next.onload=()=>{try{localStorage.setItem(inlineDocumentStorageKey,next.contentWindow.location.href)}catch{}};inlineDocumentFrame=next;inlineDocumentPanel.replaceChildren(next)}
   if(!inlineDocumentFrame)throw Error('열 문서가 없습니다.');
-  inlineDocumentPanel.hidden=false;window.inlineDocumentActive=true;syncSpaceChrome();documentScope.hidden=false;setTopTitle('문서 편집기');
+  inlineDocumentPanel.hidden=false;window.inlineDocumentActive=true;document.body.classList.add('inline-document-active');if(inlineDocumentFrame.contentWindow?.documentWorkspaceChrome)window.inlineDocumentChrome=inlineDocumentFrame.contentWindow.documentWorkspaceChrome;syncSpaceChrome();documentScope.hidden=false;setTopTitle('문서 편집기');
  }catch(error){toast(error.message||'문서를 열지 못했습니다');throw error}
 };
 window.showInlineDocument=async(create=false)=>{

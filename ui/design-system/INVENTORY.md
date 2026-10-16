@@ -7,9 +7,9 @@
 | 사이드바·워크스페이스 | ui/navigation.js, ui/workspace-nav.js, ui/sidebar-order.js | navigation.css, tokens.css | 기존 .sidebar-ref-link의 높이·선택 규칙과 토큰 공유. 라우팅·순서 로직 유지. |
 | 탭·필터 | production/ModuleTab.tsx, ui/reference-filters.js | navigation.css | 신규 .ui-tabs/.ui-tab 제공. 기존 탭별 동작과 레이아웃 유지. |
 | 모달 창 | production/Modal.tsx | Components.tsx, surfaces.css, Icons.tsx | 공통 dialog와 닫기 버튼 연결. 다른 특수 창은 기본 경계·반경 공유. |
-| 화면 제목 | .workspace-page-heading, .section-heading | typography.css, PageHeading | 기존 공통 화면 제목 클래스에 즉시 적용. 문서 내 제목은 제외. |
+| 화면 제목 | ui/app-page-heading.js, ui/navigation.js, 화면별 .workspace-page-heading | page-heading.js, typography.css | 일반 DOM/Shadow DOM의 주 제목을 상단바로 승격하고 작은 경로를 아래에 둔다. 제목 행의 조작·모달 제목·문서 본문 제목은 유지. |
 | 자료·프로젝트·개요·설정 화면 | ui/theme.css, production/merged.css | tokens.css, typography.css, surfaces.css | 공통 스타일은 일반 문서·Shadow DOM에 같은 빌드 입력으로 포함. 도메인 배치는 유지. |
-| 문서 편집기 | production/document-editor.css | 공통 CSS + 기존 본문 서식 | 편집 도구 버튼은 공유. 본문 글꼴/인쇄 치수/사용자 서식은 별도. |
+| 문서 편집기 | production/DocumentEditor.tsx, document-editor.css | typography.css, surfaces.css, tokens.css | 앱 상단 제목·저장/속성 조작, 탭 행 툴바, 모듈과 같은 패널 표면, 흰 바탕 눈금자. 본문 서식·용지 좌표·내보내기는 별도. |
 | 모션 | ui/motion.css 및 각 기능 CSS | tokens.css, motion.css | 기존 공통 모션 변수 연결 및 reduced-motion 적용. 신규 상태 클래스 제공. |
 | 드래그 | ui/touch-drag.js, ui/tab-drag.js, production/calendar-drag.js | motion.css | 입력·유효성·데이터 이동 유지. 새 UI는 공통 피드백 클래스 사용. 기능별 기존 드롭 표시는 후속 이관 대상. |
 | 앱 아이콘 | ui/icons.js, production/Icon.tsx, Lucide 혼용 | icon-pack.js, Icon.tsx, Icons.tsx | 기존 직접 Lucide import 5곳을 공통 팩으로 전환. 문자열/React 동일 SVG 도형 사용. |

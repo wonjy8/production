@@ -19,3 +19,12 @@
 
 .completion-banner{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 16px;margin-bottom:20px;border:1px solid var(--ui-line);border-radius:16px;background:var(--ui-subtle)}.completed-project-folders{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.completed-project-folders h2{width:100%;margin:0;font-size:18px;font-weight:600}[data-document-frozen=true] .document-toolbar{pointer-events:none;opacity:.55}
 .share-settings{font-size:14px;line-height:1.6;min-width:0}.share-settings form,.share-link-card{display:grid;gap:16px;margin:16px 0;padding:16px;border:1px solid var(--ui-line);border-radius:var(--ui-panel-radius)}.share-settings label{display:grid;gap:8px;min-width:0}.share-settings input,.share-settings select,.share-settings textarea{box-sizing:border-box;max-width:100%;min-width:0;width:100%;font:inherit;padding:8px 12px;min-height:40px;border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-surface)}.share-targets{max-height:320px;overflow:auto;border:1px solid var(--ui-line);border-radius:12px;padding:12px}.share-targets label,.share-settings .share-checkbox{display:flex;align-items:center;gap:8px;padding:6px 0;overflow-wrap:anywhere}.share-targets input,.share-settings .share-checkbox input{width:18px;min-height:18px;flex:none}.share-actions{display:flex;flex-wrap:wrap;gap:8px}.share-link-card p{margin:0}.share-settings .muted{color:var(--ui-muted)}
+/* Module and document inspectors share one panel surface. */
+.ui-workspace-panel{background:var(--ui-surface);color:var(--ui-text);border:1px solid var(--ui-line);border-radius:var(--ui-inspector-radius);box-shadow:none;padding:var(--ui-inspector-padding);box-sizing:border-box;gap:14px}
+.ui-workspace-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px}
+.ui-workspace-panel-heading>h2{font-size:18px;font-weight:600;margin:0;line-height:1.35}
+.ui-workspace-panel-heading>button{width:30px!important;height:30px!important;min-height:30px!important;padding:6px!important;border:0;background:transparent}
+
+.ui-workspace-panel>header h2{font-size:18px;line-height:1.35;font-weight:600}
+.hub-sidebar.ui-workspace-panel:not(.hub-sidebar-wide){width:var(--ui-inspector-width)}
+@media(max-width:720px){.hub-sidebar.ui-workspace-panel:not(.hub-sidebar-wide){width:calc(100vw - 16px)}}

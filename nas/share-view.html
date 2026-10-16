@@ -8,6 +8,7 @@
  --ui-space-1:4px; --ui-space-2:8px; --ui-space-3:12px; --ui-space-4:16px; --ui-space-5:20px; --ui-space-6:24px; --ui-space-8:32px;
  --ui-text-small:12px; --ui-text-body:14px; --ui-text-section:18px; --ui-text-title:24px;
  --ui-weight-body:400; --ui-weight-control:500; --ui-weight-title:600;
+ --ui-inspector-width:360px; --ui-inspector-padding:20px; --ui-inspector-radius:18px;
  --ui-control-height:40px; --ui-control-radius:12px; --ui-panel-radius:16px;
  --ui-fast:160ms; --ui-panel:240ms; --ui-ease:cubic-bezier(.22,1,.36,1);
  --ui-shadow:0 12px 36px #0000001a;
@@ -28,6 +29,31 @@ button{font-weight:var(--ui-weight-control)}
 .ui-page-heading>.ui-heading-actions{margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap}
 
 .app-release-version{display:block;padding:8px 12px;font-size:var(--ui-text-small);line-height:1.5;color:var(--ui-muted);font-variant-numeric:tabular-nums}.app-version-row{font-variant-numeric:tabular-nums}
+/* App page titles live above their directory; body headings keep their actions. */
+.app-heading-stack{display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;flex:1}
+.topbar .brand:has(.app-heading-stack){align-items:center}
+#app-page-title{display:flex;align-items:center;min-width:0;min-height:28px;margin:0;font-size:20px;line-height:1.3;font-weight:600;letter-spacing:-.02em}
+#app-page-title>.app-page-title-label,.app-document-title{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:inherit!important;letter-spacing:inherit;color:var(--ui-text);max-width:100%}
+#app-page-title>.app-document-title{padding:0!important;border:0!important;background:transparent!important;text-align:left;min-height:28px!important;height:auto!important;border-radius:0;opacity:1}
+#app-page-title>.app-document-title:disabled{cursor:default;opacity:1}
+#app-page-title>.app-document-title-input{font:inherit;height:28px;min-height:28px;padding:0 4px;width:min(520px,100%);border:0;border-bottom:1px solid var(--ui-line);border-radius:0;background:transparent}
+.app-heading-stack .breadcrumbs{gap:2px;min-height:16px;flex-wrap:nowrap;overflow:hidden}
+.app-heading-stack .breadcrumbs .breadcrumb-link{font-size:11px!important;line-height:16px!important;min-height:16px!important;height:16px!important;padding:0 2px!important;font-weight:400!important;color:var(--ui-muted)!important;max-width:220px}
+.app-heading-stack .breadcrumb-divider{font-size:10px!important;line-height:16px;color:#b5b6b9;margin:0 3px}
+.app-document-tools{display:flex;align-items:center;gap:10px;min-width:0}
+.app-document-tools>.app-document-status{font-size:11px;color:var(--ui-muted);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;font-weight:400}
+.app-document-tools>button{flex:none}
+:is(.app-heading-stack,.app-document-tools) [hidden],.app-document-tools[hidden]{display:none!important}
+[data-app-page-title],[data-app-heading-empty]{display:none!important}
+.workspace-page-heading:has(>[data-app-page-title]){justify-content:flex-end}
+.project-page-heading:has(>[data-app-page-title]){justify-content:flex-start;min-height:32px;margin-bottom:8px!important}
+@media(max-width:720px){#app-page-title{font-size:18px}.app-document-tools>.app-document-status{display:none}.app-heading-stack .breadcrumbs .breadcrumb-link{max-width:100px}.app-document-tools{gap:4px}.topbar .brand{gap:4px}.app-heading-stack .breadcrumbs{max-width:100%}}
+/* Retain project identity controls beside tabs after promoting the title. */
+.project-navigation-strip{display:flex;align-items:flex-start;gap:8px;min-width:0;margin-bottom:16px;border-bottom:1px solid var(--ui-line)}
+.project-navigation-strip>.project-page-heading{flex:none;min-height:40px;margin:0!important}
+.project-navigation-strip .project-identity-icon{width:32px!important;min-width:32px!important;height:32px!important;min-height:32px!important;padding:6px!important}
+.project-navigation-strip .project-identity-icon .ui-icon{width:18px!important;height:18px!important}
+.project-navigation-strip>.merge-sections{flex:1;min-width:0;margin:0!important;padding-bottom:8px;border:0;min-height:44px}
 
 /* Native corner-shape preserves hit targets, focus rings and shadows. */
 button,.button,[role="button"],input[type="button"],input[type="submit"]{border-radius:var(--ui-control-radius)!important;corner-shape:squircle;transition:background-color var(--ui-fast) ease,color var(--ui-fast) ease,border-color var(--ui-fast) ease;}
@@ -91,6 +117,10 @@ body.document-embedded #document-editor-root{left:0!important;width:100vw!import
 @media(min-width:721px){.layout{grid-template-columns:var(--sidebar-width,264px) minmax(0,1fr)!important}.sidebar-collapsed .layout{grid-template-columns:0 minmax(0,1fr)!important}.sidebar-collapsed #sidebar{width:0!important;padding:0!important;visibility:hidden!important;pointer-events:none!important}.sidebar-collapsed .sidebar-resize{display:none!important;pointer-events:none!important}}
 @media(max-width:720px){body:has(>.workspace-rail):not(.document-mode){padding-left:0}.workspace-rail{display:none!important}#sidebar{width:260px!important}.mobile-bottom-nav .sidebar-main-spaces{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;width:100%!important;gap:4px!important}.mobile-bottom-nav .sidebar-main-spaces>.sidebar-ref-link{width:100%!important;max-width:100%!important;min-width:0!important;min-height:44px!important}.mobile-bottom-nav .workspace-rail-divider{display:none}#inline-document-panel{height:calc(100dvh - 140px);min-height:240px}}
 @media print{.workspace-rail,#sidebar,.document-workspace-rail{display:none!important}body{padding-left:0!important}.layout{display:block!important}body.document-mode #document-editor-root{left:0!important;width:100%!important}}
+/* The document tool strip occupies the same top lane as workspace tabs. */
+body.inline-document-active #inline-document-panel{height:calc(100dvh - var(--appbar-height,72px) - 18px);min-height:320px}
+body.inline-document-active .canvas{padding-top:0!important}
+@media(max-width:720px){body.inline-document-active #inline-document-panel{height:calc(100dvh - var(--appbar-height,72px) - 92px);min-height:220px}}
 
 /* Every rounded UI corner uses Squircle; existing radii keep their size. */
 *,*::before,*::after{corner-shape:squircle}
@@ -113,6 +143,15 @@ body.document-embedded #document-editor-root{left:0!important;width:100vw!import
 
 .completion-banner{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 16px;margin-bottom:20px;border:1px solid var(--ui-line);border-radius:16px;background:var(--ui-subtle)}.completed-project-folders{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.completed-project-folders h2{width:100%;margin:0;font-size:18px;font-weight:600}[data-document-frozen=true] .document-toolbar{pointer-events:none;opacity:.55}
 .share-settings{font-size:14px;line-height:1.6;min-width:0}.share-settings form,.share-link-card{display:grid;gap:16px;margin:16px 0;padding:16px;border:1px solid var(--ui-line);border-radius:var(--ui-panel-radius)}.share-settings label{display:grid;gap:8px;min-width:0}.share-settings input,.share-settings select,.share-settings textarea{box-sizing:border-box;max-width:100%;min-width:0;width:100%;font:inherit;padding:8px 12px;min-height:40px;border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-surface)}.share-targets{max-height:320px;overflow:auto;border:1px solid var(--ui-line);border-radius:12px;padding:12px}.share-targets label,.share-settings .share-checkbox{display:flex;align-items:center;gap:8px;padding:6px 0;overflow-wrap:anywhere}.share-targets input,.share-settings .share-checkbox input{width:18px;min-height:18px;flex:none}.share-actions{display:flex;flex-wrap:wrap;gap:8px}.share-link-card p{margin:0}.share-settings .muted{color:var(--ui-muted)}
+/* Module and document inspectors share one panel surface. */
+.ui-workspace-panel{background:var(--ui-surface);color:var(--ui-text);border:1px solid var(--ui-line);border-radius:var(--ui-inspector-radius);box-shadow:none;padding:var(--ui-inspector-padding);box-sizing:border-box;gap:14px}
+.ui-workspace-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px}
+.ui-workspace-panel-heading>h2{font-size:18px;font-weight:600;margin:0;line-height:1.35}
+.ui-workspace-panel-heading>button{width:30px!important;height:30px!important;min-height:30px!important;padding:6px!important;border:0;background:transparent}
+
+.ui-workspace-panel>header h2{font-size:18px;line-height:1.35;font-weight:600}
+.hub-sidebar.ui-workspace-panel:not(.hub-sidebar-wide){width:var(--ui-inspector-width)}
+@media(max-width:720px){.hub-sidebar.ui-workspace-panel:not(.hub-sidebar-wide){width:calc(100vw - 16px)}}
 
 /* Only presentation is shared; each domain retains its drop semantics. */
 .ui-enter,.ui-screen,.merged-workspace,.refpanel,.paper,.database-page,.settings-page,.workspace-landing{animation:none!important}
