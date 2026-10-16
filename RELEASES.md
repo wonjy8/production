@@ -288,3 +288,12 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Remap only the completed owner's individual file selections to preservation IDs in the completion transaction. Keep the same link on completion/reopening and leave other projects' links independent.
 - Browser-only storage explains the NAS requirement. Download restrictions govern original-file delivery and controls; rendered content/media can still be saved.
 - NAS update: add `sharing.py`, `public_gateway.py`, `share-view.html`; replace `server.py`, `browser_gateway.py`, `completion.py`, `schema.sql`, `Dockerfile`. Rebuild/recreate with `sh update.sh`; preserve `.env` and `data/`. A new additive table is created automatically; no new dependencies or environment variables. See `nas/UPDATE-0.1.3.md` and route `/public/` through the existing HTTPS proxy.
+
+
+## 0.1.4
+
+- Put icon-only Home, Materials, Document Editor and Settings navigation inside the sidebar, separated from contextual lists by one full-height vertical divider. Place Settings at the bottom and a horizontal divider before Document Editor.
+- Use shared outline/solid icon variants, neutral selection surfaces and a new stacked-document Materials glyph. Keep a compact rail when the contextual sidebar is collapsed, and provide all four destinations in mobile navigation.
+- Add the same rail to the standalone document editor. Flush edits before returning to Home/Materials/Settings and preserve the selected NAS route.
+- Keep the app version in Settings → General and remove sidebar/public-viewer version labels. Record remaining product scope in docs/PRODUCT-AUDIT-0.1.4.md; production-template extensions and the new cross-project permission approval flow remain pending.
+- NAS 0.1.3 update: replace only `share-view.html` to remove the public-viewer version label, then rebuild/recreate with `sh update.sh`. No API, schema, environment-variable or dependency changes. Preserve `.env` and `data/`. Deliver the versioned replacement-only ZIP in chat; see nas/UPDATE-0.1.4.md.

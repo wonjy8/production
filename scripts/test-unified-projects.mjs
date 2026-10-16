@@ -60,7 +60,7 @@ assert.ok(nodes(item).some(n=>n.type==='ProductionTasks'&&n.props.productionId==
 // The shell's actual click handler preserves the fixed menu order and routes each button.
 const worker=readFileSync('worker/index.js','utf8'),start=worker.indexOf('const sidebarFixedTop='),end=worker.indexOf('\nconst sidebarFixedBottom',start),elements=[],calls=[];
 function element(){const el={className:'',hidden:false,innerHTML:'',setAttribute(){},append(){},prepend(){}};elements.push(el);return el}
-const nav={window:{appAccount:{role:'admin'}},document:{createElement:element},$:element,spacePicker:{},adminHomeButton:{},packIcon:n=>'<i>'+n+'</i>',closeSpaceMenu(){},openProduction:(...a)=>calls.push(['home',...a]),openRefs:()=>calls.push(['references']),openDatabase:()=>calls.push(['database'])};
+const nav={window:{appAccount:{role:'admin'}},document:{createElement:element},$:element,spacePicker:{},adminHomeButton:{},railIcon:()=>'',packIcon:n=>'<i>'+n+'</i>',closeSpaceMenu(){},openProduction:(...a)=>calls.push(['home',...a]),openRefs:()=>calls.push(['references']),openDatabase:()=>calls.push(['database'])};
 nav.closeHub=()=>{};nav.sidebarSettingsButton={};nav.isMobileViewport=()=>false;vm.runInNewContext(worker.slice(worker.indexOf('const materialDatabaseSections='),worker.indexOf("let refTagFilter="))+worker.slice(start,end),nav);
 assert.ok(nav.window.sidebarMainNav.innerHTML.indexOf('data-main-space="home"')<nav.window.sidebarMainNav.innerHTML.indexOf('data-main-space="references"'));
 assert.doesNotMatch(nav.window.sidebarMainNav.innerHTML,/data-main-space="database"/);

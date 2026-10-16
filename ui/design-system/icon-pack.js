@@ -103,8 +103,19 @@ export function inferIcon(label){if(/설정/.test(label))return 'settings';if(/�
 // The app shell is constructed before the deferred UI bundle finishes loading.
 export function hydrateSidebarIcons(root){
  root.querySelectorAll('[data-navigation-icon]').forEach(button=>{
-  if(!button.querySelector('svg'))button.insertAdjacentHTML('afterbegin',iconSVG(button.dataset.navigationIcon));
+  if(!button.querySelector('svg'))button.insertAdjacentHTML('afterbegin',navigationIconSVG(button.dataset.navigationIcon));
  });
 }
 
 Object.assign(icons,{"pointer": "<path d=\"m5 3 14 10-7 1-3 7Z\"/>", "crop": "<path d=\"M6 3v15h15M3 6h15v15\"/>", "scan": "<path d=\"M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M7 12h10\"/>", "rotateClockwise": "<path d=\"M20 8a8 8 0 1 0 0 8m0-13v5h-5\"/>"});
+
+// Workspace rail: outline and solid silhouettes share one SVG and one hit target.
+icons.materials='<g transform="rotate(13 15 9)"><rect x="9" y="2.5" width="11" height="14" rx="2.5"/></g><path d="M5.5 7 12 6l5 4-.3 9.5a2.5 2.5 0 0 1-2.3 2.3l-8.5.7A2.5 2.5 0 0 1 3.5 20L3 10a2.5 2.5 0 0 1 2.5-3Z"/><path d="m12 6 .3 4.5L17 10"/>';
+const solidNavigation={
+ home:'<path fill-rule="evenodd" d="M2.4 10.2 10.6 3a2.1 2.1 0 0 1 2.8 0l8.2 7.2a1.2 1.2 0 0 1-.8 2.1H20V20a2 2 0 0 1-2 2h-4.2v-6a1.8 1.8 0 0 0-3.6 0v6H6a2 2 0 0 1-2-2v-7.7h-.8a1.2 1.2 0 0 1-.8-2.1Z"/>',
+ materials:'<g fill="none" stroke="currentColor" stroke-width="1.75" transform="rotate(13 15 9)"><rect x="9" y="2.5" width="11" height="14" rx="2.5"/></g><path fill-rule="evenodd" d="M5.5 6.6 12 5.7l5.4 4.3-.3 9.5a2.9 2.9 0 0 1-2.7 2.7l-8.5.7a2.9 2.9 0 0 1-2.8-2.8l-.5-10.1a2.9 2.9 0 0 1 2.9-3.4Zm7 .9.2 2.6 2.8-.3Z"/>',
+ documentEdit:'<path fill-rule="evenodd" d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 2v5h5ZM7 13h10v1.5H7Zm0 4h7v1.5H7Z"/>',
+ settings:'<path fill-rule="evenodd" d="m9 2-.7 3-2.2 1-2.8-.8-2 3.5L3.5 11v2L1.3 15.3l2 3.5 2.8-.8 2.2 1L9 22h6l.7-3 2.2-1 2.8.8 2-3.5-2.2-2.3v-2l2.2-2.3-2-3.5-2.8.8-2.2-1L15 2Zm3 6a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"/>'
+};
+icons.documentEdit='<path d="M14 3H6a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Zm0 0v6h6M8 13h8M8 17h5"/>';
+export function navigationIconSVG(name){if(!solidNavigation[name])return iconSVG(name);return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="nav-outline">'+icons[name]+'</g><g class="nav-solid" fill="currentColor" stroke="none">'+solidNavigation[name]+'</g></svg>'}

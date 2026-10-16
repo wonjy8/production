@@ -3,6 +3,7 @@ const installed = new WeakSet();
 function install(nav) {
   if (installed.has(nav)) return;
   installed.add(nav);
+  if(nav.closest(".sidebar-fixed-top,.mobile-bottom-nav,.document-workspace-rail"))return;
   const canvas = document.createElement("canvas"),
     ctx = canvas.getContext("2d");
   function size() {
