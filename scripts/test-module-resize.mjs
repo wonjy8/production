@@ -1,3 +1,4 @@
+import * as columns from '../production/column-layout.js';
 import * as sharedModules from '../production/shared-modules.js';
 import assert from 'node:assert/strict';
 import {resizeModuleSpans,adjacentModule} from '../production/module-resize.js';
@@ -16,7 +17,7 @@ import * as snap from '../production/snap-layout.js';import * as resize from '..
 import {delayedPointerDrag} from '../ui/touch-drag.js';
 const require=createRequire(import.meta.url),esbuild=require('esbuild'),jsx=(type,props)=>({type,props});
 let states=[],cursor=0,refs=[],rc=0,writes=0,items=[{id:'a',span:6,frameHeight:400},{id:'b',span:6}];
-const context={cancelAnimationFrame(){},module:{exports:{}},exports:{},require(n){if(n==='react')return {useEffect(){},useMemo:fn=>fn(),useLayoutEffect(){},useRef:v=>refs[rc++]||(refs[rc-1]={current:v}),useState:v=>{const i=cursor++;if(!(i in states))states[i]=v;return [states[i],v=>states[i]=typeof v==='function'?v(states[i]):v]}};if(n==='react/jsx-runtime')return {jsx,jsxs:jsx};return {...snap,...resize,delayedPointerDrag}}};
+const context={window:{},cancelAnimationFrame(){},module:{exports:{}},exports:{},require(n){if(n==='react')return {useEffect(){},useMemo:fn=>fn(),useLayoutEffect(){},useRef:v=>refs[rc++]||(refs[rc-1]={current:v}),useState:v=>{const i=cursor++;if(!(i in states))states[i]=v;return [states[i],v=>states[i]=typeof v==='function'?v(states[i]):v]}};if(n==='react/jsx-runtime')return {jsx,jsxs:jsx};return {...columns,...snap,...resize,delayedPointerDrag}}};
 vm.runInNewContext(esbuild.transformSync(fs.readFileSync('production/SnapCanvas.tsx','utf8'),{loader:'tsx',format:'cjs',jsx:'automatic'}).code,context);
 function nodes(n){return [n,...[n?.props?.children].flat(Infinity).filter(v=>v&&typeof v==='object').flatMap(nodes)]}
 function edge(){cursor=0;rc=0;return nodes(context.module.exports.SnapCanvas({items,onChange:fn=>{writes++;items=fn(items)},renderItem:()=>null})).find(n=>n.props?.['aria-label']==='모듈 크기 단계 조절')}

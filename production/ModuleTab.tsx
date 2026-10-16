@@ -1,3 +1,5 @@
+import { migrateColumns, applyBlockDrop } from "./column-layout.js";
+import { snapBoxes } from "./snap-layout.js";
 import { ProjectIconPicker } from "./ProjectIconPicker";
 import { PlanningModule, SectionHeading } from "./PlanningModule";
 import {
@@ -39,7 +41,7 @@ import {
   updateSharedOwner,
 } from "./shared-modules.js";
 import { itemMenuBindings, moveInList } from "../ui/item-menu.js";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { resizeModuleSpans, adjacentModule } from "./module-resize.js";
 import type { CustomTab, Workspace, WorkspaceModule } from "./data";
 import { Icon, IconButton } from "./Icon";
@@ -63,10 +65,10 @@ import {
 } from "./timetable-model.js";
 const kinds = moduleKinds;
 export function ModuleTab({
-  tab,
+  tab: storedTab,
   workspace: w,
   defaultIds,
-  onTabChange,
+  onTabChange: saveTab,
   onChange,
   onOpen,
   onAddMember,
@@ -93,6 +95,11 @@ export function ModuleTab({
   onOpen: (pid: string, kind: string, id?: string) => void;
   onAddMember: (name: string) => void;
 }) {
+  const normalized = useMemo(() => migrateColumns(storedTab.modules, snapBoxes(storedTab.modules, {}, 1000).boxes), [storedTab.modules]);
+  const tab = { ...storedTab, modules: normalized };
+  function onTabChange(fn: (t: CustomTab) => CustomTab) {
+    saveTab(old => fn({...old, modules: old.modules === storedTab.modules ? normalized : migrateColumns(old.modules, snapBoxes(old.modules, {}, 1000).boxes)}));
+  }
   const [pendingKind, setPendingKind] = useState(""),
     [pendingPoint, setPendingPoint] = useState<any>(null);
   const [adding, setAdding] = useState(false),
@@ -344,6 +351,14 @@ export function ModuleTab({
           }
         : {}),
     });
+    if (point.placement?.parentSlot && module.kind === "columns") {
+      const trial = applyBlockDrop([...tab.modules, module], module.id, point.placement);
+      if (trial.find((m) => m.id === module.id)?.parentSlot !== point.placement.parentSlot) {
+        setError("중첩을 포함해 가로 최대 4칸까지 나눌 수 있습니다.");
+        return;
+      }
+    }
+    setError("");
     onTabChange((t) => ({
       ...t,
       modules: dropModule(

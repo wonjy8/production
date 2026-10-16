@@ -20,6 +20,12 @@ class SharingTest(unittest.TestCase):
   data={'ownerKind':'production','ownerId':a,'selectors':selectors or [{'kind':'tab','id':'visible'}],'audience':'anyone','allowDownload':True,**options}
   r=self.client.post('/api/shares',headers=self.auth,json=data);self.assertEqual(r.status_code,200,r.text);return r.json()
  def read(self,s,**kwargs):return self.client.get('/public/shares/'+s['token'],**kwargs)
+ def test_column_shells_do_not_become_empty_shared_cards(self):
+  a,b,f,g=self.fixture();w=self.state();tab=next(p for p in w['productions'] if p['id']==a)['customTabs'][0]
+  tab['modules'].insert(0,{'id':'columns','kind':'columns','title':'2단 열','columnSlots':['left','right']})
+  tab['modules'][1]['parentSlot']='left';tab['modules'][2]['parentSlot']='right';self.put(w)
+  share=self.create(a);r=self.read(share);self.assertEqual(r.status_code,200,r.text)
+  self.assertEqual(len(r.json()['items']),2);self.assertNotIn('2단 열',r.text);self.assertIn('public text',r.text)
  def test_selected_tab_live_content_and_download_revocation(self):
   a,b,f,g=self.fixture();share=self.create(a);r=self.read(share);self.assertEqual(r.status_code,200,r.text);self.assertNotIn('secret',r.text);self.assertNotIn('sourceMetadata',r.text);self.assertEqual(len(r.json()['items']),2)
   self.assertEqual(self.client.get('/public/shares/'+share['token']+'/files/'+g).status_code,404)

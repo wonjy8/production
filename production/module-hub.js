@@ -1,3 +1,4 @@
+import { columnModule } from "./column-layout.js";
 import {planningModuleTemplates,planningTabTemplates,planningInitial,populatePlanningTab} from './planning-templates.js';
 // Templates are data, so a future project template can reuse the same module definitions.
 export const hubCategories = [
@@ -9,6 +10,7 @@ const moduleCategory={tasks:'schedule',schedule:'schedule',timetable:'schedule',
 export function hubGroup(item){return moduleCategory[item.id]||item.category;}
 
 export const moduleTemplates = [
+ ...[2,3,4].map(count=>({id:`columns-${count}`,category:"basic",name:`${count}단 열`,description:"열 안에 모듈 배치 · 중첩 포함 최대 4칸",icon:`columns-${count}`,kind:"columns",count})),
  ...planningModuleTemplates,
  {id:'database',category:'basic',name:'데이터베이스',description:'문서·파일을 속성과 분류로 관리',icon:'table',kind:'database'},
  {id:'sermon-notes',category:'church',name:'말씀 노트',description:'예배·QT·동아리 말씀을 문서로 기록',icon:'book',kind:'database',noteTemplate:true},
@@ -41,7 +43,8 @@ export const tabTemplates = [
 export function createHubModule(id, options={}) {
  const template=moduleTemplates.find(item=>item.id===id);
  if(!template)throw Error('알 수 없는 모듈 템플릿');
- return {id:crypto.randomUUID(),kind:template.kind,title:template.name,span:6,
+ if(template.kind==='columns')return {...columnModule(template.count),...options};
+ return {id:crypto.randomUUID(),kind:template.kind,title:template.name,span:12,blockLayout:true,
   ...(template.initialText?{text:template.initialText}:{}),
   ...(template.fields?{fields:[...template.fields],states:[...template.states],rows:[]}:{}),
   ...(template.kind==='database'?{files:[],databaseCategories:template.noteTemplate?['예배','QT','동아리']:[],databaseFields:template.noteTemplate?[{id:'category',label:'분류',type:'select'},{id:'date',label:'날짜',type:'date'},{id:'place',label:'장소',type:'text'},{id:'speaker',label:'설교자',type:'text'},{id:'scripture',label:'본문 구절',type:'text'}]:[{id:'category',label:'분류',type:'select'},{id:'date',label:'날짜',type:'date'}],databaseView:'table'}:{}),

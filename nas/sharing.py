@@ -33,7 +33,7 @@ def projection(conn,actor,policy,strict=False):
     modules={(t['id'],m['id']):(t,m) for t in tabs for m in t.get('modules',[]) if m.get('id') and not m.get('deleted')}
     nodes=[];seen=set()
     def add(node,kind,title):
-        if not isinstance(node,dict) or node.get('deleted'):return
+        if not isinstance(node,dict) or node.get('deleted') or node.get('kind')=='columns':return
         key=(kind,node.get('id',title))
         if key not in seen:nodes.append((node,kind,title));seen.add(key)
     def tab_view(tab):

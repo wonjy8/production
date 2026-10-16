@@ -1,6 +1,10 @@
 import {projectIconPaths} from './project-icon-paths.js';
 // Production icon pack: 24px grid, 1.75px stroke, rounded caps and joins.
 export const icons={
+ 'columns-2':'<path d="M3 4h7v16H3zM14 4h7v16h-7z"/>',
+ 'columns-3':'<path d="M2 4h4v16H2zM10 4h4v16h-4zM18 4h4v16h-4z"/>',
+ 'columns-4':'<path d="M2 4h3v16H2zM8 4h3v16H8zM14 4h3v16h-3zM20 4h2v16h-2z"/>',
+
  circle:'<circle cx="12" cy="12" r="9"/>',
  divider:'<path d="M4 12h16"/>',
  keyboard:'<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M6 8h1m3 0h1m3 0h1m3 0h1M6 12h1m3 0h8M9 20l3 2 3-2"/>',

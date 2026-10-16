@@ -321,3 +321,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Share one title editor for projects, work groups, reference/source/portfolio pages and member pages: click, Enter/blur commit, Escape cancel, permission/completion guards, save-before-navigation, failed-save retry and title rollback. Keep system page names fixed.
 - Temporarily disable the document editor in shared feature flags, rail/file/conversion controls, creation helpers, restored routes and direct URLs. Preserve stored originals, metadata, plain text modules, downloads and Library use.
 - NAS 0.1.6 update: replace only `share-view.html` to synchronize shared design CSS, then rebuild/recreate with `sh update.sh`. No API, schema, dependency or environment changes. Preserve `.env` and `data/`. Deliver the replacement-only ZIP in chat; see nas/UPDATE-0.1.7.md.
+
+## 0.1.8
+
+- Add explicit 2/3/4-column structural modules, including nested columns with a maximum of four concurrent lanes across each containing layout.
+- Stack content modules within columns; dragging no longer creates implicit side-by-side placements. Preserve legacy module IDs, files and ordering while adopting explicit containers on the next edit.
+- Column containers have no card border or inner padding, with 16px gutters. Gutters reveal a resize line and top X on proximity/focus; X appends right-hand blocks below left-hand blocks, and the final boundary unwraps the container without deleting content.
+- Keep imported content placement-independent, transfer descendant modules together, and exclude structural shells from reusable-content and external-share choices. Existing completion locks and disabled document editor remain in effect.
+- NAS 0.1.7 baseline: replace `sharing.py` and `share-view.html` and rebuild/recreate the container using `sh update.sh`; preserve `.env`, data, database and keys. Deliver versioned ZIP in chat.

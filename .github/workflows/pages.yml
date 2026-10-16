@@ -20,7 +20,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run validate
-      - run: node scripts/test-production.mjs && node scripts/test-auth-gateway.mjs && node scripts/test-grade-calculator.mjs && node scripts/test-figma-connection.mjs && node scripts/test-pages-route.mjs && node scripts/test-document-library.mjs && node scripts/test-planning.mjs && node scripts/test-resource-schema.mjs && node scripts/test-completion-summary.mjs && node scripts/test-completion-policy.mjs && node scripts/test-sharing.mjs && node scripts/test-module-placement.mjs && node scripts/test-module-transfer.mjs && node scripts/test-task-status.mjs && node scripts/test-title-editor.mjs
+      - run: node scripts/test-production.mjs && node scripts/test-auth-gateway.mjs && node scripts/test-grade-calculator.mjs && node scripts/test-figma-connection.mjs && node scripts/test-pages-route.mjs && node scripts/test-document-library.mjs && node scripts/test-planning.mjs && node scripts/test-resource-schema.mjs && node scripts/test-completion-summary.mjs && node scripts/test-completion-policy.mjs && node scripts/test-sharing.mjs && node scripts/test-columns.mjs && node scripts/test-module-placement.mjs && node scripts/test-module-transfer.mjs && node scripts/test-task-status.mjs && node scripts/test-title-editor.mjs
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

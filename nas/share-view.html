@@ -197,6 +197,30 @@ body:not(.workspace-layout-ready):has(>.workspace-rail)>.topbar,body:not(.worksp
 .tab-drag-ghost,.dragghost{pointer-events:none;box-shadow:var(--ui-shadow)}
 .module-drop-target,.member-drop-target,.team-drop-target,.calendar-drop-target{outline:2px solid var(--ui-drop);outline-offset:2px}
 
+/* Structural columns: no card surface, border or internal padding. */
+.column-slot-tools{position:absolute;z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.column-add{pointer-events:auto;display:grid;place-items:center;width:24px;height:24px;padding:3px;border:0;background:transparent;color:var(--ui-muted);opacity:0;cursor:pointer}
+.column-slot-empty .column-add,.column-slot-tools:hover .column-add,.column-add:focus-visible{opacity:1}
+.column-add svg{width:16px;height:16px}
+.column-boundary{position:absolute;z-index:5;pointer-events:auto}
+.column-boundary-line{position:absolute;inset:0;cursor:col-resize;touch-action:none;opacity:0}
+.column-boundary-line:after{content:"";position:absolute;left:7px;top:0;bottom:0;width:1px;background:var(--ui-line)}
+.column-merge{position:absolute;top:0;left:-2px;width:20px;height:20px;display:grid;place-items:center;padding:3px;border:0;background:var(--ui-surface);color:var(--ui-muted);cursor:pointer;opacity:0}
+.column-merge svg{width:14px;height:14px}
+.column-boundary:hover .column-boundary-line,.column-boundary:hover .column-merge,.column-boundary:focus-within .column-boundary-line,.column-boundary:focus-within .column-merge{opacity:1}
+.column-add-menu{position:absolute;top:24px;left:0;z-index:30;max-height:320px;overflow:auto;min-width:160px;background:var(--ui-surface);border:1px solid var(--ui-line);box-shadow:0 6px 24px #0001;padding:4px;pointer-events:auto;border-radius:12px;corner-shape:squircle}
+.column-add-menu button{display:flex;gap:6px;align-items:center;width:100%;padding:6px;border:0;background:transparent;text-align:left;font:inherit;font-size:12px;cursor:pointer}
+.column-add-menu button:hover{background:var(--ui-subtle)}
+.column-add-menu button:disabled{opacity:.35;cursor:default}
+.column-add-menu svg{width:16px;height:16px}
+.snap-canvas .fluid-resize-edge[hidden],.snap-canvas .module-resize-corner[hidden]{display:none}
+@media(pointer:coarse){.column-boundary-line,.column-merge{opacity:.6}.column-add{opacity:1}}
+.snap-canvas .column-add,.snap-canvas .column-merge{min-height:0;max-width:none;min-width:0;box-sizing:border-box}
+.snap-canvas .column-add{width:24px;height:24px}
+.snap-canvas .column-merge{width:20px;height:20px}
+
+[data-project-readonly="true"] .column-slot-tools,[data-project-readonly="true"] .column-boundary{display:none}
+
 body{margin:0;background:var(--ui-subtle);font-family:var(--ui-font);color:var(--ui-text)}main{max-width:960px;margin:0 auto;padding:32px 20px}.public-header{display:flex;align-items:center;justify-content:space-between;gap:16px}h1{font-size:24px}article,form{padding:20px;margin:16px 0;background:var(--ui-surface);border:1px solid var(--ui-line);border-radius:16px}h2{font-size:18px;margin-top:0}p,pre{white-space:pre-wrap;overflow-wrap:anywhere;font:400 14px/1.65 var(--ui-font)}label{display:grid;gap:8px;margin:12px 0}input,button{font:inherit;min-height:40px;padding:8px 12px;border:1px solid var(--ui-line);border-radius:12px;background:white}button{cursor:pointer}img,video,iframe{max-width:100%;display:block;border-radius:12px}iframe{width:100%;height:70vh;border:1px solid var(--ui-line)}audio{max-width:100%}a{color:var(--ui-accent,#245bd6)}.public-file{border-top:1px solid var(--ui-line);padding-top:12px;margin-top:12px}.public-actions{display:flex;gap:12px;flex-wrap:wrap}.muted{color:var(--ui-muted)}[hidden]{display:none!important}
 </style><main><header class="public-header"><h1 id="title">공유 자료</h1><button id="refresh">새로고침</button></header><p id="status" role="status">불러오는 중…</p><form id="login" hidden><h2>지정 사용자 로그인</h2><p>이 링크에 지정된 NAS 계정으로 로그인하세요.</p><label>이메일<input name="email" type="email" autocomplete="username" required></label><label>비밀번호<input name="password" type="password" autocomplete="current-password" required></label><button type="submit">로그인</button></form><div class="public-actions"><button id="logout" hidden>로그아웃</button></div><section id="content" aria-label="공유 내용"></section><footer><p class="muted">선택한 항목만 표시하는 읽기 전용 공유입니다. 다운로드 제한은 다운로드 동작과 원본 전달을 제한하며, 화면에 표시되는 내용·미디어의 저장까지 막지는 못합니다.</p><small>Production</small></footer></main><script>(()=>{'use strict';const token=location.pathname.split('/').pop(),endpoint='/public/shares/'+token,$=id=>document.getElementById(id);let requestNumber=0;
 const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el};

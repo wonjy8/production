@@ -1,3 +1,4 @@
+import { isBlockLayout, blockBoxes, blockDropTarget, applyBlockDrop } from "./column-layout.js";
 import { fluidBoxes, reorderItems } from "./fluid-layout.js";
 export const moduleSpans = [3, 4, 6, 8, 9, 12];
 export function snapSpan(value) {
@@ -11,6 +12,7 @@ export function moduleSpan(item) {
   return snapSpan(item.span || ((item.width || 100) / 100) * 12);
 }
 export function snapBoxes(items, heights, width) {
+  if (isBlockLayout(items)) return blockBoxes(items, heights, width);
   const boxes = {},
     columns = new Map(),
     roots = [];
@@ -69,6 +71,7 @@ export function snapBoxes(items, heights, width) {
 }
 // Resolve against stationary cards using the pointer, never the dragged card's centre.
 export function moduleDropTarget(items, boxes, id, x, y, width) {
+  if (isBlockLayout(items)) return blockDropTarget(items, boxes, id, x, y, width);
   const candidates = items.filter((i) => i.id !== id && boxes[i.id]);
   if (!candidates.length) return null;
   const roots = candidates.filter((i) => i.kind !== "divider");
@@ -150,6 +153,7 @@ export function moduleDropTarget(items, boxes, id, x, y, width) {
   };
 }
 export function applyModuleDrop(items, id, target) {
+  if (target?.mode === "block") return applyBlockDrop(items, id, target);
   const moving = items.find((i) => i.id === id),
     anchor = items.find((i) => i.id === target?.targetId);
   if (!moving || !anchor || id === anchor.id) return items;

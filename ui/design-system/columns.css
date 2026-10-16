@@ -1,0 +1,23 @@
+/* Structural columns: no card surface, border or internal padding. */
+.column-slot-tools{position:absolute;z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.column-add{pointer-events:auto;display:grid;place-items:center;width:24px;height:24px;padding:3px;border:0;background:transparent;color:var(--ui-muted);opacity:0;cursor:pointer}
+.column-slot-empty .column-add,.column-slot-tools:hover .column-add,.column-add:focus-visible{opacity:1}
+.column-add svg{width:16px;height:16px}
+.column-boundary{position:absolute;z-index:5;pointer-events:auto}
+.column-boundary-line{position:absolute;inset:0;cursor:col-resize;touch-action:none;opacity:0}
+.column-boundary-line:after{content:"";position:absolute;left:7px;top:0;bottom:0;width:1px;background:var(--ui-line)}
+.column-merge{position:absolute;top:0;left:-2px;width:20px;height:20px;display:grid;place-items:center;padding:3px;border:0;background:var(--ui-surface);color:var(--ui-muted);cursor:pointer;opacity:0}
+.column-merge svg{width:14px;height:14px}
+.column-boundary:hover .column-boundary-line,.column-boundary:hover .column-merge,.column-boundary:focus-within .column-boundary-line,.column-boundary:focus-within .column-merge{opacity:1}
+.column-add-menu{position:absolute;top:24px;left:0;z-index:30;max-height:320px;overflow:auto;min-width:160px;background:var(--ui-surface);border:1px solid var(--ui-line);box-shadow:0 6px 24px #0001;padding:4px;pointer-events:auto;border-radius:12px;corner-shape:squircle}
+.column-add-menu button{display:flex;gap:6px;align-items:center;width:100%;padding:6px;border:0;background:transparent;text-align:left;font:inherit;font-size:12px;cursor:pointer}
+.column-add-menu button:hover{background:var(--ui-subtle)}
+.column-add-menu button:disabled{opacity:.35;cursor:default}
+.column-add-menu svg{width:16px;height:16px}
+.snap-canvas .fluid-resize-edge[hidden],.snap-canvas .module-resize-corner[hidden]{display:none}
+@media(pointer:coarse){.column-boundary-line,.column-merge{opacity:.6}.column-add{opacity:1}}
+.snap-canvas .column-add,.snap-canvas .column-merge{min-height:0;max-width:none;min-width:0;box-sizing:border-box}
+.snap-canvas .column-add{width:24px;height:24px}
+.snap-canvas .column-merge{width:20px;height:20px}
+
+[data-project-readonly="true"] .column-slot-tools,[data-project-readonly="true"] .column-boundary{display:none}

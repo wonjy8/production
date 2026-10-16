@@ -1,3 +1,5 @@
+import { snapBoxes } from "./snap-layout.js";
+import { descendants, isBlockLayout, migrateColumns } from "./column-layout.js";
 import { projectBoard, overviewBoardSection } from "./project-structure.js";
 import { planningSnapshot, removePlanningModule } from "./planning-model.js";
 export function transferModule(tabs, from, to, id) {
@@ -14,11 +16,20 @@ export function transferModule(tabs, from, to, id) {
   const copy = { ...planningSnapshot(module, source.modules) };
   for (const key of ["columnId", "rowBreakBefore", "rowBreakAfter", "x", "y"])
     delete copy[key];
+  const selected = descendants(source.modules, id);
+  delete copy.parentSlot;
+  if (isBlockLayout(source.modules)) { copy.blockLayout = true; copy.span = 12; }
+  if (destination.modules.some(m => selected.has(m.id))) return tabs;
+  const moved = [copy, ...source.modules.filter(m => m.id !== id && selected.has(m.id)).map(m => planningSnapshot(m, source.modules))];
+  const destinationModules = isBlockLayout(moved) && !isBlockLayout(destination.modules)
+    ? migrateColumns(destination.modules, snapBoxes(destination.modules, {}, 1000).boxes)
+    : destination.modules;
+  const remaining = [...selected].reduce((modules, selectedId) => removePlanningModule(modules, selectedId), source.modules);
   return tabs.map((t) =>
     t.id === from
-      ? { ...t, modules: removePlanningModule(t.modules, id) }
+      ? { ...t, modules: remaining }
       : t.id === to
-        ? { ...t, modules: [...t.modules, copy] }
+        ? { ...t, modules: [...destinationModules, ...moved] }
         : t,
   );
 }

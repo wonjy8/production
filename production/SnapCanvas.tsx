@@ -1,3 +1,5 @@
+import { ColumnControls } from "./ColumnControls";
+import { isBlockLayout } from "./column-layout.js";
 import { contentHeightResize, naturalModuleHeight } from "./module-resize.js";
 import { delayedPointerDrag } from "../ui/touch-drag.js";
 import { useRef, useState, useEffect, useLayoutEffect, useMemo } from "react";
@@ -172,6 +174,8 @@ export function SnapCanvas({
     );
   function down(e: any, id: string, kind: string) {
     if (
+      (window as any).appAccount?.role === "viewer" ||
+      !!canvas.current?.closest('[data-project-readonly="true"]') ||
       e.button !== 0 ||
       e.isPrimary === false ||
       (kind === "move" &&
@@ -402,7 +406,7 @@ export function SnapCanvas({
       );
       return;
     }
-    if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+    if (isBlockLayout(items) || !["ArrowLeft", "ArrowRight"].includes(e.key)) return;
     e.preventDefault();
     const index = moduleSpans.indexOf(moduleSpan(i)),
       span =
@@ -546,6 +550,7 @@ export function SnapCanvas({
         ),
       }}
     >
+      {isBlockLayout(items) && <ColumnControls items={items} layout={layout} onChange={onChange} onTemplateDrop={onTemplateDrop} />}
       {tabTarget && (
         <div
           className="module-tab-transfer-target"
@@ -574,6 +579,7 @@ export function SnapCanvas({
         </div>
       )}
       {effective.map((i, index) => {
+        if (i.kind === "columns") return null;
         const b = layout.boxes[i.id],
           moving = preview?.id === i.id && preview.kind === "move",
           drag = delayedPointerDrag({
@@ -614,6 +620,7 @@ export function SnapCanvas({
               <>
                 <div
                   className="fluid-resize-edge"
+                  hidden={isBlockLayout(items)}
                   role="separator"
                   tabIndex={0}
                   aria-label="모듈 크기 단계 조절"
@@ -654,6 +661,7 @@ export function SnapCanvas({
                 />
                 <div
                   className="module-resize-corner"
+                  hidden={isBlockLayout(items)}
                   role="button"
                   tabIndex={0}
                   aria-label="모듈 너비와 높이 조절"

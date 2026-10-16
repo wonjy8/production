@@ -15,8 +15,8 @@ export function resolveSharedModule(module,w,refs){
 }
 export function sharedChoices(w,refs){
  const out=[];
- for(const r of refs.filter(r=>!r.deleted))for(const t of referenceTabs(r))for(const m of t.modules)out.push({key:'r:'+r.id+':'+m.id,label:r.title+' / '+t.name+' / '+(m.title||moduleKinds.find(k=>k[0]===m.kind)?.[1]||'모듈'),source:m.source||{kind:'reference',ownerId:r.id,moduleId:m.id},module:m});
- for(const [kind,owners] of [['project',w.projects||[]],['production',w.productions||[]]])for(const p of owners)for(const t of p.customTabs||[])for(const m of t.modules)out.push({key:kind+':'+p.id+':'+m.id,label:(p.name||p.title)+' / '+t.name+' / '+(m.title||moduleKinds.find(k=>k[0]===m.kind)?.[1]||'모듈'),source:m.source||{kind,ownerId:p.id,moduleId:m.id},module:m});
+ for(const r of refs.filter(r=>!r.deleted))for(const t of referenceTabs(r))for(const m of t.modules.filter(m=>m.kind!=="columns"))out.push({key:'r:'+r.id+':'+m.id,label:r.title+' / '+t.name+' / '+(m.title||moduleKinds.find(k=>k[0]===m.kind)?.[1]||'모듈'),source:m.source||{kind:'reference',ownerId:r.id,moduleId:m.id},module:m});
+ for(const [kind,owners] of [['project',w.projects||[]],['production',w.productions||[]]])for(const p of owners)for(const t of p.customTabs||[])for(const m of t.modules.filter(m=>m.kind!=="columns"))out.push({key:kind+':'+p.id+':'+m.id,label:(p.name||p.title)+' / '+t.name+' / '+(m.title||moduleKinds.find(k=>k[0]===m.kind)?.[1]||'모듈'),source:m.source||{kind,ownerId:p.id,moduleId:m.id},module:m});
  return out;
 }
 export function updateSharedOwner(w,source,fn){const key=source.kind==='project'?'projects':'productions';return {...w,[key]:w[key].map(p=>p.id===source.ownerId?{...p,customTabs:(p.customTabs||[]).map(t=>({...t,modules:t.modules.map(m=>m.id===source.moduleId?fn(m):m)}))}:p)}};
