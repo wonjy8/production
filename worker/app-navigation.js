@@ -13,6 +13,7 @@ export const appNavigationScript=String.raw`
   if(location.hash.startsWith('#/')){
    let parts;try{parts=location.hash.slice(2).split('/').map(decodeURIComponent)}catch{return null}
    const [view,scope,record,tabType,tab]=parts;
+   if(view==='documents')return {view:'documents'};
    if(view==='home')return {view:'home',section:['tasks','schedule','projects'].includes(scope)?'home-'+scope:'dashboard'};
    if(view==='projects'||view==='work-groups'){
     const items=view==='projects'?state.productions||[]:state.projects||[],owner=find(items,scope),selectedTab=record==='tabs'?find(owner?.customTabs||[],tabType):null;
@@ -28,6 +29,7 @@ export const appNavigationScript=String.raw`
  }
 
  function route(){
+  if(window.inlineDocumentActive)return {view:'documents'};
   if(mobileLandingSpace)return {view:mobileLandingSpace,landing:'1'};
   if(!settingsPanel.hidden)return {view:'settings',section:settingsCategory};
   if(!databasePanel.hidden)return {view:'database',section:databaseCollection,record:databasePanel.classList.contains('owner-editor')?databasePanel.dataset.searchOwnerId:databaseRecord};
@@ -37,7 +39,8 @@ export const appNavigationScript=String.raw`
  }
  function url(value){
   const result=new URL(location.href);keys.forEach(key=>result.searchParams.delete(key));let parts;
-  if(value.view==='home'){
+  if(value.view==='documents'){parts=['documents'];
+  }else if(value.view==='home'){
    const owner=value.project?(state.projects||[]).find(item=>item.id===value.project):(state.productions||[]).find(item=>item.id===value.group);
    parts=owner?[value.project?'work-groups':'projects',token(owner,value.project?state.projects:state.productions),...sectionPath(owner,value.section)]:value.section?.startsWith('home-')?['home',value.section.slice(5)]:['home'];
   }else if(value.view==='references'){
@@ -54,7 +57,8 @@ export const appNavigationScript=String.raw`
   window.productionSearchTarget=undefined;
   window.closeAppPanels?.();if($('#dialog').open)$('#dialog').close();
   if(value.landing==='1'&&isMobileViewport()){await openMobileWorkspaceHome(value.view);return}
-  if(value.view==='home'){
+  if(value.view==='documents')await window.showInlineDocument();
+  else if(value.view==='home'){
    const project=(state.projects||[]).find(p=>p.id===value.project&&!p.deleted),group=(state.productions||[]).find(p=>p.id===value.group&&!p.deleted);
    await openProduction(project?.id,value.section||'overview',false,project?undefined:group?.id);
   }else if(value.view==='settings')await openSettings(value.section||'general');
@@ -69,6 +73,7 @@ export const appNavigationScript=String.raw`
   await frames();
  }
  function wrap(get,set){const original=get();set(async function(...args){pending++;try{return await original.apply(this,args)}finally{pending--;changed()}})}
+ wrap(()=>window.openInlineDocument,value=>window.openInlineDocument=value);
  wrap(()=>openProduction,value=>openProduction=value);
  wrap(()=>openRefs,value=>openRefs=value);
  wrap(()=>openReferenceModules,value=>openReferenceModules=value);

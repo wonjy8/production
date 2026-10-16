@@ -123,6 +123,7 @@ export function DocumentLibrary({showCompleted=false}:{showCompleted?:boolean}) 
               className="document-library-row"
               key={f.key}
               href={address(f)}
+              onClick={event=>{if(documentFormat(f)&&(window as any).openInlineDocument&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();void (window as any).openInlineDocument(address(f)).catch(()=>{});}}}
               target="_blank"
               rel="noopener noreferrer"
             >

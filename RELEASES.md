@@ -297,3 +297,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Add the same rail to the standalone document editor. Flush edits before returning to Home/Materials/Settings and preserve the selected NAS route.
 - Keep the app version in Settings → General and remove sidebar/public-viewer version labels. Record remaining product scope in docs/PRODUCT-AUDIT-0.1.4.md; production-template extensions and the new cross-project permission approval flow remain pending.
 - NAS 0.1.3 update: replace only `share-view.html` to remove the public-viewer version label, then rebuild/recreate with `sh update.sh`. No API, schema, environment-variable or dependency changes. Preserve `.env` and `data/`. Deliver the versioned replacement-only ZIP in chat; see nas/UPDATE-0.1.4.md.
+
+## 0.1.5
+
+- Move workspace navigation outside the app surface into a compact 48px rail with 36px Squircle buttons, 18px icons, consistent spacing and bottom Settings. Cover rear Materials strokes with the front document surface.
+- Remove the sidebar toggle button. Repeated active-icon clicks toggle the contextual sidebar; other destinations open theirs. Disable collapsed resizing for pointer, keyboard and focus navigation, while retaining stored open width.
+- Run documents in the right content pane without opening a window. Reuse the current editor when returning, restore the last document on reload, and block navigation until edits save. Route Library, resource, file-card, planning and text-conversion document actions into the pane; retain direct document URLs.
+- Keep version in Settings → General. Update the shared UI language specification and verify document original/copy consent in browser and NAS storage.
+- NAS 0.1.4 update: replace only `share-view.html` to synchronize shared design CSS, then rebuild/recreate with `sh update.sh`. No API, schema, dependency or environment changes. Preserve `.env` and `data/`. See nas/UPDATE-0.1.5.md and the replacement-only ZIP delivered in chat.

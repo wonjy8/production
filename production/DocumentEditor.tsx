@@ -873,6 +873,10 @@ function DocumentEditor({ file }: { file: any }) {
     window.addEventListener("blur", blur);
     window.addEventListener("online", online);
     window.addEventListener("keydown", key);
+    (window as any).prepareDocumentNavigation = async () => {
+      if (s.composing || pendingOperations.current) return false;
+      return flush();
+    };
     (window as any).prepareAppUpdate = async () => {
       if (!editor.current || s.composing || pendingOperations.current)
         return false;

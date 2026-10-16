@@ -110,7 +110,7 @@ export function hydrateSidebarIcons(root){
 Object.assign(icons,{"pointer": "<path d=\"m5 3 14 10-7 1-3 7Z\"/>", "crop": "<path d=\"M6 3v15h15M3 6h15v15\"/>", "scan": "<path d=\"M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M7 12h10\"/>", "rotateClockwise": "<path d=\"M20 8a8 8 0 1 0 0 8m0-13v5h-5\"/>"});
 
 // Workspace rail: outline and solid silhouettes share one SVG and one hit target.
-icons.materials='<g transform="rotate(13 15 9)"><rect x="9" y="2.5" width="11" height="14" rx="2.5"/></g><path d="M5.5 7 12 6l5 4-.3 9.5a2.5 2.5 0 0 1-2.3 2.3l-8.5.7A2.5 2.5 0 0 1 3.5 20L3 10a2.5 2.5 0 0 1 2.5-3Z"/><path d="m12 6 .3 4.5L17 10"/>';
+icons.materials='<g transform="rotate(13 15 9)"><rect x="9" y="2.5" width="11" height="14" rx="2.5"/></g><path fill="var(--nav-icon-surface, white)" d="M5.5 7 12 6l5 4-.3 9.5a2.5 2.5 0 0 1-2.3 2.3l-8.5.7A2.5 2.5 0 0 1 3.5 20L3 10a2.5 2.5 0 0 1 2.5-3Z"/><path d="m12 6 .3 4.5L17 10"/>';
 const solidNavigation={
  home:'<path fill-rule="evenodd" d="M2.4 10.2 10.6 3a2.1 2.1 0 0 1 2.8 0l8.2 7.2a1.2 1.2 0 0 1-.8 2.1H20V20a2 2 0 0 1-2 2h-4.2v-6a1.8 1.8 0 0 0-3.6 0v6H6a2 2 0 0 1-2-2v-7.7h-.8a1.2 1.2 0 0 1-.8-2.1Z"/>',
  materials:'<g fill="none" stroke="currentColor" stroke-width="1.75" transform="rotate(13 15 9)"><rect x="9" y="2.5" width="11" height="14" rx="2.5"/></g><path fill-rule="evenodd" d="M5.5 6.6 12 5.7l5.4 4.3-.3 9.5a2.9 2.9 0 0 1-2.7 2.7l-8.5.7a2.9 2.9 0 0 1-2.8-2.8l-.5-10.1a2.9 2.9 0 0 1 2.9-3.4Zm7 .9.2 2.6 2.8-.3Z"/>',

@@ -52,6 +52,7 @@ function ResourceLibrary() {
   try {
     const row = await createNote({ title: "제목 없는 문서", properties: {} });
     if (popup) popup.location.replace(documentURL(resourceFile(row), null));
+    else await (window as any).openInlineDocument(documentURL(resourceFile(row), null));
   } catch (e: any) {
     popup?.close();
     throw e;

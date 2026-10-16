@@ -44,7 +44,9 @@ with tempfile.TemporaryDirectory() as td:
     fixture=page.evaluate("""async()=>{const id=crypto.randomUUID();const upload=await fetch('/production/api/ref-files/'+id+'?name=central.txt',{method:'PUT',headers:{'Content-Type':'text/plain'},body:'one original'});if(!upload.ok)throw Error('upload failed');const rows=await fetch('/production/api/database/resources').then(r=>r.json());return {id,row:rows.find(r=>r.id===id)}}""")
     assert fixture['row']['title']=='central.txt' and fixture['row']['origins']==[],fixture
     assert fixture['row']['canTrash'] is True
-    page.locator('[data-main-space=references]').first.click();page.locator('button[data-source-section=resources]').click()
+    page.locator('[data-main-space=references]').first.click()
+    if page.evaluate("document.body.classList.contains('sidebar-collapsed')"):page.locator('[data-main-space=references]').first.click()
+    page.locator('button[data-source-section=resources]').click()
     page.get_by_role('button',name='central.txt',exact=True).wait_for()
     page.evaluate("""async id=>{const w=window.productionBridge.read();for(const [key,name,hidden] of [['catalog-a','프로젝트 A',false],['catalog-b','프로젝트 B',true]])w.productions.push({id:key,name,status:'진행 중',tasks:[],teams:[],memberIds:[],customTabs:[{id:key+'-tab',name:'자료 탭',hidden,modules:[{id:key+'-db',kind:'database',files:[{id,name:'central.txt',kind:'file',mime:'text/plain'}]}]}]});window.productionBridge.write(w);await window.flushDocumentModules()}""",fixture['id'])
     page.get_by_role('button',name='새로고침',exact=True).click()
@@ -68,22 +70,24 @@ with tempfile.TemporaryDirectory() as td:
     original=next(r for r in rows if r['id']==fixture['id']);copy=next(r for r in rows if r['title']=='central.txt 사본')
     assert copy['fileId']!=original['fileId'] and len(original['origins'])==2
     # A shared document must offer original/copy selection before autosaving.
-    with page.expect_popup() as opened:card.get_by_role('button',name='central.txt',exact=True).click()
-    document=opened.value
+    card.get_by_role('button',name='central.txt',exact=True).click()
+    page.locator('#inline-document-panel iframe').wait_for()
+    document=page.locator('#inline-document-panel iframe').element_handle().content_frame()
     prompt=document.get_by_role('dialog',name='원본 문서 편집',exact=True);prompt.wait_for()
     assert '프로젝트 A' in prompt.inner_text()
     prompt.get_by_role('button',name='원본 수정',exact=True).click()
     document.locator('.tiptap').wait_for();document.get_by_role('textbox',name='문서 본문',exact=True).fill('saved through original editor')
     document.wait_for_function("document.querySelector('.document-header [role=status]')?.textContent.endsWith('저장됨')")
     assert page.evaluate("id=>fetch('/production/api/ref-files/'+id).then(r=>r.text())",fixture['id'])=='saved through original editor'
-    document.close()
-    with page.expect_popup() as opened:card.get_by_role('button',name='central.txt',exact=True).click()
-    document=opened.value
+    page.locator('[data-main-space=references]').first.click()
+    card.get_by_role('button',name='central.txt',exact=True).click()
+    page.locator('#inline-document-panel iframe').wait_for()
+    document=page.locator('#inline-document-panel iframe').element_handle().content_frame()
     document.get_by_role('dialog',name='원본 문서 편집',exact=True).get_by_role('button',name='사본을 만들어 편집',exact=True).click()
     document.wait_for_function('(id)=>new URLSearchParams(location.search).get("document")!==id',arg=fixture['id'])
     document.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
     assert document.get_by_role('dialog',name='원본 문서 편집',exact=True).count()==0
-    document.close()
+    page.locator('[data-main-space=references]').first.click()
     # Editing one original never changes an explicitly created independent copy.
     result=page.evaluate("""async ({original,copy})=>{const file=await fetch('/production/api/ref-files/'+original.fileId);const update=await fetch('/production/api/ref-files/'+original.fileId,{method:'PUT',headers:{'Content-Type':'text/plain','If-Match':file.headers.get('ETag')},body:'edited original'});return {status:update.status,copy:await fetch('/production/api/ref-files/'+copy.fileId).then(r=>r.text())}}""",{'original':original,'copy':copy})
     assert result=={'status':200,'copy':'one original'},result

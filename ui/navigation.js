@@ -1,6 +1,7 @@
 const breadcrumbNav=document.createElement('nav');breadcrumbNav.className='breadcrumbs';breadcrumbNav.setAttribute('aria-label','현재 위치');document.querySelector('.topbar .brand').append(breadcrumbNav);
 function syncBreadcrumbs(){if(!loaded)return;const settings=!settingsPanel.hidden,db=!databasePanel.hidden,items=[];
- if(mobileLandingSpace){items.push({label:workspaceDefinitions.find(w=>w.id===mobileLandingSpace)?.label||'설정',action:mobileLandingSpace});}
+ if(window.inlineDocumentActive){items.push({label:'문서 편집기',action:'current'});}
+ else if(mobileLandingSpace){items.push({label:workspaceDefinitions.find(w=>w.id===mobileLandingSpace)?.label||'설정',action:mobileLandingSpace});}
  else if(settings){items.push({label:'설정',action:'settings'});const category=typeof settingsCategories!=='undefined'?settingsCategories.find(c=>c[0]===settingsCategory):null;if(category)items.push({label:category[1],action:'current'})}
  else if(db){items.push({label:'자료',action:'references'});if(db){const collection=databaseCollections.find(c=>c[0]===databaseCollection);if(collection)items.push({label:collection[1],action:'database'});}}
  else if(refPage){items.push({label:'자료',action:'references'});const category=workspaceDefinitions[1].sections.find(([id])=>id===sourceSection)||workspaceDefinitions[1].sections[0];items.push({label:category[1],action:'reference-section',section:category[0]});const record=refs.find(r=>r.id===window.activeReferenceId&&!r.deleted);if(record)items.push({label:record.title,action:'current'});else if(window.sourceGalleryVisible)items.push({label:'갤러리',action:'current'});}

@@ -5,6 +5,7 @@ const mobileWorkspaceBack=document.createElement('button');mobileWorkspaceBack.c
 function isMobileViewport(){return window.matchMedia('(max-width:720px)').matches}
 function dismissMobileWorkspaceHome(){mobileLandingSpace='';mobileLandingPanel.hidden=true;window.mobileWorkspaceHome=''}
 async function openMobileWorkspaceHome(id){
+ if(id==='documents')return window.showInlineDocument();
  if(id==='database')id='references';
  if(!loaded)return;
  try{await prepareWorkspaceNavigation()}catch(error){toast(error.message);return}
@@ -20,7 +21,7 @@ async function openMobileWorkspaceHome(id){
  localStorage.setItem('pn-space',id);setTopTitle(label);syncSpaceChrome();
 }
 mobileWorkspaceBack.onclick=()=>openMobileWorkspaceHome(window.activeWorkspace||'settings');
-window.syncMobileWorkspaceChrome=space=>{mobileWorkspaceBack.hidden=!isMobileViewport()||!!mobileLandingSpace||(space==='production'&&!selected&&localStorage.getItem('pn-production-view')!=='production')};
+window.syncMobileWorkspaceChrome=space=>{mobileWorkspaceBack.hidden=space==='documents'||!isMobileViewport()||!!mobileLandingSpace||(space==='production'&&!selected&&localStorage.getItem('pn-production-view')!=='production')};
 function syncMobileNavigation(){
  const mobile=isMobileViewport();
  if(mobile){mobileBottomNav.append(sidebarMainNav);sidebarMainNav.append(sidebarSettingsButton);sidebarSettingsButton.dataset.mainSpace='settings';sidebarSettingsButton.setAttribute('aria-label','설정');sidebarSettingsButton.classList.add('keep-label')}

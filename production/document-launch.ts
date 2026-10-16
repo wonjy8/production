@@ -9,6 +9,7 @@ export function documentURL(
   url.search = "";
   url.hash = "";
   url.searchParams.set("document", file.id);
+  if(new URLSearchParams(location.search).has("embedded"))url.searchParams.set("embedded","1");
   url.searchParams.set("name", file.name || "문서.docx");
   if (file.mime) url.searchParams.set("mime", file.mime);
   const context =
@@ -30,16 +31,18 @@ export function documentURL(
 }
 export function openDocument(file: any) {
   if (!documentFormat(file)) return;
-  window.open(documentURL(file), "_blank", "noopener,noreferrer");
+  if ((window as any).openInlineDocument) void (window as any).openInlineDocument(documentURL(file)).catch(()=>{});
+  else window.open(documentURL(file), "_blank", "noopener,noreferrer");
 }
 export async function convertTextDocument(
   module: any,
   onChange: (fn: any) => any,
 ) {
-  const tab = window.open("about:blank", "_blank");
-  if (!tab) throw Error("새 탭 열기를 허용한 뒤 다시 시도하세요.");
-  tab.opener = null;
-  tab.document.body.textContent = "문서를 준비하는 중…";
+  const inline = (window as any).openInlineDocument;
+  const tab = inline ? null : window.open("about:blank", "_blank");
+  if (!tab && !inline) throw Error("새 탭 열기를 허용한 뒤 다시 시도하세요.");
+  if(tab){tab.opener = null;
+  tab.document.body.textContent = "문서를 준비하는 중…";}
   try {
     const { saveDocument } = await loadDocumentTools();
     const content = {
@@ -70,10 +73,11 @@ export async function convertTextDocument(
     });
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
     await (window as any).flushDocumentModules?.();
-    tab.location.replace(documentURL(file));
+    if(tab)tab.location.replace(documentURL(file));
+    else await inline(documentURL(file));
     return file;
   } catch (error) {
-    tab.close();
+    tab?.close();
     throw error;
   }
 }

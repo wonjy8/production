@@ -218,6 +218,7 @@ export function PlanningModule({
           <a
             className="plan-resource"
             href={url}
+            onClick={event=>{if(r.fileId&&documentFormat(file)&&(window as any).openInlineDocument&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();void (window as any).openInlineDocument(url).catch(()=>{});}}}
             target="_blank"
             rel="noopener noreferrer"
           >

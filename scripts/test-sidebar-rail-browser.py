@@ -37,53 +37,87 @@ with tempfile.TemporaryDirectory() as td:
    import io,zipfile,json
    page.goto('https://pages.test:9443/production/')
    page.wait_for_function('!!window.productionBridge && typeof window.mountProduction === "function"')
-   if 'sidebar-collapsed' in (page.locator('body').get_attribute('class') or ''):page.locator('#menu').click()
-   nav=page.locator('#sidebar .sidebar-main-spaces');expect(nav).to_be_visible()
+   nav=page.locator('.workspace-rail .sidebar-main-spaces');expect(nav).to_be_visible()
    assert nav.locator('[data-main-space]').evaluate_all('(buttons)=>buttons.map(b=>b.dataset.mainSpace)')==['home','references','documents','settings']
-   assert page.locator('.app-release-version').count()==0
-   metrics=page.evaluate("""()=>{const side=document.querySelector('#sidebar').getBoundingClientRect(),rail=document.querySelector('.sidebar-fixed-top').getBoundingClientRect(),scroll=document.querySelector('.sidebar-scroll').getBoundingClientRect(),settings=document.querySelector('.sidebar-main-spaces [data-main-space=settings]').getBoundingClientRect();return {inside:Math.abs(rail.left-side.left)<=1&&rail.right<side.right,divider:getComputedStyle(document.querySelector('.sidebar-fixed-top')).borderRightWidth,content:scroll.left>=rail.right-1,bottom:side.bottom-settings.bottom}}""")
-   assert metrics['inside'] and metrics['divider']=='1px' and metrics['content'] and 5<=metrics['bottom']<=25,metrics
-   page.locator('[data-main-space=references]').first.click()
-   expect(page.locator('[data-main-space=references]').first).to_have_attribute('aria-pressed','true')
-   assert page.locator('[data-main-space=references]').first.locator('.nav-solid').evaluate('(g)=>getComputedStyle(g).display')!='none'
-   assert page.locator('[data-main-space=home]').first.locator('.nav-solid').evaluate('(g)=>getComputedStyle(g).display')=='none'
-   colors=nav.locator('[data-main-space]').evaluate_all("bs=>bs.map(b=>({space:b.dataset.mainSpace,color:getComputedStyle(b).color,bg:getComputedStyle(b).backgroundColor}))")
-   assert next(c for c in colors if c['space']=='references')['color']=='rgb(24, 25, 27)',colors
-   assert next(c for c in colors if c['space']=='home')['bg']=='rgba(0, 0, 0, 0)',colors
+   assert page.locator('#menu').count()==0
+   metrics=page.evaluate("""()=>{const rail=document.querySelector('.workspace-rail').getBoundingClientRect(),side=document.querySelector('#sidebar').getBoundingClientRect(),settings=document.querySelector('.workspace-rail [data-main-space=settings]').getBoundingClientRect();return {outside:rail.right<=side.left,size:getComputedStyle(document.querySelector('.workspace-rail svg')).width,bottom:innerHeight-settings.bottom}}""")
+   assert metrics['outside'] and metrics['size']=='18px' and 5<=metrics['bottom']<=25,metrics
+   home=nav.locator('[data-main-space=home]');home.click()
+   expect(page.locator('body')).to_have_class(re.compile('sidebar-collapsed'))
+   assert page.locator('.sidebar-resize').get_attribute('aria-disabled')=='true'
+   before=page.evaluate("localStorage.getItem('pn-sidebar-width')")
+   page.locator('.sidebar-resize').dispatch_event('keydown',{'key':'ArrowRight'})
+   page.locator('.sidebar-resize').dispatch_event('pointerdown',{'clientX':100,'pointerId':1})
+   page.locator('.sidebar-resize').dispatch_event('pointermove',{'clientX':200,'pointerId':1})
+   assert page.evaluate("localStorage.getItem('pn-sidebar-width')")==before
+   home.click();expect(page.locator('.sidebar-resize')).to_have_attribute('aria-disabled','false')
+   page.locator('.sidebar-resize').focus();page.keyboard.press('ArrowRight')
+   assert int(page.evaluate("localStorage.getItem('pn-sidebar-width')"))==int(before)+10
+   home.click()
+   nav.locator('[data-main-space=references]').click()
+   expect(nav.locator('[data-main-space=references]')).to_have_attribute('aria-pressed','true')
+   expect(nav.locator('[data-main-space=references]')).to_have_attribute('aria-expanded','true')
+   assert not page.evaluate("document.body.classList.contains('sidebar-collapsed')")
+   assert nav.locator('[data-main-space=references] .nav-solid').evaluate('(g)=>getComputedStyle(g).display')!='none'
+   # The front document has an opaque surface, covering the rear outline.
+   fill=nav.locator('[data-main-space=references] .nav-outline>path').first.evaluate('(g)=>getComputedStyle(g).fill')
+   assert fill!='none',fill
    page.screenshot(path='/tmp/production-sidebar-materials.png',full_page=True)
-   page.locator('[data-main-space=settings]').first.click()
+   nav.locator('[data-main-space=settings]').click()
    page.locator('#sidebar [data-settings-category=general]').click()
-   expect(page.locator('.app-version-row')).to_contain_text('v0.1.4')
+   expect(page.locator('.app-version-row')).to_contain_text('v0.1.5')
    page.screenshot(path='/tmp/production-sidebar-settings.png',full_page=True)
-   with page.expect_popup() as opened:page.locator('[data-main-space=documents]').first.click()
-   document=opened.value;document.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
-   rail=document.locator('.document-workspace-rail');expect(rail).to_be_visible();expect(rail.locator('[data-main-space=documents]')).to_have_attribute('aria-pressed','true')
-   box=document.locator('#document-editor-root').bounding_box();assert box['x']==64 and box['x']+box['width']<=1401,box
-   document.get_by_role('textbox',name='문서 본문',exact=True).fill('Saved before leaving the document rail')
-   file_id=document.evaluate('new URLSearchParams(location.search).get("document")')
-   document.screenshot(path='/tmp/production-sidebar-document.png',full_page=True)
-   rail.locator('[data-main-space=home]').click()
-   document.wait_for_function('!new URLSearchParams(location.search).has("document")&&!!window.productionBridge')
-   expect(document.locator('[data-main-space=home]').first).to_have_attribute('aria-pressed','true')
-   raw=document.evaluate("async id=>btoa(String.fromCharCode(...new Uint8Array(await fetch('/production/api/ref-files/'+id).then(r=>r.arrayBuffer()))))",file_id)
-   import io,zipfile
-   with zipfile.ZipFile(io.BytesIO(base64.b64decode(raw))) as saved:assert b'Saved before leaving the document rail' in saved.read('word/document.xml')
-   document.close()
-   page.locator('#menu').click()
-   expect(nav).to_be_visible();assert page.locator('#sidebar').bounding_box()['width']==64
-   page.locator('[data-main-space=home]').first.click()
+   page_count=len(context.pages)
+   nav.locator('[data-main-space=documents]').click()
+   document=page.frame_locator('#inline-document-panel iframe')
+   editor=document.get_by_role('textbox',name='문서 본문',exact=True);editor.wait_for()
+   assert len(context.pages)==page_count
+   box=page.locator('#inline-document-panel iframe').bounding_box();side=page.locator('#sidebar').bounding_box()
+   assert box['x']>=side['x']+side['width'] and box['x']+box['width']<=1401,box
+   assert document.locator('#document-editor-root').bounding_box()['width']<=box['width']+1
+   editor.fill('Saved before leaving inline document')
+   file_id=document.locator('body').evaluate('()=>new URLSearchParams(location.search).get("document")')
+   page.screenshot(path='/tmp/production-sidebar-document.png',full_page=True)
+   document.locator('body').evaluate('()=>{window.testSaveHook=window.prepareDocumentNavigation;window.prepareDocumentNavigation=async()=>false}')
+   nav.locator('[data-main-space=home]').click()
+   expect(nav.locator('[data-main-space=documents]')).to_have_attribute('aria-pressed','true')
+   expect(page.locator('#inline-document-panel')).to_be_visible()
+   document.locator('body').evaluate('()=>{window.prepareDocumentNavigation=window.testSaveHook}')
+   nav.locator('[data-main-space=home]').click()
+   expect(nav.locator('[data-main-space=home]')).to_have_attribute('aria-pressed','true')
+   expect(page.locator('#inline-document-panel')).to_be_hidden()
+   raw=page.evaluate("async id=>btoa(String.fromCharCode(...new Uint8Array(await fetch('/production/api/ref-files/'+id).then(r=>r.arrayBuffer()))))",file_id)
+   with zipfile.ZipFile(io.BytesIO(base64.b64decode(raw))) as saved:assert b'Saved before leaving inline document' in saved.read('word/document.xml')
+   page.wait_for_function("location.hash==='#/home'")
+   page.go_back();expect(nav.locator('[data-main-space=documents]')).to_have_attribute('aria-pressed','true');expect(editor).to_contain_text('Saved before leaving inline document')
+   page.go_forward();expect(nav.locator('[data-main-space=home]')).to_have_attribute('aria-pressed','true')
+   nav.locator('[data-main-space=documents]').click();expect(editor).to_contain_text('Saved before leaving inline document')
    page.set_viewport_size({'width':390,'height':844})
-   expect(page.locator('.mobile-bottom-nav [data-main-space=documents]')).to_be_visible()
+   mobile=page.locator('.mobile-bottom-nav')
+   expect(mobile.locator('[data-main-space=documents]')).to_be_visible()
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
-   page.locator('.mobile-bottom-nav [data-main-space=references]').click()
-   expect(page.locator('.mobile-bottom-nav [data-main-space=references]')).to_have_attribute('aria-pressed','true')
-   with page.expect_popup() as opened:page.locator('.mobile-bottom-nav [data-main-space=documents]').click()
-   document=opened.value;document.set_viewport_size({'width':390,'height':844});document.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
-   box=document.locator('#document-editor-root').bounding_box();assert box['x']==52 and box['x']+box['width']<=391,box
-   document.screenshot(path='/tmp/production-sidebar-document-mobile.png',full_page=True);document.close()
-   page.screenshot(path='/tmp/production-sidebar-mobile.png',full_page=True)
+   mobile.locator('[data-main-space=home]').click()
+   mobile.locator('[data-main-space=references]').click()
+   expect(mobile.locator('[data-main-space=references]')).to_have_attribute('aria-pressed','true')
+   expect(page.locator('#sidebar')).to_have_class(re.compile('open'))
+   mobile.locator('[data-main-space=references]').click()
+   assert 'open' not in (page.locator('#sidebar').get_attribute('class') or '')
+   mobile.locator('[data-main-space=documents]').click()
+   # Close its contextual drawer without opening another document.
+   mobile.locator('[data-main-space=documents]').click()
+   expect(editor).to_be_visible()
+   assert len(context.pages)==page_count
+   box=page.locator('#inline-document-panel iframe').bounding_box();assert box['x']>=0 and box['x']+box['width']<=391,box
+   page.screenshot(path='/tmp/production-sidebar-document-mobile.png',full_page=True)
+   page.wait_for_function("location.hash==='#/documents'")
+   page.reload();editor=page.frame_locator('#inline-document-panel iframe').get_by_role('textbox',name='문서 본문',exact=True);expect(editor).to_contain_text('Saved before leaving inline document')
+   assert len(context.pages)==page_count
+   mobile.locator('[data-main-space=home]').click();expect(mobile.locator('[data-main-space=home]')).to_have_attribute('aria-pressed','true')
+   page.evaluate("window.openInlineDocument(location.pathname+'?document=00000000-0000-0000-0000-000000000000&name=missing.txt&mime=text/plain')")
+   expect(page.frame_locator('#inline-document-panel iframe').locator('.document-header [role=status]')).to_contain_text('문서를 열지 못했습니다')
+   mobile.locator('[data-main-space=home]').click();expect(mobile.locator('[data-main-space=home]')).to_have_attribute('aria-pressed','true')
    assert not errors,errors
-   print('PASS sidebar: interior rail/divider, filled selection, stacked materials glyph, bottom settings, version only in settings, document rail + saved navigation, collapsed rail, four mobile icons and mobile editor bounds',flush=True)
+   print('PASS sidebar: external compact rail, spacing, filled/opaque icons, settings version, icon toggle, resize guards, embedded editor + save on navigation/resume, mobile bounds and toggle',flush=True)
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

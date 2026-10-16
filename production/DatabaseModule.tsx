@@ -177,7 +177,7 @@ export function ResourceDatabase({
     }
     const file = resourceFile(row);
     if (row.fileId && documentFormat(file))
-      window.open(documentURL(file, null), "_blank", "noopener,noreferrer");
+      {if((window as any).openInlineDocument)void (window as any).openInlineDocument(documentURL(file,null)).catch(()=>{});else window.open(documentURL(file, null), "_blank", "noopener,noreferrer");}
     else if (row.fileId) {
       const preview =
         /^(image\/(png|jpeg|webp|gif)|video\/(mp4|webm)|audio\/(mpeg|mp4|wav|ogg)|application\/pdf)$/.test(
@@ -525,7 +525,7 @@ export function ResourceDatabase({
           }}
           onSave={async (draft: any) => {
             let popup: Window | null = null;
-            if (!editing) {
+            if (!editing && !(window as any).openInlineDocument) {
               popup = window.open("about:blank", "_blank");
               if (popup) {
                 popup.opener = null;
@@ -539,6 +539,7 @@ export function ResourceDatabase({
               await attach(row);
               if (popup)
                 popup.location.replace(documentURL(resourceFile(row), null));
+              else if(!editing && (window as any).openInlineDocument)await (window as any).openInlineDocument(documentURL(resourceFile(row),null));
               return row;
             });
             if (result) {
