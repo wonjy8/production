@@ -1,7 +1,15 @@
 import {iconSVG,inferIcon} from './icons.js';
 import {installDropdowns} from './dropdowns.js';
 const exclude='.source-gallery button,.admin-home button,.merge-project,.sidebar-project,.refopen,.task-title,.calendar-event,.calendar-task,.assignee-trigger,.assignee-popover button,.status-options button,.navlink,.keep-label,.space-switch,.space-option,.sidebar-ref-link';
-export function decorateUI(root){root.querySelectorAll('button').forEach(b=>{
+export function decorateUI(root){
+ root.querySelectorAll('button,input,textarea,select,[contenteditable]').forEach(el=>{
+  const locked=!!el.closest?.('[data-project-readonly="true"],[data-document-frozen="true"]');
+  const label=el.getAttribute('aria-label')||el.textContent||'';
+  const navigation=el.closest?.('.merge-sections,.resource-view-switch,.resource-type-tabs')||/사본|다운로드|다시 진행|보존본 준비|사용처|미리보기|열기|닫기|보기|필터|검색|정렬|내보내기/.test(label);
+  const mutable=!navigation&&(el.matches?.('input:not([type=search]),textarea,select,[contenteditable]')||/추가|삭제|수정|편집|저장|제거|이름|업로드|완료|체크|구성|그룹 관리/.test(label));
+  if(locked&&mutable&&!el.disabled){el.disabled=true;el.dataset.completionDisabled='true'}else if(!locked&&el.dataset.completionDisabled==='true'){el.disabled=false;delete el.dataset.completionDisabled}
+ });
+root.querySelectorAll('button').forEach(b=>{
  const actionLabel=b.getAttribute('aria-label')||b.textContent.trim();
  b.classList.toggle('ui-add-action',/추가|^[＋+]$/.test(actionLabel)&&!b.matches('.hub-card,.module-tab-empty,.calendar-event,.calendar-task,.tt-slot,.calendar-add'));
  if(b.matches(exclude))return;

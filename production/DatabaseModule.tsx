@@ -49,6 +49,7 @@ export function ResourceDatabase({
   onChange,
   global = false,
   filterType = "all",
+  showCompleted=false,
 }: any) {
   const [rows, setRows] = useState<any[]>([]),
     [query, setQuery] = useState(""),
@@ -63,6 +64,7 @@ export function ResourceDatabase({
     [settings, setSettings] = useState(false),
     [preview, setPreview] = useState<any>(null),
     [usage, setUsage] = useState<any>(null),
+    [folder,setFolder]=useState(""),
     [view, setView] = useState(
       module?.databaseView ||
         (global
@@ -108,7 +110,7 @@ export function ResourceDatabase({
       (r) => !r.deleted && r.properties?.documentFont !== "true",
     ),
     selected = global
-      ? active
+      ? active.filter(r=>r.completionOwner?showCompleted&&(!folder||r.completionOwner.id===folder):!showCompleted||!folder)
       : active.filter((r) => ids.has(r.fileId || r.id)),
     needle = query.trim().normalize("NFKC").toLocaleLowerCase(),
     visible = selected
@@ -295,6 +297,7 @@ export function ResourceDatabase({
       style={{ "--resource-columns": fields.length } as any}
       aria-label={global ? "통합 자료 데이터베이스" : "데이터베이스 모듈"}
     >
+      {global&&showCompleted&&<nav className="completed-project-folders" aria-label="완료된 프로젝트 폴더"><h2>완료된 프로젝트</h2><button className="button keep-label" aria-pressed={!folder} onClick={()=>setFolder("")}>모든 자료</button>{[...new Map<string,any>(rows.filter(r=>r.completionOwner&&!r.deleted).map(r=>[r.completionOwner.id,r.completionOwner])).values()].map(owner=><button className="button keep-label" key={owner.id} aria-pressed={folder===owner.id} onClick={()=>setFolder(owner.id)}>{owner.name}</button>)}</nav>}
       <header className="resource-toolbar">
         <input
           type="search"

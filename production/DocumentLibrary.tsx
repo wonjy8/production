@@ -7,7 +7,7 @@ import { documentLibrary } from "./document-library.js";
 import { documentFormat } from "./document-types";
 import { documentURL } from "./document-launch";
 import { Icon } from "./Icon";
-export function DocumentLibrary() {
+export function DocumentLibrary({showCompleted=false}:{showCompleted?:boolean}) {
   const [error, setError] = useState("");
   const [resources, setResources] = useState<any[]>([]);
   const [data, setData] = useState(() => window.sourceGalleryBridge.read()),
@@ -36,7 +36,7 @@ export function DocumentLibrary() {
       window.removeEventListener("gallery-changed", update);
     };
   }, []);
-  const library = documentLibrary(data.workspace, data.references, resources),
+  const library = documentLibrary(data.workspace, data.references, resources,{showCompleted}),
     crumbs = [library.root];
   let folder = library.root;
   for (const id of path) {

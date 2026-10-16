@@ -1,7 +1,7 @@
 /* API bridge keeps media, canvas and downloads same-origin on GitHub Pages.
  * Authentication is an HttpOnly, Secure, partitioned cookie at the NAS.
  * NAS responses are not cached. Local mode stores data in IndexedDB. */
-importScripts('./pages-route.js','./pages-local.js');
+importScripts('./pages-route.js','./completion-policy.js','./pages-local.js');
 self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', event => event.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith('production-wordcraft-'))await caches.delete(key);await self.clients.claim()})()));
 async function connectionFor(href){const value=self.productionConnectionFromURL(href,self.registration.scope);if(!value.startsWith('alias:'))return value;const origin=await localRead('account','nas-alias:'+value.slice(6));if(!origin)throw Error('이 브라우저에 등록되지 않은 NAS 별칭입니다. 원래 NAS 주소로 먼저 접속하세요.');return self.productionConnectionFromURL(self.registration.scope+encodeURIComponent(origin),self.registration.scope)}

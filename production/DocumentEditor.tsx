@@ -404,6 +404,7 @@ function DocumentEditor({ file }: { file: any }) {
   const originalConsent=useRef(false);
   const [originalPrompt,setOriginalPrompt]=useState<any>(null);
   const [copyingOriginal,setCopyingOriginal]=useState(false);
+  const [frozenDocument,setFrozenDocument]=useState(false);
   useEffect(() => {
     editor.current?.view.dom.dispatchEvent(new Event("document-layout-change"));
   }, [ready, zoom, fitScale, showLayout]);
@@ -427,7 +428,7 @@ function DocumentEditor({ file }: { file: any }) {
         const row = rows.find((r: any) => r.fileId === file.id);
         if (row) {
           resource.current = row;
-          if(row.origins?.length)setOriginalPrompt(row);else originalConsent.current=true;
+          if(row.completionOwner){setFrozenDocument(true);editor.current?.setEditable(false);setOriginalPrompt(row)}else if(row.origins?.length)setOriginalPrompt(row);else originalConsent.current=true;
           const ext = file.name.match(/\.[^.]+$/)?.[0] || "";
           file.name = row.title.toLowerCase().endsWith(ext.toLowerCase())
             ? row.title
@@ -538,7 +539,7 @@ function DocumentEditor({ file }: { file: any }) {
     } catch (e: any) {
       setError(e.message);
     } finally {
-      editor.current?.setEditable(true);
+      editor.current?.setEditable(!frozenDocument);
       setExporting(false);
     }
   }
@@ -766,6 +767,7 @@ function DocumentEditor({ file }: { file: any }) {
             opaque,
           ],
           content,
+          editable:!resource.current?.completionOwner,
           editorProps: {
             scrollMargin: { top: 40, right: 12, bottom: 100, left: 38 },
             handleClick: (_view, _pos, event) => {
@@ -910,7 +912,7 @@ function DocumentEditor({ file }: { file: any }) {
             : "") +
           (editor.current?.isActive(name) ? " selected" : "")
         }
-        disabled={!ready}
+        disabled={!ready||frozenDocument}
         type="button"
         aria-label={
           {
@@ -984,13 +986,13 @@ function DocumentEditor({ file }: { file: any }) {
     );
   }
   return (
-    <main className="document-editor" data-selection={active}>
-      {originalPrompt&&<Modal title="원본 문서 편집" onClose={()=>{setOriginalPrompt(null);setStatus('원본 수정 선택 대기')}}>
+    <main className="document-editor" data-selection={active} data-document-frozen={frozenDocument||undefined}>
+      {originalPrompt&&<Modal title={frozenDocument?"완료 보존본 · 읽기 전용":"원본 문서 편집"} onClose={()=>{setOriginalPrompt(null);setStatus('원본 수정 선택 대기')}}>
        <ResourceUsage row={originalPrompt} notice/>{error&&<p role="alert">{error}</p>}
-       <button className="button keep-label" disabled={copyingOriginal} onClick={()=>{originalConsent.current=true;setOriginalPrompt(null);session.current?.flush()}}>원본 수정</button>
+       {!frozenDocument&&<button className="button keep-label" disabled={copyingOriginal} onClick={()=>{originalConsent.current=true;setOriginalPrompt(null);session.current?.flush()}}>원본 수정</button>}
        <button className="button keep-label" disabled={copyingOriginal} onClick={async()=>{setCopyingOriginal(true);pendingOperations.current++;try{const copy=await copyResource(originalPrompt);location.assign(documentURL(resourceFile(copy),null))}catch(e:any){setError(e.message)}finally{setCopyingOriginal(false);pendingOperations.current--}}}>{copyingOriginal?"사본 만드는 중…":"사본을 만들어 편집"}</button>
       </Modal>}
-      {!originalConsent.current&&!originalPrompt&&resource.current&&<button className="button keep-label" onClick={()=>setOriginalPrompt(resource.current)}>원본 수정 방식 선택</button>}
+      {!originalConsent.current&&!originalPrompt&&resource.current&&<button className="button keep-label" onClick={()=>setOriginalPrompt(resource.current)}>{frozenDocument?"완료 보존본 · 사본으로 편집":"원본 수정 방식 선택"}</button>}
       <header className="document-header">
         <span className="document-logo" title="문서 편집기">
           <Icon name="file" />
@@ -1446,7 +1448,7 @@ function DocumentEditor({ file }: { file: any }) {
                           <select
                             aria-label="글꼴"
                             className="keep-label"
-                            disabled={!ready}
+                            disabled={!ready||frozenDocument}
                             value={
                               editor.current?.getAttributes("textStyle")
                                 .fontFamily || "Arial"

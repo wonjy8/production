@@ -16,3 +16,11 @@ assert.equal(documentLibrary(w,references,[{fileId:'doc',deleted:true}]).entries
 assert.equal(documentLibrary(w,references,[{fileId:'doc',deleted:true,purged:true}]).entries.some(f=>f.id==='doc'),false);
 assert.equal(JSON.stringify({w,references}),before);
 console.log('Document catalog trash hides every placement while preserving shared originals');
+
+const completedResource={id:'doc',fileId:'doc',title:'계획',file:file('doc','계획.docx'),completionOwner:{id:'parent',name:'완료 프로젝트'}};
+assert.equal(documentLibrary(w,references,[completedResource]).entries.some(f=>f.id==='doc'),false);
+const visibleCompleted=documentLibrary(w,references,[completedResource],{showCompleted:true}).entries.filter(f=>f.id==='doc');
+assert.equal(visibleCompleted.length,1);
+assert.deepEqual(visibleCompleted[0].path.map(p=>p.name),['완료된 프로젝트','완료 프로젝트']);
+assert.equal(JSON.stringify({w,references}),before);
+console.log('Completed documents: hidden from normal entries/search, visible once in their completed-project folder');

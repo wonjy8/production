@@ -1,4 +1,5 @@
 """Scoped storage API behind authenticated Worker gateway."""
+from completion import apply_completion,frozen
 from access import actor_for,is_admin,scope,apply_tab_visibility,merge_workspace,workspace_data,ref_visible,file_ids,deny,permitted
 from accounts import install
 import asyncio
@@ -222,7 +223,7 @@ def save_workspace(conn, data):
 def health():
     with database() as conn:
         conn.execute('SELECT 1')
-    return {'ok': True, 'schemaVersion': 1, 'storage': 'nas', 'features': {'archiveScopes': 1}}
+    return {'ok': True, 'schemaVersion': 1, 'storage': 'nas', 'features': {'archiveScopes': 1, 'completionCopies': 1}}
 
 
 @app.get('/api/data')
@@ -237,22 +238,28 @@ def workspace(request: Request):
 
 @app.put('/api/data')
 async def put_workspace(request: Request):
-    data = await json_body(request)
-    with write_lock, database() as conn:
-        old = conn.execute('SELECT payload FROM workspace').fetchone()
-        expected = request.headers.get('If-Match')
-        if expected and expected != revision(old[0] if old else '{}'):
-            raise HTTPException(409, 'Data changed on another device; reload before saving')
-        if request.headers.get('X-Import-Only') == '1' and old:
-            if json.loads(old[0]) == data:
-                return {'ok': True}
-            raise HTTPException(409, 'Workspace already exists')
-        actor=actor_for(conn,request)
-        data=merge_workspace(conn,json.loads(old[0]) if old else {'projects':[],'productions':[],'members':[]},data,actor)
-        save_workspace(conn, data)
-        conn.execute('INSERT INTO access_audit(user_id,action,target,created_at) VALUES(?,?,?,?)',(actor['id'],'workspace-save','workspace',now()))
-        conn.execute('INSERT INTO audit_log(action,collection,created_at) VALUES(?,?,?)', ('save', 'workspace', now()))
-    return JSONResponse({'ok': True}, headers={'ETag': revision(packed(data))})
+    data=await json_body(request);created=[];transformed=False
+    try:
+        with write_lock,database() as conn:
+            old=conn.execute('SELECT payload FROM workspace').fetchone();full=json.loads(old[0]) if old else {'projects':[],'productions':[],'members':[]}
+            expected=request.headers.get('If-Match')
+            if expected and expected!=revision(old[0] if old else '{}'):raise HTTPException(409,'Data changed on another device; reload before saving')
+            if request.headers.get('X-Import-Only')=='1' and old:
+                if full==data:return {'ok':True}
+                raise HTTPException(409,'Workspace already exists')
+            actor=actor_for(conn,request);data=merge_workspace(conn,full,data,actor)
+            original=packed(data)
+            data=apply_completion(conn,full,data,actor,now(),catalog_entries,resource_origins,created)
+            transformed=packed(data)!=original
+            save_workspace(conn,data)
+            conn.execute('INSERT INTO access_audit(user_id,action,target,created_at) VALUES(?,?,?,?)',(actor['id'],'workspace-save','workspace',now()))
+            conn.execute('INSERT INTO audit_log(action,collection,created_at) VALUES(?,?,?)',('save','workspace',now()))
+            response={'ok':True}
+            if transformed:response['workspace']=apply_tab_visibility(conn,scope(data,actor),actor)
+    except Exception:
+        for path in created:path.unlink(missing_ok=True)
+        raise
+    return JSONResponse(response,headers={'ETag':revision(packed(data))})
 
 
 @app.get('/api/references')
@@ -332,6 +339,7 @@ def delete_reference(ident: str, request: Request):
 
 
 def can_edit_file(conn,actor,ident):
+    if frozen(conn,ident):return False
     if is_admin(actor):return True
     full=workspace_data(conn);visible=apply_tab_visibility(conn,scope(full,actor),actor)
     referenced=ident in file_ids(full)
@@ -395,7 +403,7 @@ async def put_file(ident: str, request: Request):
                 os.replace(temp.name, target)
                 conn.execute('INSERT INTO file_uploaders VALUES(?,?)',(ident,actor['id']))
                 conn.execute('INSERT INTO files VALUES(?,?,?,?,?)', (ident, request.headers.get('content-type', 'application/octet-stream'), size, digest.hexdigest(), now()))
-            register_original(conn,ident,actor['id'],now(),request.query_params.get('name',''))
+            register_original(conn,ident,actor['id'],now(),request.query_params.get('name',''),not bool(request.headers.get('x-scope-owner')))
         return {'id': ident, 'sha256': digest.hexdigest()}
     finally:
         temp.close()
@@ -488,7 +496,7 @@ def get_file(ident: str, request: Request):
                         headers={'Content-Security-Policy': "default-src 'none'; sandbox", 'X-File-SHA256': row['sha256'], 'ETag': '"'+row['sha256']+'"', 'Cache-Control':'no-store'})
 
 
-from resources import install_resources,register_original
+from resources import install_resources,register_original,catalog_entries,resource_origins
 sync_resource_catalog=install_resources(app,database,write_lock,now,json_body,lambda conn,actor,ident:can_edit_file(conn,actor,ident))
 
 

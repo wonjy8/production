@@ -7,13 +7,14 @@ import { Icon } from "./Icon";
 import { createNote, resourceFile } from "./resources";
 import { documentURL } from "./document-launch";
 function ResourceLibrary() {
+ const [showCompleted,setShowCompleted]=useState(()=>localStorage.getItem("pn-show-completed")==="true");
   const [type, setType] = useState(
     () => localStorage.getItem("pn-resource-type") || "all",
   );
   return (
     <section className="resource-library">
       <header className="workspace-page-heading">
-        <h1>자료</h1>
+        <h1>자료</h1><button className="button keep-label" aria-pressed={showCompleted} onClick={()=>{setShowCompleted(!showCompleted);localStorage.setItem("pn-show-completed",String(!showCompleted))}}>{showCompleted?"완료 자료 숨기기":"완료 자료 보이기"}</button>
       </header>
       <nav className="resource-type-tabs" aria-label="자료 유형">
         {[
@@ -40,9 +41,9 @@ function ResourceLibrary() {
         ))}
       </nav>
       {type === "documents" ? (
-        <DocumentLibrary />
+        <DocumentLibrary showCompleted={showCompleted} />
       ) : (
-        <ResourceDatabase global filterType={type} />
+        <ResourceDatabase global filterType={type} showCompleted={showCompleted} />
       )}
     </section>
   );

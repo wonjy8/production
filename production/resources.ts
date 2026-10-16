@@ -43,6 +43,7 @@ export function resourceFile(row: any) {
   if (row.kind === "text")
     return {
       id: row.id,
+      resourceId:row.id,
       name: row.title,
       kind: "text",
       text: row.content || "",
@@ -53,6 +54,7 @@ export function resourceFile(row: any) {
     "";
   return {
     id: row.fileId || row.id,
+    resourceId:row.id,
     name:
       row.title +
       (row.fileId &&

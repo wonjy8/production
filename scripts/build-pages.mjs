@@ -37,19 +37,19 @@ for (const [route, file] of Object.entries(routes)) {
   let text = rewrite(rendered[file]);
   await writeFile(output+'/'+file, text);
 }
-for (const file of ['pages-sw.js', 'pages-local.js', 'pages-loader.js', 'pages-updates.js', 'pages-route.js']) {
+for (const file of ['completion-policy.js', 'pages-sw.js', 'pages-local.js', 'pages-loader.js', 'pages-updates.js', 'pages-route.js']) {
   await writeFile(output+'/'+file, await readFile('ui/'+file, 'utf8'));
 }
 await writeFile(output+'/.nojekyll', '');
 const helpers = {};
-for (const file of ['pages-sw.js','pages-local.js','pages-loader.js','pages-updates.js','pages-route.js','index.html']) {
+for (const file of ['completion-policy.js','pages-sw.js','pages-local.js','pages-loader.js','pages-updates.js','pages-route.js','index.html']) {
   helpers[file] = await readFile(file==='index.html'?'ui/pages-index.html':output+'/'+file,'utf8');
 }
 const hash = text => createHash('sha256').update(text).digest('hex');
 helpers['pages-loader.js']=helpers['pages-loader.js'].replace('./pages-route.js','./pages-route.js?v='+hash(helpers['pages-route.js']).slice(0,12));
 await writeFile(output+'/pages-loader.js',helpers['pages-loader.js']);
 const version = hash(JSON.stringify({rendered,helpers,base}));
-const worker = helpers['pages-sw.js'].replace("'./pages-route.js'",JSON.stringify('./pages-route.js?v='+hash(helpers['pages-route.js']).slice(0,12))).replace("'./pages-local.js'", JSON.stringify('./pages-local.js?v='+hash(helpers['pages-local.js']).slice(0,12)));
+const worker = helpers['pages-sw.js'].replace("'./completion-policy.js'",JSON.stringify('./completion-policy.js?v='+hash(helpers['completion-policy.js']).slice(0,12))).replace("'./pages-route.js'",JSON.stringify('./pages-route.js?v='+hash(helpers['pages-route.js']).slice(0,12))).replace("'./pages-local.js'", JSON.stringify('./pages-local.js?v='+hash(helpers['pages-local.js']).slice(0,12)));
 await writeFile(output+'/pages-sw.js',worker);
 const app = await readFile(output+'/app.html','utf8');
 await writeFile(output+'/app.html',app.replace('</head>', '<base href="'+base+'"><meta name="pn-base" content="'+base+'"><meta name="pn-build" content="'+version+'"><meta name="pn-release" content="'+releaseVersion+'"><script src="'+base+'pages-updates.js?v='+hash(helpers['pages-updates.js']).slice(0,12)+'"></script></head>'));

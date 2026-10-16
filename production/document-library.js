@@ -2,9 +2,9 @@ import { referenceTabs } from "./shared-modules.js";
 import { sourceGallery } from "./source-gallery-model.js";
 const types =
   /\.(docx?|docm|dotx?|dotm|odt|rtf|txt|md|markdown|html?|pdf|hwp|hwpx|xlsx?|xlsm|ods|csv|pptx?|odp)$/i;
-export function documentLibrary(workspace, references, resources=[]) {
-  const hiddenIds=new Set(resources.filter(r=>r.deleted||r.purged).map(r=>r.fileId));
-  resources=resources.filter(r=>!r.deleted&&!r.purged);
+export function documentLibrary(workspace, references, resources=[],{showCompleted=false}={}) {
+  const hiddenIds=new Set(resources.filter(r=>r.deleted||r.purged||r.completionOwner&&!showCompleted).map(r=>r.fileId));
+  resources=resources.filter(r=>!r.deleted&&!r.purged&&(!r.completionOwner||showCompleted));
   if(resources.length){
     const categories=[...new Set(resources.map(r=>r.properties?.category||'미분류'))];
     references=[...references,{id:'catalog-library',title:'자료',recordType:'source',tabs:categories.map(category=>({id:'catalog-'+category,name:category,modules:[{id:'catalog-module-'+category,kind:'file',files:resources.filter(r=>(r.properties?.category||'미분류')===category).map(r=>r.file)}]}))}];
@@ -59,7 +59,9 @@ export function documentLibrary(workspace, references, resources=[]) {
             ? ["portfolios", "포트폴리오"]
             : ["references", "레퍼런스"]
         : ["projects", "프로젝트"];
-      const path = [{ id: section[0], name: section[1] }];
+      const frozen=resources.find(r=>r.fileId===file.id)?.completionOwner;
+      const path = frozen?[{id:"completed-projects",name:"완료된 프로젝트"},{id:"completed:"+frozen.id,name:frozen.name}]:[{ id: section[0], name: section[1] }];
+      if(!frozen){
       if (origin.ownerKind === "project") {
         const owner = (workspace.projects || []).find(
             (p) => p.id === origin.ownerId,
@@ -79,6 +81,7 @@ export function documentLibrary(workspace, references, resources=[]) {
           id: "tab:" + origin.tabId,
           name: origin.tabName || "자료",
         });
+      }
       const entry = {
         ...file,
         origin,

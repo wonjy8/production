@@ -269,3 +269,12 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Refuse trash/permanent deletion of in-use originals on the server and in browser storage, including hidden-tab use; preserve files after detaching project links.
 - Record the agreed product policies and distinguish the next completion, sharing, permission-approval and template stages.
 - NAS update: replace `resources.py` and `server.py` together, then run `sh update.sh` or rebuild/recreate the existing container. Preserve `.env` and `data/`; no schema, dependency or environment-variable changes. See `nas/UPDATE-0.1.1.md`.
+
+
+## 0.1.2
+
+- Complete projects with independent Library preservation copies and authoritative file-ID replacement in NAS/browser storage. Verify copied bytes and roll back incomplete preservation operations.
+- Lock completed project/work-group content, schedules, preserved file bytes and catalog metadata. Freeze legacy module/planning links during completion review; editing a preservation document requires an independent copy.
+- Add Library completed-project folders with a persistent hide/show switch, including document browsing/search. Existing completed projects offer explicit preparation of current preservation copies.
+- Reopen using the same preserved IDs as editable working originals, remove the current completion record, and keep other projects' originals independent. Preserve a child's own completion when reopening its parent.
+- NAS update: add `completion.py`; replace `resources.py`, `server.py`, `browser_gateway.py`, and `Dockerfile` together. Run `sh update.sh` to rebuild/recreate. Preserve `.env` and `data/`; no schema, dependency or environment-variable changes. See `nas/UPDATE-0.1.2.md`.
