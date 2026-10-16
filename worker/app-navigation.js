@@ -18,6 +18,7 @@ export const appNavigationScript=String.raw`
     const items=view==='projects'?state.productions||[]:state.projects||[],owner=find(items,scope),selectedTab=record==='tabs'?find(owner?.customTabs||[],tabType):null;
     return {view:'home',...(view==='projects'?{group:owner?.id}:{project:owner?.id}),section:selectedTab?'tab:'+selectedTab.id:record==='tabs'?'overview':record||'overview'};
    }
+   if(view==='materials'&&['members','equipment','rental-shops','locations'].includes(scope))return {view:'database',section:scope,recordToken:record};
    if(view==='materials')return {view:'references',section:scope||'references',recordToken:record,tabToken:tabType==='tabs'?tab:'',landing:scope?'':'1'};
    if(view==='database')return {view,section:scope||'members',recordToken:record,landing:scope?'':'1'};
    if(view==='settings')return {view,section:scope||'general',landing:scope?'':'1'};
@@ -42,7 +43,7 @@ export const appNavigationScript=String.raw`
   }else if(value.view==='references'){
    parts=['materials'];if(!value.landing){parts.push(value.section||'references');const record=refs.find(item=>item.id===value.record);if(record){parts.push(token(record,refs));const tabs=recordTabs(record),tab=tabs.find(item=>item.id===value.tab);if(tab)parts.push('tabs',token(tab,tabs))}}
   }else{
-   parts=[value.view];if(!value.landing){parts.push(value.section);if(value.view==='database'){const record=databaseRows.find(item=>item.id===value.record);if(record)parts.push(token(record,databaseRows))}}
+   parts=[value.view==='database'?'materials':value.view];if(!value.landing){parts.push(value.section);if(value.view==='database'){const record=databaseRows.find(item=>item.id===value.record);if(record)parts.push(token(record,databaseRows))}}
   }
   result.hash='/'+parts.map(encodeURIComponent).join('/');return result.pathname+result.search+result.hash
  }

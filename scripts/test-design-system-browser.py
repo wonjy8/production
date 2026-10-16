@@ -4,7 +4,7 @@ import os
 from playwright.sync_api import sync_playwright
 root=Path(__file__).resolve().parent.parent
 css='\n'.join((root/'ui/design-system'/f'{name}.css').read_text() for name in ['tokens','typography','buttons','navigation','surfaces','motion'])
-markup='''<header class="workspace-page-heading"><h1>자료</h1></header><button class="ui-button" id="action">추가</button><button class="ui-button" disabled>비활성</button><div class="ui-drop-target">여기에 이동</div>'''
+markup='''<header class="workspace-page-heading"><h1>자료</h1></header><button class="ui-button" id="action">추가</button><button class="ui-button" disabled>비활성</button><div class="ui-drop-target">여기에 이동</div><div class="ui-card">카드</div><input class="ui-input"><div class="ui-menu">메뉴</div><section class="ui-screen ui-enter">화면</section>'''
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH','/usr/bin/chromium'),args=['--no-sandbox'])
  page=browser.new_page()
@@ -16,6 +16,10 @@ with sync_playwright() as p:
   assert values['font']=='24px' and values['weight']=='600',values
   assert values['drop']=='2px' and values['disabled']=='0.45',values
   if page.evaluate('CSS.supports("corner-shape","squircle")'): assert values['corner'] in ('squircle','superellipse(2)'),values
+  for selector in ['.ui-card','.ui-input','.ui-menu']:
+   if page.evaluate('CSS.supports("corner-shape","squircle")'):
+    assert page.evaluate('([shadow,selector])=>getComputedStyle((shadow?document.querySelector("#shadow").shadowRoot:document).querySelector(selector)).cornerShape',[shadow,selector]) in ('squircle','superellipse(2)')
+  assert page.evaluate('shadow=>getComputedStyle((shadow?document.querySelector("#shadow").shadowRoot:document).querySelector(".ui-screen")).animationName',shadow)=='none'
  page.keyboard.press('Tab')
  assert page.locator('#action').first.evaluate('(b)=>b.matches(":focus-visible")&&getComputedStyle(b).outlineWidth==="2px"')
  page.emulate_media(reduced_motion='reduce')

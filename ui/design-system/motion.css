@@ -1,6 +1,5 @@
 /* Only presentation is shared; each domain retains its drop semantics. */
-.ui-enter{animation:ui-enter var(--ui-panel) var(--ui-ease)}
-@keyframes ui-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.ui-enter,.ui-screen,.merged-workspace,.refpanel,.paper,.database-page,.settings-page,.workspace-landing{animation:none!important}
 .ui-drag-handle{cursor:grab;touch-action:none}.ui-drag-handle:active{cursor:grabbing}
 .ui-drag-source,[aria-grabbed="true"]{opacity:.5}
 .ui-drop-target{outline:2px solid var(--ui-drop);outline-offset:2px;background:color-mix(in srgb,var(--ui-drop) 8%,white)}

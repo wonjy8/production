@@ -5,6 +5,7 @@ const mobileWorkspaceBack=document.createElement('button');mobileWorkspaceBack.c
 function isMobileViewport(){return window.matchMedia('(max-width:720px)').matches}
 function dismissMobileWorkspaceHome(){mobileLandingSpace='';mobileLandingPanel.hidden=true;window.mobileWorkspaceHome=''}
 async function openMobileWorkspaceHome(id){
+ if(id==='database')id='references';
  if(!loaded)return;
  try{await prepareWorkspaceNavigation()}catch(error){toast(error.message);return}
  closeHub();closeSpaceMenu();
@@ -14,8 +15,8 @@ async function openMobileWorkspaceHome(id){
  const workspace=workspaceDefinitions.find(w=>w.id===id),label=workspace?.label||'설정';
  const admin=['superadmin','admin'].includes(window.appAccount?.role);
  const sections=id==='settings'?settingsCategories.filter(c=>admin||['account','general','connections'].includes(c[0])):id==='references'?workspace.sections:workspace.sections;
- mobileLandingPanel.innerHTML='<header><h1>'+label+'</h1><p>열 항목을 선택하세요.</p></header><div class="workspace-landing-items">'+sections.map(([key,title,icon])=>'<button class="workspace-landing-card keep-label" data-workspace-section="'+key+'">'+packIcon(icon)+'<span>'+title+'</span>'+packIcon('chevronRight')+'</button>').join('')+'</div>';
- mobileLandingPanel.onclick=event=>{const button=event.target.closest('[data-workspace-section]');if(!button)return;const section=button.dataset.workspaceSection;if(id==='settings')openSettings(section);else if(id==='database')openDatabase(section);else if(section==='archive'){window.openReferencesArchive?.()}else if(section==='trash'){window.openMaterialsTrash?.()}else{sourceSection=section;localStorage.setItem('pn-source-section',section);refFavorite=false;refTrash=false;refCategory='';refTagFilter='';openRefs()}};
+ mobileLandingPanel.innerHTML='<header><h1>'+label+'</h1><p>열 항목을 선택하세요.</p></header><div class="workspace-landing-items">'+sections.map(([key,title,icon])=>(key==='members'||key==='trash'?'<hr class="ui-divider materials-divider">':'')+'<button class="workspace-landing-card keep-label" data-workspace-section="'+key+'">'+packIcon(icon)+'<span>'+title+'</span>'+packIcon('chevronRight')+'</button>').join('')+'</div>';
+ mobileLandingPanel.onclick=event=>{const button=event.target.closest('[data-workspace-section]');if(!button)return;const section=button.dataset.workspaceSection;if(id==='settings')openSettings(section);else if(materialDatabaseSections.some(([key])=>key===section))openDatabase(section);else if(section==='archive'){window.openReferencesArchive?.()}else if(section==='trash'){window.openMaterialsTrash?.()}else{sourceSection=section;localStorage.setItem('pn-source-section',section);refFavorite=false;refTrash=false;refCategory='';refTagFilter='';openRefs()}};
  localStorage.setItem('pn-space',id);setTopTitle(label);syncSpaceChrome();
 }
 mobileWorkspaceBack.onclick=()=>openMobileWorkspaceHome(window.activeWorkspace||'settings');

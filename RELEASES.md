@@ -250,3 +250,13 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Route React and DOM icons through the shared pack; use the common Button in Modal.
 - Show the running release from `VERSION` in the sidebar and Settings → General; keep Pages release metadata in sync.
 - NAS configuration, database and container files do not change in this release.
+
+
+## 0.1.0
+
+- Merge database navigation into Materials with a divider before Members, Equipment, Rental Shops and Locations. Preserve the existing data, APIs, permissions and editors.
+- Move the unified trash to the bottom of the Materials sidebar and remove category/tag sub-navigation under References, Sources and Portfolios.
+- Apply Squircle to all rounded UI corners, keeping existing radius sizes and browser fallback.
+- Remove screen/tab entrance motion; keep interaction feedback and reduced-motion support.
+- Mobile navigation now has Home, Materials and Settings. Legacy saved database starts resolve into Materials.
+- NAS files, schema, settings and containers do not change in this release.

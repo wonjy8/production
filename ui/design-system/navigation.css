@@ -9,3 +9,11 @@
 .merge-sections,.project-sections,.resource-type-tabs{gap:4px}
 .merge-sections>button,.project-sections>button,.resource-type-tabs>button{min-height:40px;font-weight:500}
 .merge-sections>button.active,.project-sections>button.active,.resource-type-tabs>button.active{font-weight:600}
+
+/* Two workspaces plus Settings, consistently on desktop and mobile. */
+.sidebar-main-spaces.nav-icons-only{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.sidebar-materials-trash{order:100;border-top:1px solid var(--ui-line)!important;padding-top:8px!important;margin-top:8px!important}
+.sidebar-materials-trash[hidden],.sidebar-document-editor[hidden]{display:none!important}
+.materials-divider{width:100%;flex:none}
+.workspace-landing-items>.materials-divider{grid-column:1/-1}
+@media(max-width:720px){.mobile-bottom-nav .sidebar-main-spaces{grid-template-columns:repeat(3,minmax(0,1fr))!important}}

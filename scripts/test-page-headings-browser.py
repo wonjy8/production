@@ -54,7 +54,7 @@ with tempfile.TemporaryDirectory() as td:
    assert page.locator('.app-version-row').inner_text().replace('\n','').endswith('v'+release)
    page.locator('[data-settings-category=projects]').click()
    measure('settings','#settings-panel>.workspace-page-heading')
-   page.locator('[data-main-space=database]').click()
+   page.locator('[data-main-space=references]').click()
    page.locator('[data-db-scope=members]').click()
    page.get_by_role('heading',name='멤버',exact=True).wait_for()
    measure('database','#database-panel>.workspace-page-heading')
