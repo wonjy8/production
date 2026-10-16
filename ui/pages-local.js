@@ -1,38 +1,75 @@
-async function localCatalogScan(workspace,references){
+async function localCatalogScan(workspace,references,includeHidden=false){
  const rows=new Map();
  async function walk(value,origin,tags=[]){
   if(Array.isArray(value)){for(const node of value)await walk(node,origin,tags);return}
-  if(!value||typeof value!=='object'||value.deleted||value.hidden)return;
+  if(!value||typeof value!=='object'||value.deleted||(!includeHidden&&value.hidden))return;
   tags=[...new Set([...tags,...(Array.isArray(value.tags)?value.tags:[])].filter(t=>typeof t==='string'))];
   let fileId=value.fileId||((['image','video','audio','pdf','file','document'].includes(value.kind)||value.mime)?value.id:null),url=['link','youtube','embed'].includes(value.kind)&&/^https?:\/\//.test(value.url||'')?value.url:'';
   const textOnly=value.kind==='text'&&typeof value.text==='string'&&value.id;
-  if(fileId||url||textOnly){let id=fileId;if(!id){const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(textOnly?'text:'+origin.ownerId+':'+value.id:url))),hex=[...bytes].map(n=>n.toString(16).padStart(2,'0')).join('').slice(0,32);id=hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20)}const row=rows.get(id)||{id,fileId:fileId||null,url:fileId?'':url,...(textOnly?{content:value.text}:{}),title:value.name||value.originalName||value.title||(textOnly?'텍스트':url?'링크':'파일'),filename:value.name||value.originalName||'',mime:value.mime||'',size:value.size||0,kind:value.kind||'file',tags:[],properties:value.resourceProperties||{},propertyLabels:value.resourcePropertyLabels||{},origins:[]};row.tags=[...new Set([...row.tags,...tags])].slice(0,30);if(!row.origins.some(o=>JSON.stringify(o)===JSON.stringify(origin)))row.origins.push(origin);rows.set(id,row)}
+  if(fileId||url||textOnly){let id=fileId;if(!id){const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(textOnly?'text:'+origin.ownerId+':'+value.id:url))),hex=[...bytes].map(n=>n.toString(16).padStart(2,'0')).join('').slice(0,32);id=hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20)}const row=rows.get(id)||{id,fileId:fileId||null,url:fileId?'':url,...(textOnly?{content:value.text,sourceTextKey:origin.ownerId+':'+value.id}:{}),title:value.name||value.originalName||value.title||(textOnly?'텍스트':url?'링크':'파일'),filename:value.name||value.originalName||'',mime:value.mime||'',size:value.size||0,kind:value.kind||'file',tags:[],properties:value.resourceProperties||{},propertyLabels:value.resourcePropertyLabels||{},origins:[]};row.tags=[...new Set([...row.tags,...tags])].slice(0,30);if(!row.origins.some(o=>JSON.stringify(o)===JSON.stringify(origin)))row.origins.push(origin);rows.set(id,row)}
   for(const [field,node] of Object.entries(value)){if(['source','photoEdit','archives','resourceProperties','resourcePropertyLabels'].includes(field))continue;if(['tabs','customTabs'].includes(field)&&Array.isArray(node)){for(const tab of node)await walk(tab,{...origin,tabId:tab.id,tabName:tab.name},tags)}else if(['modules','blocks'].includes(field)&&Array.isArray(node)){for(const module of node)await walk(module,{...origin,moduleId:module.id,moduleName:module.title},tags)}else await walk(node,origin,tags)}
  }
  for(const [key,kind] of [['projects','project'],['productions','production']])for(const owner of workspace[key]||[])await walk(owner,{ownerKind:kind,ownerId:owner.id,ownerName:owner.name||owner.title||''});
  for(const owner of references)await walk(owner,{ownerKind:'reference',ownerId:owner.id,ownerName:owner.title||''});return rows;
 }
-async function localResourceTransaction(fn){const db=await localOpen();return new Promise((resolve,reject)=>{const tx=db.transaction('resources','readwrite'),store=tx.objectStore('resources'),read=store.getAll();let result;read.onsuccess=()=>{try{result=fn(store,read.result)}catch(error){reject(error);tx.abort()}};tx.oncomplete=()=>{db.close();resolve(result)};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error||Error('자료 저장 실패'))}})}
+function localOriginalInUse(row,workspace,references){
+ const walk=(value,ownerId)=>{
+  if(typeof value==='string')return !!row.fileId&&value.startsWith('/api/ref-files/')&&value.split('/api/ref-files/')[1].split('?')[0]===row.fileId;
+  if(!value||typeof value!=='object'||value.deleted)return false;
+  if(Array.isArray(value))return value.some(v=>walk(v,ownerId));
+  const fileId=value.fileId||((['image','video','audio','pdf','file','document'].includes(value.kind)||value.mime)?value.id:null);
+  if(row.fileId&&fileId===row.fileId)return true;
+  if(row.url&&['link','youtube','embed'].includes(value.kind)&&value.url===row.url)return true;
+  if(row.kind==='text'&&value.kind==='text'&&row.sourceTextKey===ownerId+':'+value.id)return true;
+  return Object.entries(value).some(([key,v])=>!['source','photoEdit','resourceProperties','resourcePropertyLabels'].includes(key)&&walk(v,ownerId));
+ };
+ return [...(workspace?.projects||[]),...(workspace?.productions||[]),...(references||[])].some(owner=>walk(owner,owner.id));
+}
+function localResourceOrigins(row,discovered,workspace,references){
+ const origins=[...(discovered.get(row.id)?.origins||[])];
+ for(const [kind,owners] of [['project',workspace.projects||[]],['production',workspace.productions||[]],['reference',references]])for(const owner of owners){
+  if(origins.some(o=>o.ownerKind===kind&&o.ownerId===owner.id))continue;
+  if(localOriginalInUse(row,kind==='reference'?{}:{projects:[owner]},kind==='reference'?[owner]:[]))origins.push({ownerKind:kind,ownerId:owner.id,ownerName:owner.name||owner.title||''});
+ }
+ return origins;
+}
+async function localResourceTransaction(fn){const db=await localOpen();return new Promise((resolve,reject)=>{
+ const tx=db.transaction(['resources','workspace','references'],'readwrite'),store=tx.objectStore('resources'),read=store.getAll(),workspaceRead=tx.objectStore('workspace').get('current'),refsRead=tx.objectStore('references').getAll();
+ let result,rows,workspace,references,ready=0;
+ const run=()=>{if(++ready!==3)return;try{result=fn(store,rows,workspace?.data||localEmptyWorkspace(),references)}catch(error){reject(error);tx.abort()}};
+ read.onsuccess=()=>{rows=read.result;run()};workspaceRead.onsuccess=()=>{workspace=workspaceRead.result;run()};refsRead.onsuccess=()=>{references=refsRead.result;run()};
+ tx.oncomplete=()=>{db.close();resolve(result)};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error||Error('자료 저장 실패'))};
+})}
+let localOriginalsReady=false;
+async function localRegisterOriginals(){
+ if(localOriginalsReady)return;
+ const db=await localOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(['files','resources'],'readwrite'),files=tx.objectStore('files').openCursor(),catalog=tx.objectStore('resources');files.onsuccess=()=>{const cursor=files.result;if(!cursor)return;const id=cursor.key,file=cursor.value,read=catalog.get(id);read.onsuccess=()=>{if(!read.result){const mime=file.mime||'application/octet-stream';catalog.put({id,fileId:id,title:file.filename||id,filename:file.filename||'',mime,kind:mime.startsWith('image/')?'image':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file',tags:[],properties:{},propertyLabels:{},catalogSeed:true,version:0,updatedAt:new Date().toISOString()},id)}cursor.continue()}};tx.oncomplete=()=>{localOriginalsReady=true;db.close();resolve()};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error)}})
+}
 async function localEnsureResources(){
- const workspace=(await localRead('workspace','current'))?.data||localEmptyWorkspace(),references=await localRead('references'),discovered=await localCatalogScan(workspace,references);
- let rows=await localResourceTransaction((store,existing)=>{for(const row of discovered.values()){const old=existing.find(r=>r.id===row.id);if(old){if(row.kind==='text'&&old.content!==row.content){old.content=row.content;old.version++;old.updatedAt=new Date().toISOString();store.put(old,old.id)}continue}const {origins,...data}=row,item={...data,version:1,updatedAt:new Date().toISOString()};store.put(item,item.id);existing.push(item)}return existing});
- return {rows,discovered};
+ await localRegisterOriginals();
+ const workspace=(await localRead('workspace','current'))?.data||localEmptyWorkspace(),references=await localRead('references'),discovered=await localCatalogScan(workspace,references,true);
+ let rows=await localResourceTransaction((store,existing)=>{for(const row of discovered.values()){const old=existing.find(r=>r.id===row.id);if(old){if(old.catalogSeed){const {origins,...data}=row;Object.assign(old,data,{catalogSeed:false,version:old.version+1,updatedAt:new Date().toISOString()});store.put(old,old.id)}else if(row.kind==='text'&&!old.sourceTextKey){old.sourceTextKey=row.sourceTextKey;old.version++;old.updatedAt=new Date().toISOString();store.put(old,old.id)}else if(old.deleted&&!old.purged){old.deleted=false;delete old.deletedAt;old.version++;old.updatedAt=new Date().toISOString();store.put(old,old.id)}else if(row.kind==='text'&&old.content!==row.content){old.content=row.content;old.version++;old.updatedAt=new Date().toISOString();store.put(old,old.id)}continue}const {origins,...data}=row,item={...data,version:1,updatedAt:new Date().toISOString()};store.put(item,item.id);existing.push(item)}return existing});
+ return {rows,discovered,workspace,references};
 }
 async function localPurgeResource(request,id){
- const [workspace,references]=await Promise.all([localRead('workspace','current'),localRead('references')]),used=JSON.stringify([workspace,references]);
- const db=await localOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(['resources','files'],'readwrite'),store=tx.objectStore('resources'),read=store.get(id);let result;
- read.onsuccess=()=>{const row=read.result;if(!row||row.purged){result=localJson({error:'Not found'},404);return}if(!row.deleted||request.headers.get('If-Match')!=='"'+row.version+'"'){result=localJson({error:'자료가 변경되었거나 휴지통에 없습니다.'},409);return}store.put({id:row.id,fileId:row.fileId,title:'',tags:[],properties:{},deleted:true,purged:true,version:row.version+1,updatedAt:new Date().toISOString()},id);if(row.fileId&&!used.includes(row.fileId))tx.objectStore('files').delete(row.fileId);result=localJson({ok:true})};tx.oncomplete=()=>{db.close();resolve(result)};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error)}})
+ const db=await localOpen();return new Promise((resolve,reject)=>{
+  const tx=db.transaction(['resources','files','workspace','references'],'readwrite'),store=tx.objectStore('resources'),read=store.get(id),wr=tx.objectStore('workspace').get('current'),rr=tx.objectStore('references').getAll();let result,row,workspace,references,ready=0;
+  const finish=()=>{if(++ready!==3)return;if(!row||row.purged){result=localJson({error:'Not found'},404);return}if(localOriginalInUse(row,workspace?.data,references)){result=localJson({error:'사용 중인 원본은 영구 삭제할 수 없습니다.'},409);return}if(!row.deleted||request.headers.get('If-Match')!=='"'+row.version+'"'){result=localJson({error:'자료가 변경되었거나 휴지통에 없습니다.'},409);return}
+   store.put({id:row.id,fileId:row.fileId,title:'',tags:[],properties:{},deleted:true,purged:true,version:row.version+1,updatedAt:new Date().toISOString()},id);
+   if(row.fileId&&!JSON.stringify([workspace,references]).includes(row.fileId))tx.objectStore('files').delete(row.fileId);result=localJson({ok:true});};
+  read.onsuccess=()=>{row=read.result;finish()};wr.onsuccess=()=>{workspace=wr.result;finish()};rr.onsuccess=()=>{references=rr.result;finish()};tx.oncomplete=()=>{db.close();resolve(result)};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error)};
+ })
 }
 async function localResources(request,id){
- const {rows,discovered}=await localEnsureResources();for(const row of rows)if(row.deleted&&!row.purged&&Date.parse(row.deletedAt||row.updatedAt)<=Date.now()-30*86400000){await localPurgeResource(new Request(request.url,{method:'DELETE',headers:{'If-Match':'"'+row.version+'"'}}),row.id);row.purged=true;}
- if(request.method==='GET'&&!id){const result=[];for(const row of rows){if(row.purged&&!new URL(request.url).searchParams.has('includePurged'))continue;const f=row.fileId?await localRead('files',row.fileId):null;if(row.fileId&&!f)continue;result.push({...row,...(f?{size:f.blob.size,mime:f.mime,sha256:f.sha256}:{}),origins:discovered.get(row.id)?.origins||[],canEdit:true})}return localJson(result)}
+ const {rows,discovered,workspace,references}=await localEnsureResources();for(const row of rows)if(row.deleted&&!row.purged&&Date.parse(row.deletedAt||row.updatedAt)<=Date.now()-30*86400000){const response=await localPurgeResource(new Request(request.url,{method:'DELETE',headers:{'If-Match':'"'+row.version+'"'}}),row.id);if(response.ok)row.purged=true;}
+ if(request.method==='GET'&&!id){const result=[];for(const row of rows){if(row.purged&&!new URL(request.url).searchParams.has('includePurged'))continue;const f=row.fileId?await localRead('files',row.fileId):null;if(row.fileId&&!f)continue;result.push({...row,...(f?{size:f.blob.size,mime:f.mime,sha256:f.sha256}:{}),origins:localResourceOrigins(row,discovered,workspace,references),canEdit:true,canTrash:!localOriginalInUse(row,workspace,references)})}return localJson(result)}
  if(request.method==='DELETE'&&id)return localPurgeResource(request,id);
  if(request.method==='PUT'&&localId.test(id||'')){
   const data=await request.json(),fileId=rows.find(r=>r.id===id)?.fileId||data.fileId,url=data.url||'';
   if(fileId&&(id!==fileId||!await localRead('files',fileId)))return localJson({error:'파일을 먼저 업로드하세요'},400);
   if(!fileId&&!rows.some(r=>r.id===id)&&!/^https?:\/\//.test(url))return localJson({error:'올바른 자료 주소가 필요합니다'},400);
   if(typeof data.title!=='string'||!data.title.trim()||data.title.length>200||!Array.isArray(data.tags)||data.tags.length>30||data.tags.some(t=>typeof t!=='string'||t.length>100)||!data.properties||typeof data.properties!=='object'||Array.isArray(data.properties)||Object.keys(data.properties).length>50||Object.entries(data.properties).some(([k,v])=>k.length>80||typeof v!=='string'||v.length>2000))return localJson({error:'자료 속성을 확인하세요'},400);
-  return localResourceTransaction((store,existing)=>{const old=existing.find(r=>r.id===id),version=old?.version||0;if(old?.purged)return localJson({error:'영구 삭제된 자료입니다.'},409);if(request.headers.get('If-Match')!==localRevision(version))return localJson({error:'자료가 다른 곳에서 변경되었습니다. 새로고침 후 다시 시도하세요.'},409);const item={...(old||{id,fileId:fileId||null,url,kind:data.kind||'file',mime:data.mime||'',filename:String(data.filename||'').slice(0,250)}),title:data.title.trim(),tags:data.tags,properties:data.properties,propertyLabels:data.propertyLabels||old?.propertyLabels||{},deleted:!!data.deleted,version:version+1,updatedAt:new Date().toISOString()};if(item.deleted)item.deletedAt=old?.deletedAt||item.updatedAt;else delete item.deletedAt;store.put(item,id);return localJson({...item,canEdit:true,origins:discovered.get(id)?.origins||[]})})
+  return localResourceTransaction((store,existing,workspace,references)=>{const old=existing.find(r=>r.id===id),version=old?.version||0;if(data.deleted&&localOriginalInUse(old||{fileId,url},workspace,references))return localJson({error:'사용 중인 원본입니다. 프로젝트·보관함의 연결을 먼저 해제하세요.'},409);if(old?.purged)return localJson({error:'영구 삭제된 자료입니다.'},409);if(request.headers.get('If-Match')!==localRevision(version))return localJson({error:'자료가 다른 곳에서 변경되었습니다. 새로고침 후 다시 시도하세요.'},409);const item={...(old||{id,fileId:fileId||null,url,kind:data.kind||'file',mime:data.mime||'',filename:String(data.filename||'').slice(0,250)}),title:data.title.trim(),tags:data.tags,properties:data.properties,propertyLabels:data.propertyLabels||old?.propertyLabels||{},catalogSeed:false,deleted:!!data.deleted,version:version+1,updatedAt:new Date().toISOString()};if(item.deleted)item.deletedAt=old?.deletedAt||item.updatedAt;else delete item.deletedAt;store.put(item,id);return localJson({...item,canEdit:true,canTrash:!localOriginalInUse(item,workspace,references),origins:discovered.get(id)?.origins||[]})})
  }
  return localJson({error:'Method not allowed'},405);
 }
@@ -65,7 +102,7 @@ async function localWrite(store,key,value) {
     tx.oncomplete=()=>{db.close();resolve(value)};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error)};
   });
 }
-function localReferenceFileIds(item){const ids=new Set();const walk=v=>{if(!v||typeof v!=='object')return;if(v.fileId)ids.add(v.fileId);if(['image','video','audio','pdf','file','document'].includes(v.kind)&&v.id)ids.add(v.id);if(Array.isArray(v))v.forEach(walk);else Object.values(v).forEach(walk)};walk(item);return ids}
+function localReferenceFileIds(item){const ids=new Set();const walk=v=>{if(typeof v==='string'&&v.startsWith('/api/ref-files/')){ids.add(v.split('/api/ref-files/')[1].split('?')[0]);return}if(!v||typeof v!=='object')return;if(v.fileId)ids.add(v.fileId);if(['image','video','audio','pdf','file','document'].includes(v.kind)&&v.id)ids.add(v.id);if(Array.isArray(v))v.forEach(walk);else Object.values(v).forEach(walk)};walk(item);return ids}
 async function localDeleteReferences(ids){
  const db=await localOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(['references','workspace','files','resources'],'readwrite'),records=tx.objectStore('references'),refsRequest=records.getAll(),workspaceRequest=tx.objectStore('workspace').get('current'),catalogRequest=tx.objectStore('resources').getAll();let refs,workspace,catalog;const finish=()=>{if(!refs||workspace===undefined||!catalog)return;const removed=refs.filter(r=>ids.includes(r.id)),remaining=refs.filter(r=>!ids.includes(r.id)),used=JSON.stringify([workspace,remaining,catalog.filter(r=>!r.deleted)]),files=tx.objectStore('files');removed.forEach(r=>{records.delete(r.id);localReferenceFileIds(r).forEach(id=>{if(localId.test(id)&&!used.includes(id))files.delete(id)})})};catalogRequest.onsuccess=()=>{catalog=catalogRequest.result;finish()};refsRequest.onsuccess=()=>{refs=refsRequest.result;finish()};workspaceRequest.onsuccess=()=>{workspace=workspaceRequest.result||null;finish()};tx.oncomplete=()=>{db.close();resolve()};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error)}})
 }
@@ -96,7 +133,7 @@ async function localFile(request,id,url) {
     const sha256=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),v=>v.toString(16).padStart(2,'0')).join('');
     const before=await localRead('files',id),expected=request.headers.get('If-Match');
     const previousHash=before&&!before.sha256?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await before.blob.arrayBuffer())),v=>v.toString(16).padStart(2,'0')).join(''):before?.sha256;
-    const db=await localOpen();return new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite'),store=tx.objectStore('files'),read=store.get(id);let conflict=false;read.onsuccess=()=>{const row=read.result;if(expected&&(!row||expected!==localRevision(row.sha256||previousHash))){conflict=true;return}if(row&&!expected){conflict=true;return}store.put({blob,sha256,mime:request.headers.get('Content-Type')||blob.type||'application/octet-stream'},id)};tx.oncomplete=()=>{db.close();resolve(conflict?localJson({error:'원본 파일이 변경되었습니다.'},409):localJson({id,sha256},200,{'ETag':localRevision(sha256)}))};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error)}});
+    const db=await localOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(['files','resources'],'readwrite'),store=tx.objectStore('files'),read=store.get(id);let conflict=false;read.onsuccess=()=>{const row=read.result;if(expected&&(!row||expected!==localRevision(row.sha256||previousHash))){conflict=true;return}if(row&&!expected){conflict=true;return}const mime=request.headers.get('Content-Type')||blob.type||'application/octet-stream';let filename='';try{filename=(url.searchParams.get('name')||'').slice(0,250)}catch{}store.put({blob,sha256,mime,filename:filename||row?.filename||''},id);if(!row)tx.objectStore('resources').put({id,fileId:id,title:filename.slice(0,200)||id,filename,mime,kind:mime.startsWith('image/')?'image':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file',tags:[],properties:{},propertyLabels:{},catalogSeed:true,version:0,updatedAt:new Date().toISOString()},id)};tx.oncomplete=()=>{db.close();resolve(conflict?localJson({error:'원본 파일이 변경되었습니다.'},409):localJson({id,sha256},200,{'ETag':localRevision(sha256)}))};tx.onerror=tx.onabort=()=>{db.close();reject(tx.error)}});
   }
   if(!['GET','HEAD'].includes(request.method))return localJson({error:'Method not allowed'},405);
   const row=await localRead('files',id);if(!row)return localJson({error:'파일 없음'},404);

@@ -14,3 +14,5 @@
 .ui-field{display:grid;gap:8px}.ui-input{min-height:40px;padding:8px 12px;border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-surface);font:400 14px/1.5 var(--ui-font)}
 .ui-menu{padding:6px;border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-surface);box-shadow:var(--ui-shadow)}
 @media(max-width:600px){.ui-screen{padding:16px 12px}.ui-dialog{padding:16px}.ui-input{font-size:16px}}
+
+.resource-usage{max-width:100%;font-size:14px;line-height:1.5}.resource-usage ul{padding-inline-start:20px;max-height:240px;overflow:auto}.resource-usage li{margin-block:8px;overflow-wrap:anywhere}.resource-usage li>span{display:block;color:var(--ui-muted)}

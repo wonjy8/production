@@ -31,16 +31,19 @@ class ResourceTest(unittest.TestCase):
         self.assertFalse(any(row['id']==ident for row in self.rows()))
         self.assertEqual(self.client.get('/api/ref-files/'+ident,headers=self.auth).status_code,404)
         self.assertIn(self.client.put(url,headers={**self.auth,'If-Match':'"3"'},json={**saved,'deleted':False}).status_code,(403,409))
-        # A shared original survives permanent catalog removal and cannot reappear in the catalog.
+        # Connected originals cannot be trashed or purged, even by an administrator.
         shared=self.upload();reference={'id':str(uuid4()),'title':'shared','modules':[{'id':'files','kind':'file','files':[{'id':shared,'kind':'file','name':'shared.txt'}]}]}
         self.client.put('/api/references/'+reference['id'],headers=self.auth,json=reference)
         row=next(row for row in self.rows() if row['id']==shared)
+        self.assertFalse(row['canTrash'])
+        self.assertEqual(self.client.put('/api/database/resources/'+shared,headers={**self.auth,'If-Match':'"'+str(row['version'])+'"'},json={**row,'deleted':True}).status_code,409)
+        self.assertEqual(self.client.get('/api/ref-files/'+shared,headers=self.auth).status_code,200)
+        self.client.put('/api/references/'+reference['id'],headers=self.auth,json={**reference,'modules':[]})
+        row=next(row for row in self.rows() if row['id']==shared)
+        self.assertTrue(row['canTrash'])
         deleted=self.client.put('/api/database/resources/'+shared,headers={**self.auth,'If-Match':'"'+str(row['version'])+'"'},json={**row,'deleted':True}).json()
         self.assertEqual(self.client.delete('/api/database/resources/'+shared,headers={**self.auth,'If-Match':'"'+str(deleted['version'])+'"'}).status_code,200)
-        self.assertEqual(self.client.get('/api/ref-files/'+shared,headers=self.auth).status_code,200)
         self.assertFalse(any(row['id']==shared for row in self.rows()))
-        hidden=self.client.get('/api/database/resources?includePurged=1',headers=self.auth).json()
-        self.assertTrue(next(row for row in hidden if row['id']==shared)['purged'])
         expired=self.upload();url='/api/database/resources/'+expired
         row=self.client.put(url,headers={**self.auth,'If-Match':'"0"'},json={**draft,'id':expired,'fileId':expired,'deleted':True}).json()
         with self.module.database() as conn:
@@ -97,3 +100,51 @@ class ResourceTest(unittest.TestCase):
         self.client.put('/api/references/'+ref['id'],headers=self.auth,json={**ref,'deleted':True})
         self.client.delete('/api/references/'+ref['id'],headers=self.auth)
         self.assertEqual(next(r for r in self.rows() if r['id']==ident)['content'],'수정된 말씀')
+
+    def test_upload_registers_original_before_any_project_placement(self):
+        ident=str(uuid4())
+        response=self.client.put('/api/ref-files/'+ident+'?name=unplaced.txt',headers={**self.auth,'Content-Type':'text/plain'},content=b'central original')
+        self.assertEqual(response.status_code,200)
+        row=next(r for r in self.rows() if r['id']==ident)
+        self.assertEqual(row['title'],'unplaced.txt');self.assertEqual(row['fileId'],ident)
+        self.assertEqual(row['origins'],[]);self.assertTrue(row['canTrash'])
+        with self.module.database() as conn:
+            owner=conn.execute('SELECT owner_user_id FROM resource_records WHERE id=?',(ident,)).fetchone()[0]
+            self.assertTrue(owner)
+            self.assertEqual(conn.execute('SELECT count(*) FROM files WHERE id=?',(ident,)).fetchone()[0],1)
+        _,outsider=self.account('operator')
+        self.assertFalse(any(r['id']==ident for r in self.rows(outsider)))
+        self.assertEqual(self.client.get('/api/ref-files/'+ident,headers=outsider).status_code,403)
+
+    def test_hidden_and_multiple_uses_protect_one_original(self):
+        ident=self.upload()
+        workspace={'projects':[],'productions':[{'id':str(uuid4()),'name':name,'customTabs':[{'id':'t','hidden':hidden,'modules':[{'id':'m','kind':'file','files':[{'id':ident,'kind':'file','name':'original.txt'}]}]}]} for name,hidden in [('first',False),('hidden',True)]]}
+        self.assertEqual(self.client.put('/api/data',headers=self.auth,json=workspace).status_code,200)
+        row=next(r for r in self.rows() if r['id']==ident)
+        self.assertEqual(len(row['origins']),2);self.assertFalse(row['canTrash'])
+        url='/api/database/resources/'+ident
+        self.assertEqual(self.client.put(url,headers={**self.auth,'If-Match':'"'+str(row['version'])+'"'},json={**row,'deleted':True,'canTrash':True,'origins':[]}).status_code,409)
+        workspace['productions'][0]['customTabs']=[]
+        self.client.put('/api/data',headers=self.auth,json=workspace)
+        row=next(r for r in self.rows() if r['id']==ident);self.assertFalse(row['canTrash'])
+        with self.module.database() as conn:
+            self.assertEqual(conn.execute('SELECT count(*) FROM resource_records WHERE file_id=?',(ident,)).fetchone()[0],1)
+        workspace['productions'][1]['customTabs']=[]
+        self.client.put('/api/data',headers=self.auth,json=workspace)
+        row=next(r for r in self.rows() if r['id']==ident);self.assertTrue(row['canTrash'])
+        self.assertEqual(self.client.get('/api/ref-files/'+ident,headers=self.auth).content,b'original bytes')
+
+    def test_existing_orphan_upload_is_registered_without_changing_bytes(self):
+        ident=self.upload()
+        with self.module.database() as conn:conn.execute('DELETE FROM resource_records WHERE id=?',(ident,))
+        self.assertTrue(any(r['id']==ident for r in self.rows()))
+        self.assertEqual(self.client.get('/api/ref-files/'+ident,headers=self.auth).content,b'original bytes')
+
+    def test_stale_client_cannot_purge_reconnected_original(self):
+        ident=self.upload();row=next(r for r in self.rows() if r['id']==ident);url='/api/database/resources/'+ident
+        deleted=self.client.put(url,headers={**self.auth,'If-Match':'"'+str(row['version'])+'"'},json={**row,'deleted':True}).json()
+        ref={'id':str(uuid4()),'title':'late connection','modules':[{'id':'m','kind':'file','files':[{'id':ident,'kind':'file','name':'late.txt'}]}]}
+        self.client.put('/api/references/'+ref['id'],headers=self.auth,json=ref)
+        self.assertEqual(self.client.delete(url,headers={**self.auth,'If-Match':'"'+str(deleted['version'])+'"'}).status_code,409)
+        self.assertEqual(self.client.get('/api/ref-files/'+ident,headers=self.auth).status_code,200)
+        active=next(r for r in self.rows() if r['id']==ident);self.assertFalse(active.get('deleted',False));self.assertFalse(active['canTrash'])

@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "./Modal";
 import { Photo } from "./Photo";
 import { Icon } from "./Icon";
+import { ResourceUsage } from "./ResourceUsage";
 import { InlineRemove } from "./InlineRemove";
 import { documentFormat } from "./document-types";
 import { documentURL } from "./document-launch";
@@ -61,6 +62,7 @@ export function ResourceDatabase({
     [picking, setPicking] = useState(false),
     [settings, setSettings] = useState(false),
     [preview, setPreview] = useState<any>(null),
+    [usage, setUsage] = useState<any>(null),
     [view, setView] = useState(
       module?.databaseView ||
         (global
@@ -247,6 +249,8 @@ export function ResourceDatabase({
           ))}
         </div>
         <div className="resource-row-actions">
+          <button className="keep-label" onClick={()=>setUsage(row)} aria-label={row.title+' 사용처'}>사용처 {(row.origins||[]).length}</button>
+          {!readonly&&(row.fileId||row.kind==='text')&&<button className="keep-label" disabled={busy} onClick={()=>perform(async()=>{await attach(await copyResource(row));await refresh()})} aria-label={row.title+' 사본 만들기'}>사본</button>}
           {!readonly && row.canEdit && (
             <button
               className="keep-label"
@@ -256,7 +260,8 @@ export function ResourceDatabase({
               속성
             </button>
           )}
-          {!readonly && global && row.canEdit && (
+          {!readonly && global && row.canEdit && (row.canTrash===false||row.origins?.length>0) && <button className="keep-label" onClick={()=>setUsage(row)} aria-label={row.title+' 삭제 안내'}>휴지통</button>}
+          {!readonly && global && row.canEdit && row.canTrash!==false && !row.origins?.length && (
             <InlineRemove
               triggerText="휴지통"
               label={row.title + " 휴지통으로 이동"}
@@ -470,10 +475,10 @@ export function ResourceDatabase({
       )}
       {!global && (
         <small className="resource-explanation">
-          연결한 자료는 같은 원본을 사용합니다. 이 모듈에서 제거해도 자료 목록과
-          파일은 유지됩니다.
+          연결한 자료는 같은 원본을 사용합니다. 이 모듈에서 제거해도 보관함의 원본과 다른 사용처는 유지됩니다.
         </small>
       )}
+      {usage&&<Modal title="원본 사용처" onClose={()=>setUsage(null)}><ResourceUsage row={usage}/><p>원본은 보관함에 저장되며, 프로젝트에서는 같은 원본을 연결해 사용합니다.</p></Modal>}
       {preview && (
         <Modal title={preview.title} onClose={() => setPreview(null)}>
           <p style={{ whiteSpace: "pre-wrap" }}>{preview.content}</p>
@@ -495,7 +500,10 @@ export function ResourceDatabase({
       )}
       {(adding || editing) && (
         <ResourceEditor
+          key={editing?.id||"new-resource"}
           row={editing}
+          error={error}
+          onCopy={editing&&(editing.fileId||editing.kind==='text')?()=>perform(async()=>{const copy=await copyResource(editing);await attach(copy);setEditing(copy)}):undefined}
           fields={
             global
               ? [
@@ -617,6 +625,8 @@ export function ResourceDatabase({
 }
 function ResourceEditor({
   row,
+  error,
+  onCopy,
   fields,
   categories,
   busy,
@@ -628,6 +638,9 @@ function ResourceEditor({
     [tags, setTags] = useState((row?.tags || []).join(", "));
   return (
     <Modal title={row ? "자료 속성" : "새 문서"} onClose={onClose}>
+      {row&&<ResourceUsage row={row} notice/>}
+      {error&&<p role="alert" className="form-error">{error}</p>}
+      {onCopy&&<button type="button" className="button keep-label" disabled={busy} onClick={onCopy}>사본을 만들어 편집</button>}
       <form
         className="merge-form resource-form"
         onSubmit={(e) => {

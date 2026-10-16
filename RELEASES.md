@@ -260,3 +260,12 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Remove screen/tab entrance motion; keep interaction feedback and reduced-motion support.
 - Mobile navigation now has Home, Materials and Settings. Legacy saved database starts resolve into Materials.
 - NAS files, schema, settings and containers do not change in this release.
+
+
+## 0.1.1
+
+- Register original uploads immediately in the central Library catalog; projects keep file-ID connections. Register uncataloged legacy bytes without moving/copying files or replacing user metadata.
+- Show resource usage, original-edit impact, and independent-copy actions. Shared documents require an original/copy choice before saving.
+- Refuse trash/permanent deletion of in-use originals on the server and in browser storage, including hidden-tab use; preserve files after detaching project links.
+- Record the agreed product policies and distinguish the next completion, sharing, permission-approval and template stages.
+- NAS update: replace `resources.py` and `server.py` together, then run `sh update.sh` or rebuild/recreate the existing container. Preserve `.env` and `data/`; no schema, dependency or environment-variable changes. See `nas/UPDATE-0.1.1.md`.

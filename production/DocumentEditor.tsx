@@ -15,6 +15,10 @@ import {
   DocumentTableView,
   ListLevels,
 } from "./document-extensions";
+import { Modal } from "./Modal";
+import { ResourceUsage } from "./ResourceUsage";
+import { copyResource, resourceFile } from "./resources";
+import { documentURL } from "./document-launch";
 import { addResourceFile } from "./resources";
 import { readFile } from "./files";
 import { ResourceImagePicker } from "./ResourceImagePicker";
@@ -397,6 +401,9 @@ function DocumentEditor({ file }: { file: any }) {
   const scroll = useRef<HTMLDivElement>(null),
     titleInput = useRef<HTMLInputElement>(null);
   const resource = useRef<any>(null);
+  const originalConsent=useRef(false);
+  const [originalPrompt,setOriginalPrompt]=useState<any>(null);
+  const [copyingOriginal,setCopyingOriginal]=useState(false);
   useEffect(() => {
     editor.current?.view.dom.dispatchEvent(new Event("document-layout-change"));
   }, [ready, zoom, fitScale, showLayout]);
@@ -420,6 +427,7 @@ function DocumentEditor({ file }: { file: any }) {
         const row = rows.find((r: any) => r.fileId === file.id);
         if (row) {
           resource.current = row;
+          if(row.origins?.length)setOriginalPrompt(row);else originalConsent.current=true;
           const ext = file.name.match(/\.[^.]+$/)?.[0] || "";
           file.name = row.title.toLowerCase().endsWith(ext.toLowerCase())
             ? row.title
@@ -427,9 +435,9 @@ function DocumentEditor({ file }: { file: any }) {
           setName(file.name);
           setTitleDraft(file.name.replace(/\.[^.]+$/, ""));
           document.title = file.name + " · 문서";
-        }
+        }else originalConsent.current=true;
       })
-      .catch(() => {});
+      .catch(() => {setError("원본의 사용처를 확인하지 못했습니다. 새로고침 후 다시 열어주세요.");});
   }, [file.id]);
   useEffect(() => {
     if (!scroll.current) return;
@@ -480,7 +488,7 @@ function DocumentEditor({ file }: { file: any }) {
     };
   }, []);
   async function rename() {
-    if (!editingTitle) return;
+    if (!editingTitle||!originalConsent.current) return;
     const title = titleDraft.trim().replace(/[\/\\\r\n]/g, " ");
     if (!title) {
       setTitleDraft(name.replace(/\.[^.]+$/, ""));
@@ -596,6 +604,7 @@ function DocumentEditor({ file }: { file: any }) {
         return !dirty();
       }
       if (!dirty() || !editor.current) return true;
+      if(!originalConsent.current)return false;
       if (s.conflict || s.composing) return false;
       s.inflight = (async () => {
         while (dirty() && !s.conflict && !s.composing) {
@@ -976,6 +985,12 @@ function DocumentEditor({ file }: { file: any }) {
   }
   return (
     <main className="document-editor" data-selection={active}>
+      {originalPrompt&&<Modal title="원본 문서 편집" onClose={()=>{setOriginalPrompt(null);setStatus('원본 수정 선택 대기')}}>
+       <ResourceUsage row={originalPrompt} notice/>{error&&<p role="alert">{error}</p>}
+       <button className="button keep-label" disabled={copyingOriginal} onClick={()=>{originalConsent.current=true;setOriginalPrompt(null);session.current?.flush()}}>원본 수정</button>
+       <button className="button keep-label" disabled={copyingOriginal} onClick={async()=>{setCopyingOriginal(true);pendingOperations.current++;try{const copy=await copyResource(originalPrompt);location.assign(documentURL(resourceFile(copy),null))}catch(e:any){setError(e.message)}finally{setCopyingOriginal(false);pendingOperations.current--}}}>{copyingOriginal?"사본 만드는 중…":"사본을 만들어 편집"}</button>
+      </Modal>}
+      {!originalConsent.current&&!originalPrompt&&resource.current&&<button className="button keep-label" onClick={()=>setOriginalPrompt(resource.current)}>원본 수정 방식 선택</button>}
       <header className="document-header">
         <span className="document-logo" title="문서 편집기">
           <Icon name="file" />

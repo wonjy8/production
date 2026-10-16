@@ -395,6 +395,7 @@ async def put_file(ident: str, request: Request):
                 os.replace(temp.name, target)
                 conn.execute('INSERT INTO file_uploaders VALUES(?,?)',(ident,actor['id']))
                 conn.execute('INSERT INTO files VALUES(?,?,?,?,?)', (ident, request.headers.get('content-type', 'application/octet-stream'), size, digest.hexdigest(), now()))
+            register_original(conn,ident,actor['id'],now(),request.query_params.get('name',''))
         return {'id': ident, 'sha256': digest.hexdigest()}
     finally:
         temp.close()
@@ -487,7 +488,7 @@ def get_file(ident: str, request: Request):
                         headers={'Content-Security-Policy': "default-src 'none'; sandbox", 'X-File-SHA256': row['sha256'], 'ETag': '"'+row['sha256']+'"', 'Cache-Control':'no-store'})
 
 
-from resources import install_resources
+from resources import install_resources,register_original
 sync_resource_catalog=install_resources(app,database,write_lock,now,json_body,lambda conn,actor,ident:can_edit_file(conn,actor,ident))
 
 
