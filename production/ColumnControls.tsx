@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { moduleTemplates } from './module-hub.js';
-import { mergeColumn, validColumns } from './column-layout.js';
+import { mergeColumn, validColumns, snapColumnWidths } from './column-layout.js';
 import { Icon } from './Icon';
 export function ColumnControls({items,layout,onChange,onTemplateDrop}:any){
   const [adding,setAdding]=useState('');
@@ -23,12 +23,12 @@ export function ColumnControls({items,layout,onChange,onTemplateDrop}:any){
     const widths=group.columnSlots.map((key:string)=>layout.slots[key].width);
     const total=widths[guide.index]+widths[guide.index+1],start=e.clientX;
     const target=e.currentTarget;target.setPointerCapture(e.pointerId);
-    const move=(ev:any)=>{if(ev.pointerId!==e.pointerId)return;const min=Math.min(48,total/3),left=Math.max(min,Math.min(total-min,widths[guide.index]+ev.clientX-start));
+    const move=(ev:any)=>{if(ev.pointerId!==e.pointerId)return;const left=snapColumnWidths(widths,guide.index,ev.clientX-start)[guide.index];
       // Preview is local DOM geometry; persist only on release.
       target.style.transform=`translateX(${left-widths[guide.index]}px)`;
     };
     const end=(ev:any)=>{if(ev.pointerId!==e.pointerId)return;target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',end);target.removeEventListener('pointercancel',cancel);target.style.transform='';resizeCleanup.current=null;if(target.hasPointerCapture(e.pointerId))target.releasePointerCapture(e.pointerId);
-      const min=Math.min(48,total/3),left=Math.max(min,Math.min(total-min,widths[guide.index]+ev.clientX-start)),weights=[...widths];weights[guide.index]=left;weights[guide.index+1]=total-left;
+      const weights=snapColumnWidths(widths,guide.index,ev.clientX-start);
       onChange((old:any[])=>old.map(i=>i.id===guide.id?{...i,columnWeights:weights}:i));
     };
     const cancel=(ev:any)=>{if(ev.pointerId!==e.pointerId)return;target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',end);target.removeEventListener('pointercancel',cancel);target.style.transform='';resizeCleanup.current=null;if(target.hasPointerCapture(e.pointerId))target.releasePointerCapture(e.pointerId);};
@@ -45,7 +45,7 @@ export function ColumnControls({items,layout,onChange,onTemplateDrop}:any){
       </div>;
     })}
     {(layout.guides||[]).map((g:any)=><div key={g.id+g.index} className="column-boundary" style={{left:g.left-8,top:g.top,width:16,height:g.height}}>
-      <div className="column-boundary-line" role="separator" aria-label="열 너비 조절" aria-orientation="vertical" tabIndex={0} onPointerDown={e=>resize(e,g)} onKeyDown={e=>{if(blocked(e)||!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const group=items.find((i:any)=>i.id===g.id),weights=group.columnSlots.map((s:string)=>layout.slots[s].width),total=weights[g.index]+weights[g.index+1],left=Math.max(32,Math.min(total-32,weights[g.index]+(e.key==='ArrowRight'?16:-16)));weights[g.index]=left;weights[g.index+1]=total-left;onChange((old:any[])=>old.map(i=>i.id===g.id?{...i,columnWeights:weights}:i));}}/>
+      <div className="column-boundary-line" role="separator" aria-label="열 너비 조절" aria-orientation="vertical" tabIndex={0} onPointerDown={e=>resize(e,g)} onKeyDown={e=>{if(blocked(e)||!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const group=items.find((i:any)=>i.id===g.id),weights=group.columnSlots.map((s:string)=>layout.slots[s].width),snapped=snapColumnWidths(weights,g.index,0,e.key==='ArrowRight'?1:-1);onChange((old:any[])=>old.map(i=>i.id===g.id?{...i,columnWeights:snapped}:i));}}/>
       <button type="button" className="column-merge keep-label" aria-label="열 구분선 삭제 · 오른쪽 모듈을 왼쪽 아래로 합치기" title="모듈을 유지하고 열 합치기" onClick={e=>{if(blocked(e))return;setAdding('');onChange((old:any[])=>mergeColumn(old,g.id,g.index));}}><Icon name="close"/></button>
     </div>)}
   </>;

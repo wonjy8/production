@@ -13,3 +13,9 @@ button:disabled,.ui-button[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
 @media(pointer:coarse){.ui-button{min-height:44px}.ui-button[data-icon-only="true"]{width:44px;height:44px}}
 .ui-button[data-variant="primary"]:hover:not(:disabled){background:var(--accent-hover,#363739)}
 .ui-button[data-variant="danger"]:hover:not(:disabled){background:var(--ui-danger-soft);border-color:var(--ui-danger)}
+
+/* A common neutral hover for every actionable button and tab. */
+button:not(:disabled):hover,.button:not([aria-disabled="true"]):hover,[role="tab"]:hover,[role="button"]:not([aria-disabled="true"]):hover{background-color:var(--ui-hover,#eeeeef)!important}
+/* Shared hover also overrides component-specific surfaces. */
+:is(:root,:host) :is(button,.button,[role="tab"],[role="button"]):not(:disabled):hover{background-color:var(--ui-hover,#eeeeef)!important}
+.hub-sidebar button.hub-card.keep-label:hover,.hub-sidebar button.hub-card.keep-label:focus-visible{background-color:var(--ui-hover,#eeeeef)!important}

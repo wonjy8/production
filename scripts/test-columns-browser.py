@@ -45,7 +45,7 @@ with tempfile.TemporaryDirectory() as td:
      page.locator('#account-form [name=email]').fill('admin@example.com');page.locator('#account-form [name=password]').fill('StrongPassword2026!');page.locator('#account-form button').click()
     page.wait_for_function('!!window.productionBridge && typeof window.mountProduction==="function"');page.locator('.admin-home').wait_for()
     print('START '+mode,flush=True)
-    project=page.evaluate("""async()=>{const w=window.productionBridge.read(),id=crypto.randomUUID();w.productions=[];w.projects=[{id,name:'열 검증',status:'진행 중',tasks:[],schedules:[],assets:[],feedback:[],customTabs:[{id:'columns',name:'열',modules:[{id:'outer',kind:'columns',blockLayout:true,columnSlots:['l','m','r']},{id:'inner',kind:'columns',parentSlot:'l',columnSlots:['ll','lr']},{id:'a',title:'A',kind:'checklist',parentSlot:'ll',items:[{id:'ar',text:'A 원본'}]},{id:'b',title:'B',kind:'checklist',parentSlot:'lr',items:[]},{id:'c',title:'C',kind:'checklist',parentSlot:'r',items:[]},{id:'d',title:'D',kind:'checklist',items:[]}]}]}];w.projects[0].customTabs.push({id:'legacy',name:'기존 배치',modules:['e','f'].map(id=>({id,kind:'checklist',title:id,span:6,items:[{id:id+'-item',text:id,done:false}]}))});window.productionBridge.write(w);await window.flushDocumentModules();window.productionBridge.select(id,'tab:columns');return id}""")
+    project=page.evaluate("""async()=>{const w=window.productionBridge.read(),id=crypto.randomUUID();w.productions=[];w.projects=[{id,name:'열 검증',status:'진행 중',tasks:[],schedules:[],assets:[],feedback:[],customTabs:[{id:'columns',name:'열',modules:[{id:'outer',kind:'columns',blockLayout:true,columnSlots:['l','m','r']},{id:'inner',kind:'columns',parentSlot:'l',columnSlots:['ll','lr']},{id:'a',title:'A',kind:'text',parentSlot:'ll',text:'A 원본'},{id:'b',title:'B',kind:'text',parentSlot:'lr',items:[]},{id:'c',title:'C',kind:'text',parentSlot:'r',items:[]},{id:'d',title:'D',kind:'text',items:[]}]}]}];w.projects[0].customTabs.push({id:'legacy',name:'기존 배치',modules:['e','f'].map(id=>({id,kind:'text',title:id,span:6,text:id}))});window.productionBridge.write(w);await window.flushDocumentModules();window.productionBridge.select(id,'tab:columns');return id}""")
     route=base+'#/work-groups/'+project+'/tabs/columns';page.goto(route);page.reload()
     try:page.locator('[data-fluid-id=a]').wait_for(timeout=8000)
     except Exception:
@@ -74,7 +74,7 @@ with tempfile.TemporaryDirectory() as td:
     # Merge the inner boundary: B then D append after A, preserving text/checklist bytes.
     page.locator('.column-boundary').first.get_by_role('button').click(force=True);page.wait_for_timeout(350)
     saved=data();assert not any(m['id']=='inner' for m in saved);assert [m['id'] for m in saved if m.get('parentSlot')=='l']==['a','b','d']
-    assert next(m for m in saved if m['id']=='a')['items'][0]['text']=='A 원본'
+    assert next(m for m in saved if m['id']=='a')['text']=='A 원본'
     while page.locator('.column-boundary').count():
      page.locator('.column-boundary').first.get_by_role('button').click(force=True);page.wait_for_timeout(200)
     assert not any(m['kind']=='columns' for m in data());assert all(not m.get('parentSlot') for m in data())
@@ -87,7 +87,7 @@ with tempfile.TemporaryDirectory() as td:
     page.locator('.column-slot-empty .column-add').first.click();menu=page.get_by_role('menu',name='열에 추가할 모듈');assert menu.get_by_role('menuitem',name='2단 열',exact=True).is_disabled();page.keyboard.press('Escape');menu.wait_for(state='detached')
     # Legacy side-by-side layout is displayed as explicit columns and persisted on edit.
     page.evaluate('window.flushDocumentModules()');page.goto(base+'#/work-groups/'+project+'/tabs/legacy');page.locator('[data-fluid-id=e]').wait_for();assert page.locator('.column-boundary').count()==1
-    page.locator('[data-fluid-id=e] input[type=checkbox]').check();page.evaluate('window.flushDocumentModules()')
+    page.locator('[data-fluid-id=e] textarea').fill('기존 메모 수정');page.evaluate('window.flushDocumentModules()')
     legacy=page.evaluate('window.productionBridge.read().projects[0].customTabs[1].modules');assert len(legacy)==3;assert legacy[0]['kind']=='columns';assert {m['id'] for m in legacy if m['kind']!='columns'}=={'e','f'}
     page.reload();page.locator('[data-fluid-id=e]').wait_for();assert page.locator('.column-boundary').count()==1
     page.locator('.merged-workspace.project-page').evaluate('e=>e.dataset.projectReadonly="true"');assert page.locator('.column-boundary:visible').count()==0;assert page.locator('.column-add:visible').count()==0

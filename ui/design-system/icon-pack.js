@@ -1,10 +1,12 @@
 import {projectIconPaths} from './project-icon-paths.js';
 // Production icon pack: 24px grid, 1.75px stroke, rounded caps and joins.
 export const icons={
- 'columns-2':'<path d="M3 4h7v16H3zM14 4h7v16h-7z"/>',
- 'columns-3':'<path d="M2 4h4v16H2zM10 4h4v16h-4zM18 4h4v16h-4z"/>',
- 'columns-4':'<path d="M2 4h3v16H2zM8 4h3v16H8zM14 4h3v16h-3zM20 4h2v16h-2z"/>',
-
+ 'columns-2':'<path d="M12 3v18"/>',
+ 'columns-3':'<path d="M8 3v18M16 3v18"/>',
+ 'columns-4':'<path d="M6 3v18M12 3v18M18 3v18"/>',
+ 'section-heading':'<path d="M4 5v14M14 5v14M4 12h10M18 16h4M20 14v6"/>',
+ timetable:'<path d="M3 4h18v16H3zM7 4v16M3 9h18M3 14h18M12 9v11M17 9v11"/>',
+ 'schedule-list':'<path d="M4 6h2M9 6h11M4 12h2M9 12h11M4 18h2M9 18h11"/>',
  circle:'<circle cx="12" cy="12" r="9"/>',
  divider:'<path d="M4 12h16"/>',
  keyboard:'<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M6 8h1m3 0h1m3 0h1m3 0h1M6 12h1m3 0h8M9 20l3 2 3-2"/>',
@@ -83,7 +85,7 @@ export const icons={
  undo:'<g transform="translate(24 0) scale(-1 1)"><path d="m15 4 5 5-5 5M20 9H9a6 6 0 0 0 0 12h2"/></g>',
  refresh:'<path d="M20 8a9 9 0 0 0-15-3L3 8m0-5v5h5m-4 8a9 9 0 0 0 15 3l2-3m0 5v-5h-5"/>',
  link:'<path d="m10 14 4-4M8 16l-1 1a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0m0 2 1-1a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0" transform="translate(1 1)"/>',
- video:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m10 8 6 4-6 4Z"/>',
+ video:'<path d="m8 4 12 8-12 8z"/>',
  text:'<path d="M4 5h16M12 5v15M8 20h8"/>',
  table:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>',
  users:'<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6m2 5a5 5 0 0 1 3 4v2"/>',

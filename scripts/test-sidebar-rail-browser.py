@@ -61,6 +61,14 @@ with tempfile.TemporaryDirectory() as td:
    assert page.evaluate("async id=>(await fetch('/production/api/data').then(r=>r.json())).productions.find(p=>p.id===id).name",fixture)=='정리한 프로젝트'
    expect(page.locator('.breadcrumbs')).to_have_text('프로덕션/정리한 프로젝트')
    page.screenshot(path='/tmp/production-project-title.png',full_page=True)
+   # Sidebar actions share the title editor, completion review and deletion confirmation.
+   page.evaluate("id=>{state.productions.find(p=>p.id===id).iconColor='#8b5cf6';syncSidebar()}",fixture)
+   side=page.locator('.sidebar-project[data-production-id="'+fixture+'"]');assert side.evaluate('e=>getComputedStyle(e).color')=='rgb(139, 92, 246)';assert side.locator('svg').evaluate('e=>getComputedStyle(e).color')=='rgb(139, 92, 246)'
+   side.click(button='right');menu=page.get_by_role('menu',name='항목 메뉴',exact=True);expect(menu).to_be_visible();assert menu.get_by_role('menuitem').count()==3
+   menu.get_by_role('menuitem',name='이름 변경',exact=True).click();expect(title_input).to_be_visible();title_input.press('Escape')
+   side.click(button='right');page.get_by_role('menuitem',name='아카이브',exact=True).click();review=page.get_by_role('dialog',name='프로젝트 완료 점검',exact=True);expect(review).to_be_visible();review.get_by_role('button',name='취소',exact=True).click()
+   side.click(button='right');page.get_by_role('menuitem',name='삭제',exact=True).click();deletion=page.get_by_role('dialog',name='삭제',exact=True);expect(deletion).to_be_visible();deletion.get_by_role('button',name='삭제 닫기',exact=True).click()
+
    page.evaluate("""()=>{window.savedTitleFetch=window.fetch;window.injectedTitleFailure=false;window.fetch=async(input,options)=>{if(String(input).endsWith('/api/data')&&options?.method==='PUT'&&!window.injectedTitleFailure){window.injectedTitleFailure=true;return new Response(JSON.stringify({error:'검증용 저장 실패'}),{status:503,headers:{'Content-Type':'application/json'}})}return window.savedTitleFetch(input,options)}}""")
    title_button.click();title_input.fill('저장 실패 제목');title_input.press('Enter')
    page.wait_for_function('window.injectedTitleFailure===true')
@@ -96,6 +104,12 @@ with tempfile.TemporaryDirectory() as td:
    expect(page.get_by_role('heading',name='공통 이름 멤버',exact=True)).to_be_visible()
    assert page.evaluate("async id=>(await fetch('/production/api/database/members').then(r=>r.json())).find(r=>r.id===id).name",member)=='공통 이름 멤버'
 
+   page.evaluate("openDatabase('members')");expect(page.locator('#member-total-count')).to_have_text('1')
+   order=page.locator('.member-list-toolbar').evaluate("e=>['.member-list-label','.member-total-count','.member-sort-control','#db-add'].map(s=>e.querySelector(s).getBoundingClientRect().x)");assert order==sorted(order),order
+   assert page.locator('#db-add').inner_text().strip()=='멤버';assert page.locator('#app-page-title .app-page-icon').is_hidden()
+   assert page.locator('.sidebar-reference-area .sidebar-source-sections').evaluate('e=>getComputedStyle(e).borderBottomWidth')=='0px'
+   assert page.locator('.sidebar-reference-area>.materials-divider').count()==1
+   trash=page.locator('.sidebar-materials-trash');assert trash.evaluate('e=>parseFloat(getComputedStyle(e).marginBottom)')>=12
    page.evaluate("openProduction(undefined,'dashboard')")
    expect(page.get_by_role('heading',name='홈',exact=True)).to_be_visible()
    page.evaluate("()=>{const fixture=document.createElement('div');fixture.style.height='2400px';fixture.dataset.scrollFixture='';document.querySelector('.canvas').append(fixture);window.scrollTo(0,500)}")
@@ -120,7 +134,7 @@ with tempfile.TemporaryDirectory() as td:
    page.evaluate('scrollTo(0,0)')
    page.locator('[data-scroll-fixture]').evaluate('e=>e.remove()')
    nav.locator('[data-main-space=settings]').click();page.locator('#sidebar [data-settings-category=general]').click()
-   expect(page.locator('.app-version-row')).to_contain_text('v0.1.9')
+   expect(page.locator('.app-version-row')).to_contain_text('v0.1.10')
    page.screenshot(path='/tmp/production-sidebar-settings.png',full_page=True)
    nav.locator('[data-main-space=home]').click()
    count=page.evaluate("fetch('/production/api/database/resources').then(r=>r.json()).then(r=>r.length)")

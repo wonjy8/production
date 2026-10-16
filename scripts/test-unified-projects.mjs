@@ -1,3 +1,5 @@
+import * as planning from '../production/planning-model.js';
+import * as retired from '../production/retired-modules.js';
 import * as columnLayout from '../production/column-layout.js';
 import * as snapLayout from '../production/snap-layout.js';
 import * as hub from '../production/module-hub.js';
@@ -44,7 +46,7 @@ assert.equal(adminHomeData(w,{today:'2026-10-13',productionId:'solo'}).active[0]
 const require=createRequire(import.meta.url),esbuild=require('esbuild');
 const jsx=(type,props,key)=>({type,props,key}),nodes=n=>[n,...[n?.props?.children].flat(Infinity).filter(v=>v&&typeof v==='object').flatMap(nodes)];
 let tab={id:'content',name:'내용',modules:[]},cursor=0,values=['',null,true];
-const ctx={module:{exports:{}},exports:{},crypto:{randomUUID:()=> 'new-content'},window:{},require(name){if(name==='./column-layout.js')return columnLayout;if(name==='./snap-layout.js')return snapLayout;
+const ctx={module:{exports:{}},exports:{},crypto:{randomUUID:()=> 'new-content'},window:{},require(name){if(name==='./planning-model.js')return planning;if(name==='./retired-modules.js')return retired;if(name==='./column-layout.js')return columnLayout;if(name==='./snap-layout.js')return snapLayout;
  if(name==='../ui/item-menu.js')return menus;if(name==='react')return {useMemo:fn=>fn(),useRef:v=>({current:v}),useEffect(){},useState(initial){const i=cursor++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return [values[i],v=>values[i]=v]}};
  if(name==='react/jsx-runtime')return {jsx,jsxs:jsx};
  if(name==='./shared-modules.js')return shared;if(name==='./module-hub.js')return hub;

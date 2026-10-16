@@ -3,15 +3,9 @@ import {createHubModule,createHubTab} from '../production/module-hub.js';
 import {planningKinds,planningSource,planningSnapshot,removePlanningModule,planningGroups,planningTeams,planningMembers,planningEquipment,movePlanningEntry,visiblePlanningFields} from '../production/planning-model.js';
 import {applyImportedContent,importedModule} from '../production/imported-modules.js';
 import {resetModule} from '../production/project-lifecycle.js';
-for(const kind of ['section-heading',...planningKinds])assert.equal(createHubModule(kind).kind,kind);
-for(const id of ['filming-operations','event-operations','lesson-plan','travel-plan']){
- const tab=createHubTab(id),other=createHubTab(id);assert.equal(tab.modules.length,8);assert.notEqual(tab.modules[1].id,other.modules[1].id);
- const root=tab.modules[1],view=tab.modules[3];assert.equal(planningSource(view,tab.modules),root);root.planData.entries[0].title='수정';assert.equal(planningSource(view,tab.modules).planData.entries[0].title,'수정');
- const snapshot=planningSnapshot(view,tab.modules);snapshot.planData.entries[0].title='사본';assert.equal(root.planData.entries[0].title,'수정');assert.equal(snapshot.dataModuleId,null);
- const remaining=removePlanningModule(tab.modules,root.id),kept=remaining.find(m=>m.id===view.id);assert.equal(kept.planData.entries[0].title,'수정');assert.equal(kept.dataModuleId,null);
- const imported=importedModule(planningSnapshot(view,tab.modules),{id:'copy',source:{kind:'project',ownerId:'p',moduleId:view.id}});assert.equal(imported.dataModuleId,null);assert.ok(imported.sourceCopy);assert.equal(applyImportedContent(view,imported).dataModuleId,null);
- assert.equal(visiblePlanningFields(root.planData,root.hiddenPlanFields).some(f=>f.id==='time'),false);
-}
+assert.equal(createHubModule('section-heading').kind,'section-heading');
+for(const kind of planningKinds)assert.throws(()=>createHubModule(kind),/지원하지/);
+for(const id of ['filming-operations','event-operations','lesson-plan','travel-plan'])assert.throws(()=>createHubTab(id),/지원하지/);
 const modules=[{id:'a',kind:'group-list',dataModuleId:'b'},{id:'b',kind:'group-list',dataModuleId:'a'}];assert.equal(planningSource(modules[0],modules),null);
 const w={productions:[{id:'p',name:'공연',teams:[{id:'a',name:'준비팀',members:[{memberId:'one'}]},{id:'b',name:'진행팀',members:[{memberId:'two'}]}]}],members:[{id:'one',name:'하나'},{id:'two',name:'둘'},{id:'gone',deleted:true}],equipment:[{id:'gear',ownerId:'one',inventory:[{id:'mic',name:'마이크'}]}]};
 assert.equal(planningTeams(w)[0].key,'p:a');assert.deepEqual(planningMembers(w,'p:a').map(m=>m.id),['one']);assert.equal(planningEquipment(w)[0].key,'gear:mic');

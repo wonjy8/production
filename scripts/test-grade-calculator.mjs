@@ -7,5 +7,5 @@ assert.equal(calculateGrades([{credits:3,grade:'P'}]).gpa,null);
 assert.equal(calculateGrades([{credits:-1,grade:'A+'},{credits:'bad',grade:'A0'},{credits:3,grade:''}]).graded,0);
 assert.equal(gradePoints('A-','4.5'),null);
 assert.equal(gradePoints('A+','4.0'),4);
-const a=createHubModule('grade-calculator'),b=createHubModule('grade-calculator');assert.notEqual(a.courses,b.courses);assert.equal(a.gradeScale,'4.5');
+assert.throws(()=>createHubModule('grade-calculator'),/지원하지/); // Existing GPA data still calculates; the new catalog has no calculator preset.
 console.log('Grade calculator: weighted GPA, F, P/NP, empty/invalid entries, grading scales and independent modules passed');

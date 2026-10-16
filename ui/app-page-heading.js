@@ -34,6 +34,7 @@ window.inlineDocumentBreadcrumbs=()=>{const child=window.getInlineDocumentWindow
 function headingIsInActiveWorkspace(element,root){if(element.closest('[hidden],dialog,[role=dialog]'))return false;const host=root.host;return host?!host.closest('[hidden]')&&!!host.closest('.canvas'):!!element.closest('.canvas')}
 window.refreshAppPageHeading=()=>{
  if(document.body.classList.contains('document-mode'))return;
+ appPageIconHost.hidden=!productionPage||refPage||!settingsPanel.hidden||!databasePanel.hidden||(!selected&&localStorage.getItem('pn-production-view')!=='production');
  const isDocument=!!window.inlineDocumentActive,items=window.appBreadcrumbItems||[];let title=items.at(-1)?.label||'홈';
  if(!isDocument){for(const root of window.appPageHeadingRoots||[]){const headings=[...root.querySelectorAll(window.appPageHeadingSelector)].filter(h=>headingIsInActiveWorkspace(h,root));if(!headings.length)continue;const heading=headings[0];title=heading.textContent.trim()||title;for(const h of headings){if(!h.hasAttribute('data-app-page-title'))h.setAttribute('data-app-page-title','');const wrapper=h.closest('.workspace-page-heading,.document-library-heading,.gallery-heading,.owner-editor-head,header');if(wrapper){const empty=wrapper.children.length===1&&wrapper.firstElementChild===h;if(empty&&!wrapper.hasAttribute('data-app-heading-empty'))wrapper.setAttribute('data-app-heading-empty','');else if(!empty&&wrapper.hasAttribute('data-app-heading-empty'))wrapper.removeAttribute('data-app-heading-empty')}}}}
  else title=window.inlineDocumentChrome?.title||'문서 편집기';

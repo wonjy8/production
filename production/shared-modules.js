@@ -1,5 +1,5 @@
 import {figmaEmbedURL} from './figma-connection.js';
-export const moduleKinds=[['section-heading','섹션 제목','list'],['group-list','그룹 목록','list'],['progress-table','진행표','calendar'],['info-cards','안내 카드','file'],['assignment-table','배치표','users'],['database','데이터베이스','table'],['grade-calculator','학점 계산기','table'],['schedule-list','일정 목록','calendar'],['text','텍스트','file'],['image','사진','reference'],['video','영상','video'],['file','파일','file'],['link','링크','link'],['embed','임베드','video'],['divider','구분선','list'],['accounting','회계','table'],['checklist','체크리스트','tasks'],['tracker','현황표','table'],['materials','자료','folder'],['tasks','할 일','tasks'],['schedule','일정','calendar'],['timetable','타임테이블','calendar']];
+export const moduleKinds=[['section-heading','섹션 제목','list'],['grade-calculator','학점 계산기','table'],['schedule-list','일정 목록','schedule-list'],['text','메모','file'],['image','사진','reference'],['video','영상','video'],['file','파일','file'],['link','링크','link'],['embed','임베드','video'],['divider','구분선','list'],['accounting','회계','table'],['tracker','현황표','table'],['tasks','할 일','tasks'],['schedule','캘린더','calendar'],['timetable','타임테이블','timetable']];
 export function referenceModules(r){
  if(Array.isArray(r.tabs))return r.tabs.flatMap(t=>t.modules||[]);
  if(Array.isArray(r.modules))return r.modules;
@@ -15,8 +15,8 @@ export function resolveSharedModule(module,w,refs){
 }
 export function sharedChoices(w,refs){
  const out=[];
- for(const r of refs.filter(r=>!r.deleted))for(const t of referenceTabs(r))for(const m of t.modules.filter(m=>m.kind!=="columns"))out.push({key:'r:'+r.id+':'+m.id,label:r.title+' / '+t.name+' / '+(m.title||moduleKinds.find(k=>k[0]===m.kind)?.[1]||'모듈'),source:m.source||{kind:'reference',ownerId:r.id,moduleId:m.id},module:m});
- for(const [kind,owners] of [['project',w.projects||[]],['production',w.productions||[]]])for(const p of owners)for(const t of p.customTabs||[])for(const m of t.modules.filter(m=>m.kind!=="columns"))out.push({key:kind+':'+p.id+':'+m.id,label:(p.name||p.title)+' / '+t.name+' / '+(m.title||moduleKinds.find(k=>k[0]===m.kind)?.[1]||'모듈'),source:m.source||{kind,ownerId:p.id,moduleId:m.id},module:m});
+ for(const r of refs.filter(r=>!r.deleted))for(const t of referenceTabs(r))for(const m of t.modules.filter(m=>!['columns','database','materials','checklist','group-list','progress-table','info-cards','assignment-table'].includes(m.kind)))out.push({key:'r:'+r.id+':'+m.id,label:r.title+' / '+t.name+' / '+(m.title||moduleKinds.find(k=>k[0]===m.kind)?.[1]||'모듈'),source:m.source||{kind:'reference',ownerId:r.id,moduleId:m.id},module:m});
+ for(const [kind,owners] of [['project',w.projects||[]],['production',w.productions||[]]])for(const p of owners)for(const t of p.customTabs||[])for(const m of t.modules.filter(m=>!['columns','database','materials','checklist','group-list','progress-table','info-cards','assignment-table'].includes(m.kind)))out.push({key:kind+':'+p.id+':'+m.id,label:(p.name||p.title)+' / '+t.name+' / '+(m.title||moduleKinds.find(k=>k[0]===m.kind)?.[1]||'모듈'),source:m.source||{kind,ownerId:p.id,moduleId:m.id},module:m});
  return out;
 }
 export function updateSharedOwner(w,source,fn){const key=source.kind==='project'?'projects':'productions';return {...w,[key]:w[key].map(p=>p.id===source.ownerId?{...p,customTabs:(p.customTabs||[]).map(t=>({...t,modules:t.modules.map(m=>m.id===source.moduleId?fn(m):m)}))}:p)}};
@@ -30,8 +30,8 @@ export function embedURL(raw){const figma=figmaEmbedURL(raw);if(figma)return fig
 export function instagramURL(raw){try{const u=new URL(raw);if(!['http:','https:'].includes(u.protocol)||!['instagram.com','www.instagram.com','m.instagram.com'].includes(u.hostname)||u.username||u.password)return '';const match=u.pathname.match(/^\/(p|reel|reels|tv)\/([A-Za-z0-9_-]+)\/?$/);return match?'https://www.instagram.com/'+(match[1]==='reels'?'reel':match[1])+'/'+match[2]+'/embed/':''}catch{return ''}}
 
 export const moduleGroups=[
- {id:'school',label:'학교',kinds:['grade-calculator']},
- {id:'work',label:'업무·일정',kinds:['tasks','schedule','schedule-list','timetable','group-list','progress-table','assignment-table']},
- {id:'content',label:'콘텐츠',kinds:['text','image','video','section-heading','info-cards']},
- {id:'materials',label:'자료·링크',kinds:['database','materials','file','link','embed','divider','accounting']},
+ {id:'basic',label:'기본',kinds:['text']},
+ {id:'schedule',label:'일정',kinds:['schedule','timetable','schedule-list','tasks']},
+ {id:'media',label:'미디어',kinds:['image','video','file','link']},
+ {id:'layout',label:'나누기',kinds:['section-heading','divider','columns']},
 ];

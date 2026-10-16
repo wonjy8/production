@@ -164,9 +164,9 @@ export function SnapCanvas({
               ? undefined
               : preview?.id === i.id && preview.height
                 ? preview.height
-                : i.frameHeight,
+                : i.frameHeight?Math.max(i.frameHeight,metrics.naturalHeights?.[i.id]||(i.kind==='timetable'?430:0)):undefined,
         })),
-      [items, sizingPreview],
+      [items, sizingPreview, metrics.naturalHeights],
     ),
     layout = useMemo(
       () => snapBoxes(effective, metrics.heights, metrics.width),
@@ -611,7 +611,7 @@ export function SnapCanvas({
                 ((moving ? preview.left : b.left) / metrics.width) * 100 + "%",
               top: moving ? preview.top : b.top,
               width: (b.width / metrics.width) * 100 + "%",
-              height: i.kind === "divider" ? 32 : i.frameHeight || undefined,
+              height: i.kind === "divider" ? 32 : i.kind==='timetable'?(i.frameHeight||620):i.frameHeight?Math.max(i.frameHeight,metrics.naturalHeights?.[i.id]||0):undefined,
               zIndex: moving ? 9 : undefined,
             }}
           >

@@ -1,3 +1,4 @@
+import {ScheduleGrid} from './ScheduleGrid';
 import {baseId,expandRepeats,taskOccurrences,changeRepeating,repeatAt,sameRepeat} from './recurrence.js';
 import {RepeatFields,readRepeat} from './RepeatFields';
 import {projectColorStyle} from './project-colors.js';
@@ -196,6 +197,7 @@ export function ProjectWorkspace({
 
   const [scheduleEditor, setScheduleEditor] = useState<Schedule | null>(null);
   const [calendarHeight,setCalendarHeight]=useState(()=>{try{return Number(localStorage.getItem('pn-calendar-height:'+project.id))||660}catch{return 660}});
+  const [calendarView,setCalendarView]=useState('month');
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -258,7 +260,7 @@ export function ProjectWorkspace({
   const today = dateString(new Date());
   const displayedTasks = taskOccurrences(project.tasks,today);
   const sourceFor=(item:any)=>taskSources?.[baseId(item)];
-  const colorFor=(item:any)=>projectColorStyle(itemColors?.[baseId(item)]||project.iconColor||defaultColor) as any;
+  const colorFor=(item:any)=>projectColorStyle(item.color||itemColors?.[baseId(item)]||project.iconColor||defaultColor) as any;
   const tasks = displayedTasks.filter(
     (t) =>
       (taskFilter === "전체" || (taskFilter === "완료" ? t.done : !t.done)) &&
@@ -713,12 +715,13 @@ export function ProjectWorkspace({
     month.getMonth() + 1,
     0,
   ).getDate();
-  const calendarDays = Array.from(
+  const monthCalendarDays = Array.from(
     { length: Math.ceil((startDay + monthDays) / 7) * 7 },
     (_, i) => new Date(month.getFullYear(), month.getMonth(), i - startDay + 1),
   );
+  const calendarDays=calendarView==='month'?monthCalendarDays:Array.from({length:calendarView==='week'?7:1},(_,i)=>new Date(month.getFullYear(),month.getMonth(),month.getDate()+(calendarView==='week'?-month.getDay():0)+i));
   const calendarFrom=dateString(calendarDays[0]),calendarTo=dateString(calendarDays.at(-1)!);
-  const calendarSchedules=expandRepeats(project.schedules,calendarFrom,calendarTo).sort((a,b)=>Number(!!a.startTime)-Number(!!b.startTime)||(a.startTime||'').localeCompare(b.startTime||''));
+  const calendarSchedules=expandRepeats(project.schedules.filter((s:any)=>!s.calendarExcluded),calendarFrom,calendarTo).sort((a,b)=>Number(!!a.startTime)-Number(!!b.startTime)||(a.startTime||'').localeCompare(b.startTime||''));
   const calendarTasks=expandRepeats(project.tasks,calendarFrom,calendarTo);
   return (
     <div className="production-workbench">
@@ -958,7 +961,7 @@ export function ProjectWorkspace({
               <span className="view-context-label">일정</span>
             </div>
           </div>
-          <div className="calendar-heading">
+          <div className="calendar-heading"><div className="calendar-view-switch">{[['month','월간'],['week','주간'],['day','일간']].map(([view,label])=><button type="button" className="button keep-label" key={view} aria-pressed={calendarView===view} onClick={()=>{setCalendarView(view);if(view!=='month'&&month.getDate()===1)setMonth(new Date(month.getFullYear(),month.getMonth(),new Date().getDate()))}}>{label}</button>)}</div>
             <h3>
               {month.getFullYear()}년 {month.getMonth() + 1}월
             </h3>
@@ -979,10 +982,10 @@ export function ProjectWorkspace({
               </button>
               <button
                 className="icon-button"
-                aria-label="이전 달"
+                aria-label={calendarView==='month'?'이전 달':'이전 날짜'}
                 onClick={() =>
                   setMonth(
-                    new Date(month.getFullYear(), month.getMonth() - 1, 1),
+                    calendarView==='month'?new Date(month.getFullYear(),month.getMonth()-1,1):new Date(month.getFullYear(),month.getMonth(),month.getDate()-(calendarView==='week'?7:1)),
                   )
                 }
               >
@@ -990,10 +993,10 @@ export function ProjectWorkspace({
               </button>
               <button
                 className="icon-button"
-                aria-label="다음 달"
+                aria-label={calendarView==='month'?'다음 달':'다음 날짜'}
                 onClick={() =>
                   setMonth(
-                    new Date(month.getFullYear(), month.getMonth() + 1, 1),
+                    calendarView==='month'?new Date(month.getFullYear(),month.getMonth()+1,1):new Date(month.getFullYear(),month.getMonth(),month.getDate()+(calendarView==='week'?7:1)),
                   )
                 }
               >
@@ -1003,7 +1006,7 @@ export function ProjectWorkspace({
           </div>
           <div className="calendar-scroll calendar-resizable" style={{height:calendarHeight}} onPointerUp={e=>{const height=Math.round(e.currentTarget.getBoundingClientRect().height);if(Math.abs(height-calendarHeight)>1){setCalendarHeight(height);localStorage.setItem('pn-calendar-height:'+project.id,String(height));}}}>
             <div className="calendar-height-tools"><button type="button" className="keep-label" aria-label="일정 높이 늘리기" onClick={()=>{const h=calendarHeight+140;setCalendarHeight(h);localStorage.setItem('pn-calendar-height:'+project.id,String(h));}}>높이 늘리기</button></div>
-            <div className="calendar-grid" style={{minHeight:calendarHeight-48}}>
+            {calendarView!=='month'?<ScheduleGrid dates={calendarDays.map(dateString)} items={[...calendarSchedules.map(s=>({...s,key:'schedule:'+s.id,kind:'schedule',color:(s as any).color||itemColors?.[baseId(s)]||project.iconColor||defaultColor,source:s,endDate:s.endDate||s.date})),...calendarTasks.map(t=>({...t,key:'task:'+t.id,kind:'task',color:(t as any).color||itemColors?.[baseId(t)]||project.iconColor||defaultColor,source:t,date:t.due,endDate:t.due}))]} onEdit={(i:any)=>{setCalendarDraft(false);if(i.kind==='task')setTaskEditor(i.source);else setScheduleEditor(i.source)}} onCreate={(range:any)=>{setCalendarDraft(true);setScheduleEditor({id:crypto.randomUUID(),title:'',location:'',note:'',...range})}} onMove={(i:any,patch:any)=>mutate(i.kind,i.source,i.kind==='task'?{due:patch.date,startTime:patch.startTime,endTime:patch.endTime}:patch)}/>:<div className="calendar-grid" style={{minHeight:calendarHeight-48}}>
               {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
                 <div className="weekday" key={d}>
                   {d}
@@ -1143,7 +1146,7 @@ export function ProjectWorkspace({
                   </div>
                 );
               })}
-            </div>
+            </div>}
           </div>
         </section>
       )}

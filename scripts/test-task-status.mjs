@@ -17,5 +17,5 @@ assert.equal(tabTemplates[0].id,'blank');
 for(const template of moduleTemplates)assert(hubCategories.some(g=>g.id===hubGroup(template)),template.id);
 assert.equal(hubGroup(moduleTemplates.find(t=>t.id==='photos')),'media');
 assert.equal(hubGroup(moduleTemplates.find(t=>t.id==='tasks')),'schedule');
-assert(hubCategories.findIndex(g=>g.id==='media')<hubCategories.findIndex(g=>g.id==='church'));
+assert(hubCategories.findIndex(g=>g.id==='media')<hubCategories.findIndex(g=>g.id==='layout'));
 console.log('PASS fixed task groups, stage mapping, completion/reopening and Hub taxonomy');

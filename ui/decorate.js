@@ -12,7 +12,10 @@ export function decorateUI(root){
  });
 root.querySelectorAll('button').forEach(b=>{
  const actionLabel=b.getAttribute('aria-label')||b.textContent.trim();
- b.classList.toggle('ui-add-action',/추가|^[＋+]$/.test(actionLabel)&&!b.matches('.hub-card,.module-tab-empty,.calendar-event,.calendar-task,.calendar-task-check,.task-title,.tt-event,.tt-all-day-item,.tt-slot,.calendar-add'));
+ // Keep the complete accessible name and permission semantics, shorten only visible add labels.
+ if(!b.matches('.calendar-event,.calendar-task,.calendar-task-check,.task-title,.sg-event,.sg-all-day-item,.tt-event,.tt-all-day-item,.refopen,.merge-project,.sidebar-project,.hub-card')&&/추가\s*$/.test(b.textContent.trim())&&b.textContent.trim()!=='추가'&&(/추가/.test(actionLabel)||b.dataset.controlIcon==='plus')&&!b.closest('.item-context-menu')){if(!b.hasAttribute('aria-label'))b.setAttribute('aria-label',actionLabel);const walker=document.createTreeWalker(b,NodeFilter.SHOW_TEXT);let node,last;while(node=walker.nextNode())if(node.textContent.trim())last=node;if(last&&/추가\s*$/.test(last.textContent)){last.textContent=last.textContent.replace(/\s*추가\s*$/,'');if(b.matches('.keep-label')&&!b.querySelector('svg')&&!/^[＋+]/.test(b.textContent.trim()))b.insertAdjacentHTML('afterbegin',iconSVG('plus'));}}
+
+ b.classList.toggle('ui-add-action',/추가|^[＋+]$/.test(actionLabel)&&!b.matches('.hub-card,.module-tab-empty,.calendar-event,.calendar-task,.calendar-task-check,.task-title,.tt-event,.tt-all-day-item,.sg-event,.sg-all-day-item,.tt-slot,.calendar-add'));
  if(b.matches(exclude))return;
  const svg=b.querySelector('svg');
  if(!svg&&b.matches('[data-newblock]'))b.childNodes.forEach(n=>{if(n.nodeType===3){const clean=n.textContent.replace(/^\s*[＋+]\s*/, '');if(clean!==n.textContent)n.textContent=clean;}});

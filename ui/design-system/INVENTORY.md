@@ -37,3 +37,10 @@ Squircle는 버튼을 포함한 모든 둥근 UI 모서리에 적용하며 각 �
 - 이모지 검색: `emoji-pack.js`, `emoji-ko.json`의 한국어 이름·검색어, 공통 검색 입력. 항목 테두리와 분류 드롭다운, 탭의 개수 표시를 제거했다.
 - 반복: `recurrence.js`, `RepeatFields.tsx`; 프로젝트·통합 일정/할일, 빠른 할일 추가, 일정 목록 편집, 홈/프로젝트 현황이 같은 규칙/예외를 사용한다.
 - 일정/할일 표현: `scheduling.css`의 프로젝트색 종일 배경·시간 표시·할일 체크, 캘린더 높이, 보드 하단 완료 목록 및 상태 사이 구분선.
+
+## 0.1.10 모듈 언어·시간표·사이드바
+
+- 목록·본문 높이: `module-language.css`, `module-hub.js`, `retired-modules.js`.
+- 시간표 공통 UI: `ScheduleGrid.tsx`, `time-grid-model.js`, `time-grid.css`; 캘린더 주간·일간과 타임테이블에서 공유.
+- 버튼 문구·호버: `decorate.js`, `buttons.css`; 전체 접근성 이름과 사용자 콘텐츠 제목은 유지.
+- 사이드바 메뉴·색·자료 구분선·멤버 툴바: `context-menu.js`, `item-menu.js`, `navigation.css`, `database.js`.

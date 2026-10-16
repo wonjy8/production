@@ -38,11 +38,13 @@ export function contentHeightResize(
     Math.abs(desired - naturalHeight) <= (latched ? 26 : 14);
   return {
     auto,
-    height: auto ? naturalHeight : Math.max(160, Math.round(desired / 16) * 16),
+    height: auto ? naturalHeight : Math.max(160, naturalHeight || 0, Math.round(desired / 16) * 16),
   };
 }
 export function naturalModuleHeight(element) {
   if (!element) return 0;
+  const timetable=element.querySelector?.('.timetable-module'),body=timetable?.querySelector('.sg-body');
+  if(body)return Math.max(430,element.getBoundingClientRect().height-body.getBoundingClientRect().height+180+Math.max(0,timetable.scrollHeight-timetable.clientHeight));
   const fixed = element.classList.contains("module-fixed-height"),
     height = element.style.height;
   if (fixed) {

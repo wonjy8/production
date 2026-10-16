@@ -105,3 +105,13 @@ export function migrateColumns(items,legacyBoxes){
   }
   return out;
 }
+
+// A boundary snaps to eighths, with thirds for balanced three-column layouts.
+export const columnStops=[1/8,1/4,1/3,3/8,1/2,5/8,2/3,3/4,7/8];
+export function snapColumnWidths(widths,index,delta,direction=0){
+ const sum=widths.reduce((a,b)=>a+b,0),before=widths.slice(0,index).reduce((a,b)=>a+b,0),pair=widths[index]+widths[index+1],current=before+widths[index],min=sum/8;
+ const choices=columnStops.map(f=>f*sum).filter(v=>v>=before+min-.01&&v<=before+pair-min+.01);
+ const next=direction?choices.filter(v=>direction>0?v>current+.1:v<current-.1).sort((a,b)=>direction>0?a-b:b-a)[0]:choices.sort((a,b)=>Math.abs(a-current-delta)-Math.abs(b-current-delta))[0];
+ if(next===undefined)return widths;
+ return widths.map((v,i)=>i===index?next-before:i===index+1?pair-next+before:v);
+}

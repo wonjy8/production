@@ -339,3 +339,12 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Place completed board tasks in a list below the two active columns; separate list status groups with dividers.
 - Simplify emoji/upload tabs and integrate Korean search annotations for all 1,914 emojis, with Unicode CLDR license attribution. Show upload format, size and crop/output specifications.
 - NAS 0.1.8 baseline: replace `share-view.html`, rebuild/recreate with `sh update.sh`; preserve configuration, database, data and keys. Provide the versioned ZIP in chat. No NAS API, schema, environment or dependency changes.
+
+## 0.1.10
+
+- Replace the module catalog with ordered Basic / Schedule / Media / Layout groups. Retired modules preserve their contents and original file IDs as memo/file modules; creating or editing retired module types is removed.
+- Snap column boundaries to eighths plus thirds while retaining the nested four-lane limit and lossless leftward merges. Modules use their content as minimum height without inner vertical scrolling.
+- Share a fitted time grid between calendar week/day and timetables; retain month view. Add timetable hour range, task visibility, calendar inclusion, date/time dragging and custom event colors. Keep hourly lines, adaptive two-hour labels, horizontal scrolling and equal soft outlines; remove trackpad zoom.
+- Unify neutral button/tab hover, compact `+ target` labels, list imports, blank-tab alignment and module icons.
+- Add sidebar project rename/archive/delete context actions and icon/text colors; fix Materials separators/trash spacing, hide Materials title icons and order member heading/count/sort/add controls.
+- NAS 0.1.9 baseline: replace `share-view.html` and add `UPDATE-0.1.10.md` from the versioned ZIP; preserve settings/data and rebuild using `sh update.sh`. Server APIs, DB schema and dependencies are unchanged.

@@ -1,11 +1,9 @@
+import {migrateRetiredModules} from './retired-modules.js';
 import { migrateColumns, applyBlockDrop } from "./column-layout.js";
 import { snapBoxes } from "./snap-layout.js";
 import { ProjectIconPicker } from "./ProjectIconPicker";
-import { PlanningModule, SectionHeading } from "./PlanningModule";
+import { SectionHeading } from "./SectionHeading";
 import {
-  planningKinds,
-  planningData,
-  planningSource,
   planningSnapshot,
   removePlanningModule,
   planningUniverse,
@@ -16,7 +14,6 @@ import { sourceInfo } from "./project-lifecycle.js";
 import { SharedSource } from "./SharedSource";
 import { InlineRemove } from "./InlineRemove";
 import { moveModule } from "./snap-layout.js";
-import { DatabaseModule } from "./DatabaseModule";
 import { LegacyDocumentModule } from "./LegacyDocumentModule";
 import { figmaModuleURL } from "./figma-connection.js";
 import { GradeCalculator } from "./GradeCalculator";
@@ -46,9 +43,8 @@ import { resizeModuleSpans, adjacentModule } from "./module-resize.js";
 import type { CustomTab, Workspace, WorkspaceModule } from "./data";
 import { Icon, IconButton } from "./Icon";
 import { Modal } from "./Modal";
-import { MaterialModule } from "./MaterialModule";
 import { AccountingModule } from "./AccountingModule";
-import { TrackerModule, ChecklistModule } from "./TrackerModule";
+import { TrackerModule } from "./TrackerModule";
 import { HubSidebar } from "./HubSidebar";
 import { createHubModule, moduleTemplates } from "./module-hub.js";
 import { dropModule } from "./snap-layout.js";
@@ -95,10 +91,11 @@ export function ModuleTab({
   onOpen: (pid: string, kind: string, id?: string) => void;
   onAddMember: (name: string) => void;
 }) {
-  const normalized = useMemo(() => migrateColumns(storedTab.modules, snapBoxes(storedTab.modules, {}, 1000).boxes), [storedTab.modules]);
+  const normalizeModules=(modules:any[])=>{const refs=(window as any).referenceBridge?.cached?.()||[];const preserved=migrateRetiredModules(modules,planningUniverse(w,refs),m=>resolveSharedModule(m,w,refs));return migrateColumns(preserved,snapBoxes(preserved,{},1000).boxes);};
+  const normalized = useMemo(() => normalizeModules(storedTab.modules), [storedTab.modules]);
   const tab = { ...storedTab, modules: normalized };
   function onTabChange(fn: (t: CustomTab) => CustomTab) {
-    saveTab(old => fn({...old, modules: old.modules === storedTab.modules ? normalized : migrateColumns(old.modules, snapBoxes(old.modules, {}, 1000).boxes)}));
+    saveTab(old => fn({...old, modules: old.modules === storedTab.modules ? normalized : normalizeModules(old.modules)}));
   }
   const [pendingKind, setPendingKind] = useState(""),
     [pendingPoint, setPendingPoint] = useState<any>(null);
@@ -695,42 +692,6 @@ export function ModuleTab({
                     module={m}
                     onChange={(fn) => updateModule(m.id, fn)}
                   />
-                ) : planningKinds.includes(m.kind) ? (
-                  <PlanningModule
-                    module={m}
-                    modules={tab.modules}
-                    workspace={w}
-                    onChange={(fn) => updateModule(m.id, fn)}
-                    onDataChange={(fn) =>
-                      onTabChange((t) => {
-                        const owner = planningSource(
-                          t.modules.find((v) => v.id === m.id),
-                          t.modules,
-                        );
-                        return owner
-                          ? {
-                              ...t,
-                              modules: t.modules.map((v) =>
-                                v.id === owner.id
-                                  ? {
-                                      ...v,
-                                      planData: fn(
-                                        v.planData || planningData(v.kind),
-                                      ),
-                                      updatedAt: new Date().toISOString(),
-                                    }
-                                  : v,
-                              ),
-                            }
-                          : t;
-                      })
-                    }
-                  />
-                ) : m.kind === "database" ? (
-                  <DatabaseModule
-                    module={m}
-                    onChange={(fn) => updateModule(m.id, fn)}
-                  />
                 ) : m.kind === "wordcraft" ? (
                   <LegacyDocumentModule
                     module={m}
@@ -751,17 +712,6 @@ export function ModuleTab({
                     module={m}
                     onChange={(fn) => updateModule(m.id, fn)}
                   />
-                ) : m.kind === "checklist" ? (
-                  <ChecklistModule
-                    module={m}
-                    onChange={(fn) => updateModule(m.id, fn)}
-                  />
-                ) : m.kind === "materials" ? (
-                  <MaterialModule
-                    module={m}
-                    legacy={p?.assets || []}
-                    onChange={(fn) => updateModule(m.id, fn)}
-                  />
                 ) : m.kind === "schedule-list" ? (
                   <ScheduleList
                     module={m}
@@ -773,6 +723,7 @@ export function ModuleTab({
                   />
                 ) : m.kind === "timetable" ? (
                   <Timetable
+                    footerTools={<IconButton name="tag" label="모듈 태그" onClick={()=>setTagging(m.id)}/>}
                     module={resolved || m}
                     workspace={timetableWorkspace}
                     defaultIds={defaultIds}
@@ -842,7 +793,7 @@ export function ModuleTab({
                 ) : (
                   <div className="group-empty">연결할 프로젝트 없음</div>
                 )}
-                {(!["image", "video", "file", "section-heading"].includes(
+                {(!["image", "video", "file", "section-heading", "timetable"].includes(
                   m.kind,
                 ) ||
                   (m.tags || []).length > 0) && (
@@ -854,7 +805,7 @@ export function ModuleTab({
                         onChange={() => {}}
                       />
                     </div>
-                    {!["image", "video", "file", "section-heading"].includes(
+                    {!["image", "video", "file", "section-heading", "timetable"].includes(
                       m.kind,
                     ) && (
                       <IconButton

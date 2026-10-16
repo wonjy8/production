@@ -1,4 +1,10 @@
 window.productionItemActions=target=>{
+ const sidebar=target.closest('.sidebar-project[data-production-id],.sidebar-project[data-project-id]');
+ if(sidebar){const kind=sidebar.dataset.productionId?'production':'project',id=sidebar.dataset.productionId||sidebar.dataset.projectId,owner=(kind==='production'?state.productions:state.projects).find(p=>p.id===id&&!p.deleted);if(!owner)return [];
+ const locked=window.productionCompletionPolicy?.locked(state,owner),allowed=window.accountCan?.(id,'overview')!==false&&!locked;
+ const action=async name=>{try{await openProduction(kind==='project'?id:undefined,'overview',false,kind==='production'?id:undefined);if(name==='rename')requestAnimationFrame(()=>document.querySelector('.app-document-title')?.click());else{window.sidebarPendingProjectAction={kind,id,action:name};window.dispatchEvent(new CustomEvent('sidebar-project-action',{detail:window.sidebarPendingProjectAction}))}}catch(e){toast(e.message)}};
+ return [{label:'이름 변경',icon:'edit',disabled:!allowed,run:()=>action('rename')},{label:'아카이브',icon:'archive',disabled:!allowed,run:()=>action('archive')},{label:'삭제',icon:'trash',danger:true,disabled:!allowed,run:()=>action('delete')}];}
+
  const ref=target.closest('.refcard')?.querySelector('[data-ref]');
  if(ref){const r=refs.find(r=>r.id===ref.dataset.ref);if(!r)return [];const change=async value=>{try{await persistRef({...r,...value});drawRefs()}catch(e){toast(e.message)}};
  return [{label:'이름 변경',icon:'edit',run:()=>{modal('이름 변경','<form id="item-name-form" class="database-form"><input name="name" aria-label="이름" required maxlength="160" value="'+esc(r.title)+'"><button class="primary keep-label">완료</button></form>');$('#item-name-form').onsubmit=async e=>{e.preventDefault();const title=String(new FormData(e.currentTarget).get('name')).trim();if(title){await change({title});$('#dialog').close()}}}},{label:r.deleted?'복원':'삭제',icon:r.deleted?'refresh':'trash',danger:!r.deleted,run:()=>change({deleted:!r.deleted})}]

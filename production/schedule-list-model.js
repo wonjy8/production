@@ -5,11 +5,11 @@ export function scheduleRows(workspace,{productionId='',projectIds=[]}={}) {
   const projects=(workspace.projects||[]).filter(p=>!p.deleted&&(productionId?p.productionId===productionId:!projectIds.length||projectIds.includes(p.id)));
   const rows=[];
   for(const [kind,owners] of [['production',parents],['project',projects]])for(const owner of owners)
-    for(const s of owner.schedules||[])if(!s.deleted)rows.push({...s,
+    for(const s of owner.schedules||[])if(!s.calendarExcluded&&!s.deleted)rows.push({...s,
       title:s.projectLinked?(owner.name||owner.title):s.title,
       endDate:s.projectLinked?owner.due||s.endDate:s.endDate,
       key:JSON.stringify([kind,owner.id,s.id]),origin:{kind,ownerId:owner.id,id:s.id},ownerName:owner.name||owner.title});
-  for(const s of workspace.timetableSchedules||[])if(!s.deleted&&(productionId?s.productionId===productionId:!projectIds.length||projectIds.includes(s.projectId)))
+  for(const s of workspace.timetableSchedules||[])if(!s.calendarExcluded&&!s.deleted&&(productionId?s.productionId===productionId:!projectIds.length||projectIds.includes(s.projectId)))
     rows.push({...s,key:JSON.stringify(['standalone','',s.id]),origin:{kind:'standalone',ownerId:'',id:s.id},ownerName:'일정'});
   return rows.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.startTime||'').localeCompare(b.startTime||'')||a.key.localeCompare(b.key));
 }
