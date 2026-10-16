@@ -313,3 +313,11 @@ Whenever NAS changes are needed, describe the exact files and paths, changes or 
 - Move insertion tools into the 44px top tab lane. Share module/document inspector width, padding and border surface; use plain tabs and an explicit close action.
 - Use a white editor canvas and subtle page boundaries, rulers, margin indicators and tick marks. Preserve ruler/paper geometry, zoom, scrolling, custom paper sizes, DOCX and PDF exclusion.
 - NAS 0.1.5 update: replace `share-view.html` to synchronize shared design CSS, then rebuild/recreate with `sh update.sh`. No API, schema, dependency or environment changes. Preserve `.env` and `data/`. Deliver the replacement-only ZIP in chat; see nas/UPDATE-0.1.6.md.
+
+## 0.1.7
+
+- Name the production workspace Production (프로덕션), retaining Home for the overview. Keep Production/Home/project paths separate from Materials/References and preserve existing IDs and URLs.
+- Make the left contextual sidebar a plain, fixed, full-height panel with a single border. Keep right inspectors floating. Move the page title and content together with the sidebar edge using one duration/easing, suppress initial-load motion, and retain collapsed resize guards and mobile navigation.
+- Share one title editor for projects, work groups, reference/source/portfolio pages and member pages: click, Enter/blur commit, Escape cancel, permission/completion guards, save-before-navigation, failed-save retry and title rollback. Keep system page names fixed.
+- Temporarily disable the document editor in shared feature flags, rail/file/conversion controls, creation helpers, restored routes and direct URLs. Preserve stored originals, metadata, plain text modules, downloads and Library use.
+- NAS 0.1.6 update: replace only `share-view.html` to synchronize shared design CSS, then rebuild/recreate with `sh update.sh`. No API, schema, dependency or environment changes. Preserve `.env` and `data/`. Deliver the replacement-only ZIP in chat; see nas/UPDATE-0.1.7.md.

@@ -1,3 +1,4 @@
+import {createPageTitleEditor} from './design-system/title-editor.js';
 import {installThumbnailImages} from '../production/thumbnail-images.js';
 installThumbnailImages(document);
 import {openAddMenu} from './action-menu.js';
@@ -18,7 +19,7 @@ window.parseMemberImport=parseMemberLines;
 import {installItemMenus} from './item-menu.js';
 import {observeUI} from './decorate.js';
 import {iconSVG,navigationIconSVG,hydrateSidebarIcons} from './icons.js';
-window.productionUI={iconSVG,navigationIconSVG,observeUI,hydrateSidebarIcons};hydrateSidebarIcons(document);observeUI(document);
+window.productionUI={createPageTitleEditor,iconSVG,navigationIconSVG,observeUI,hydrateSidebarIcons};hydrateSidebarIcons(document);observeUI(document);
 
 installItemMenus(document,target=>window.productionItemActions?.(target));
 

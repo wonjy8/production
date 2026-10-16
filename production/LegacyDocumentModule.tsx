@@ -1,3 +1,4 @@
+import {appFeatures} from '../ui/design-system/features.js';
 // Existing Wordcraft placements remain convertible; the editor is no longer a Hub module.
 import { useState } from "react";
 import { convertTextDocument } from "./document-launch";
@@ -12,10 +13,10 @@ export function LegacyDocumentModule({
     [error, setError] = useState("");
   return (
     <div className="legacy-document-module">
-      <p>문서편집기는 파일에서 새 탭으로 열 수 있습니다.</p>
+      <p>{appFeatures.documentEditor?"문서 파일로 전환하여 편집할 수 있습니다.":"문서 편집기는 현재 준비 중입니다."}</p>
       <button
         className="button keep-label"
-        disabled={busy}
+        disabled={busy||!appFeatures.documentEditor} title={!appFeatures.documentEditor?"문서 편집기 · 준비 중":undefined}
         onClick={async () => {
           setBusy(true);
           try {

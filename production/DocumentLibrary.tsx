@@ -1,3 +1,4 @@
+import {appFeatures} from '../ui/design-system/features.js';
 import { InlineRemove } from "./InlineRemove";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -56,7 +57,7 @@ export function DocumentLibrary({showCompleted=false}:{showCompleted?:boolean}) 
       : folder.files;
   function address(file: any) {
     const o = file.origin;
-    return documentFormat(file)
+    return appFeatures.documentEditor && documentFormat(file)
       ? documentURL(
           file,
           o.ownerKind === "reference"
@@ -123,7 +124,7 @@ export function DocumentLibrary({showCompleted=false}:{showCompleted?:boolean}) 
               className="document-library-row"
               key={f.key}
               href={address(f)}
-              onClick={event=>{if(documentFormat(f)&&(window as any).openInlineDocument&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();void (window as any).openInlineDocument(address(f)).catch(()=>{});}}}
+              onClick={event=>{if(appFeatures.documentEditor&&documentFormat(f)&&(window as any).openInlineDocument&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();void (window as any).openInlineDocument(address(f)).catch(()=>{});}}}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -135,7 +136,7 @@ export function DocumentLibrary({showCompleted=false}:{showCompleted?:boolean}) 
                 )}
               </div>
               <small>
-                {documentFormat(f)
+                {appFeatures.documentEditor&&documentFormat(f)
                   ? "문서편집기로 열기"
                   : /\.pdf$/i.test(f.name)
                     ? "PDF 열기"

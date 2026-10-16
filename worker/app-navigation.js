@@ -57,7 +57,7 @@ export const appNavigationScript=String.raw`
   window.productionSearchTarget=undefined;
   window.closeAppPanels?.();if($('#dialog').open)$('#dialog').close();
   if(value.landing==='1'&&isMobileViewport()){await openMobileWorkspaceHome(value.view);return}
-  if(value.view==='documents')await window.showInlineDocument();
+  if(value.view==='documents'){if(window.appFeatures.documentEditor)await window.showInlineDocument();else await openProduction(undefined,'dashboard');}
   else if(value.view==='home'){
    const project=(state.projects||[]).find(p=>p.id===value.project&&!p.deleted),group=(state.productions||[]).find(p=>p.id===value.group&&!p.deleted);
    await openProduction(project?.id,value.section||'overview',false,project?undefined:group?.id);

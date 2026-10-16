@@ -1,3 +1,4 @@
+import {appFeatures} from '../ui/design-system/features.js';
 import {
   resourceDefaults,
   resourcePresets,
@@ -176,7 +177,7 @@ export function ResourceDatabase({
       return;
     }
     const file = resourceFile(row);
-    if (row.fileId && documentFormat(file))
+    if (row.fileId && documentFormat(file) && appFeatures.documentEditor)
       {if((window as any).openInlineDocument)void (window as any).openInlineDocument(documentURL(file,null)).catch(()=>{});else window.open(documentURL(file, null), "_blank", "noopener,noreferrer");}
     else if (row.fileId) {
       const preview =
@@ -525,7 +526,7 @@ export function ResourceDatabase({
           }}
           onSave={async (draft: any) => {
             let popup: Window | null = null;
-            if (!editing && !(window as any).openInlineDocument) {
+            if (!editing && appFeatures.documentEditor && !(window as any).openInlineDocument) {
               popup = window.open("about:blank", "_blank");
               if (popup) {
                 popup.opener = null;
@@ -539,7 +540,7 @@ export function ResourceDatabase({
               await attach(row);
               if (popup)
                 popup.location.replace(documentURL(resourceFile(row), null));
-              else if(!editing && (window as any).openInlineDocument)await (window as any).openInlineDocument(documentURL(resourceFile(row),null));
+              else if(!editing && appFeatures.documentEditor && (window as any).openInlineDocument)await (window as any).openInlineDocument(documentURL(resourceFile(row),null));
               return row;
             });
             if (result) {

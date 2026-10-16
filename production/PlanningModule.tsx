@@ -1,3 +1,4 @@
+import {appFeatures} from '../ui/design-system/features.js';
 import { useEffect, useState } from "react";
 import { Icon, IconButton } from "./Icon";
 import { InlineRemove } from "./InlineRemove";
@@ -210,7 +211,7 @@ export function PlanningModule({
       if (r) {
         const file = resourceFile(r),
           url = r.fileId
-            ? documentFormat(file)
+            ? appFeatures.documentEditor&&documentFormat(file)
               ? documentURL(file)
               : "/api/ref-files/" + encodeURIComponent(r.fileId)
             : safeUrl(r.url || "");
@@ -218,7 +219,7 @@ export function PlanningModule({
           <a
             className="plan-resource"
             href={url}
-            onClick={event=>{if(r.fileId&&documentFormat(file)&&(window as any).openInlineDocument&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();void (window as any).openInlineDocument(url).catch(()=>{});}}}
+            onClick={event=>{if(appFeatures.documentEditor&&r.fileId&&documentFormat(file)&&(window as any).openInlineDocument&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();void (window as any).openInlineDocument(url).catch(()=>{});}}}
             target="_blank"
             rel="noopener noreferrer"
           >

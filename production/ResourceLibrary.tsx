@@ -1,3 +1,4 @@
+import {appFeatures,documentEditorUnavailable} from '../ui/design-system/features.js';
 import { createRoot } from "react-dom/client";
 import { observeUI } from "../ui/decorate.js";
 import { ResourceDatabase } from "./DatabaseModule";
@@ -49,6 +50,7 @@ function ResourceLibrary() {
   );
 }
 (window as any).openBlankDocument = async (popup: Window | null) => {
+  if(!appFeatures.documentEditor)throw Error(documentEditorUnavailable);
   try {
     const row = await createNote({ title: "제목 없는 문서", properties: {} });
     if (popup) popup.location.replace(documentURL(resourceFile(row), null));

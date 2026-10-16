@@ -34,122 +34,123 @@ with tempfile.TemporaryDirectory() as td:
    browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH'),headless=True,args=['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-proxy-server','--host-resolver-rules=MAP pages.test 127.0.0.1, MAP nas.test 127.0.0.1','--ignore-certificate-errors-spki-list='+spki])
    context=browser.new_context(viewport={'width':1400,'height':1000});engine_requests=[];context.on('request',lambda request:engine_requests.append(request.url) if '.wasm' in request.url else None);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
    context.add_init_script("try{if(window===window.top)localStorage.setItem('production-document-editor','basic')}catch{}")
+   document_requests=[];context.on('request',lambda r:document_requests.append(r.url))
    import io,zipfile,json
    page.goto('https://pages.test:9443/production/')
    page.wait_for_function('!!window.productionBridge && typeof window.mountProduction === "function"')
    nav=page.locator('.workspace-rail .sidebar-main-spaces');expect(nav).to_be_visible()
    assert nav.locator('[data-main-space]').evaluate_all('(buttons)=>buttons.map(b=>b.dataset.mainSpace)')==['home','references','documents','settings']
-   assert page.locator('#menu').count()==0
-   page.evaluate("window.openHomeSection('tasks')")
-   expect(page.get_by_role('heading',name='모든 할 일',exact=True)).to_be_visible()
-   page.evaluate("async()=>{const id=crypto.randomUUID();state.productions.push({id,name:'상단 제목 프로젝트',status:'진행 중',tasks:[],schedules:[],customTabs:[],memberIds:[]});await openProduction(undefined,'overview',false,id)}")
-   expect(page.get_by_role('heading',name='상단 제목 프로젝트',exact=True)).to_be_visible()
-   expect(page.locator('#production-panel .workspace-page-heading h1')).to_be_hidden()
-   page.screenshot(path='/tmp/production-project-title.png',full_page=True)
-   page.evaluate("window.openHomeSection('dashboard')")
+   expect(nav.locator('[data-main-space=home]')).to_have_attribute('aria-label','프로덕션')
+   expect(nav.locator('[data-main-space=documents]')).to_be_disabled()
    expect(page.get_by_role('heading',name='홈',exact=True)).to_be_visible()
-   metrics=page.evaluate("""()=>{const rail=document.querySelector('.workspace-rail').getBoundingClientRect(),side=document.querySelector('#sidebar').getBoundingClientRect(),settings=document.querySelector('.workspace-rail [data-main-space=settings]').getBoundingClientRect();return {outside:rail.right<=side.left,size:getComputedStyle(document.querySelector('.workspace-rail svg')).width,bottom:innerHeight-settings.bottom}}""")
-   assert metrics['outside'] and metrics['size']=='18px' and 5<=metrics['bottom']<=25,metrics
-   home=nav.locator('[data-main-space=home]');home.click()
-   expect(page.locator('body')).to_have_class(re.compile('sidebar-collapsed'))
-   assert page.locator('.sidebar-resize').get_attribute('aria-disabled')=='true'
-   before=page.evaluate("localStorage.getItem('pn-sidebar-width')")
+   expect(page.locator('.breadcrumbs')).to_have_text('프로덕션/홈')
+   expect(page.locator('#sidebar .sidebar-home-link')).to_be_visible()
+   assert page.locator('#menu').count()==0
+   page.wait_for_function('document.body.classList.contains("workspace-layout-ready")')
+   geometry=page.evaluate("""()=>{const side=document.querySelector('#sidebar'),box=side.getBoundingClientRect(),bar=document.querySelector('.topbar').getBoundingClientRect(),main=document.querySelector('.layout').getBoundingClientRect();return {top:box.top,height:box.height,right:box.right,title:bar.left,main:main.left,position:getComputedStyle(side).position,radius:getComputedStyle(side).borderTopLeftRadius,shadow:getComputedStyle(side).boxShadow}}""")
+   assert geometry['top']==0 and geometry['height']==1000 and geometry['position']=='fixed' and geometry['radius']=='0px' and geometry['shadow']=='none',geometry
+   assert abs(geometry['right']-geometry['title'])<1 and abs(geometry['title']-geometry['main'])<1,geometry
+   fixture=page.evaluate("""async()=>{const id=crypto.randomUUID();state.productions.push({id,name:'이름 변경 프로젝트',status:'진행 중',tasks:[],schedules:[],customTabs:[],memberIds:[]});changed();await flushWorkspace();await openProduction(undefined,'overview',false,id);return id}""")
+   title_button=page.get_by_role('button',name='페이지 제목 편집',exact=True)
+   expect(title_button).to_be_visible();title_button.click()
+   title_input=page.get_by_role('textbox',name='페이지 제목',exact=True)
+   title_input.fill('취소할 이름');title_input.press('Escape')
+   expect(page.get_by_role('heading',name='이름 변경 프로젝트',exact=True)).to_be_visible()
+   title_button.click();title_input.fill('정리한 프로젝트');title_input.press('Enter');expect(title_input).to_be_hidden()
+   expect(page.get_by_role('heading',name='정리한 프로젝트',exact=True)).to_be_visible()
+   assert page.evaluate("async id=>(await fetch('/production/api/data').then(r=>r.json())).productions.find(p=>p.id===id).name",fixture)=='정리한 프로젝트'
+   expect(page.locator('.breadcrumbs')).to_have_text('프로덕션/정리한 프로젝트')
+   page.screenshot(path='/tmp/production-project-title.png',full_page=True)
+   page.evaluate("""()=>{window.savedTitleFetch=window.fetch;window.injectedTitleFailure=false;window.fetch=async(input,options)=>{if(String(input).endsWith('/api/data')&&options?.method==='PUT'&&!window.injectedTitleFailure){window.injectedTitleFailure=true;return new Response(JSON.stringify({error:'검증용 저장 실패'}),{status:503,headers:{'Content-Type':'application/json'}})}return window.savedTitleFetch(input,options)}}""")
+   title_button.click();title_input.fill('저장 실패 제목');title_input.press('Enter')
+   page.wait_for_function('window.injectedTitleFailure===true')
+   expect(title_input).to_be_enabled();title_input.press('Escape')
+   expect(page.get_by_role('heading',name='정리한 프로젝트',exact=True)).to_be_visible()
+   page.evaluate('window.fetch=window.savedTitleFetch;delete window.savedTitleFetch')
+   page.evaluate('flushWorkspace()')
+   assert page.evaluate("async id=>(await fetch('/production/api/data').then(r=>r.json())).productions.find(p=>p.id===id).name",fixture)=='정리한 프로젝트'
+   page.get_by_role('button',name='모듈 추가',exact=True).click()
+   right_panel=page.locator('.hub-sidebar');expect(right_panel).to_be_visible()
+   assert right_panel.evaluate('(p)=>getComputedStyle(p).position')=='fixed'
+   assert right_panel.evaluate('(p)=>getComputedStyle(p).borderTopLeftRadius')=='18px'
+   right_panel.get_by_role('button',name='Hub 닫기',exact=True).click()
+
+   # Existing completion and permission rules keep the shared title editor read-only.
+   page.evaluate("id=>{state.productions.find(p=>p.id===id).status='완료';window.refreshAppPageHeading()}",fixture)
+   expect(title_button).to_be_hidden()
+   page.evaluate("id=>{state.productions.find(p=>p.id===id).status='진행 중';window.refreshAppPageHeading()}",fixture)
+   expect(title_button).to_be_visible()
+   group=page.evaluate("""async parent=>{const p=makeProject('업무 그룹');p.productionId=parent;state.projects.push(p);changed();await flushWorkspace();await openProduction(p.id);return p.id}""",fixture)
+   expect(title_button).to_be_visible();title_button.click();title_input.fill('변경한 업무 그룹')
+   # Leaving a page commits the same title input before navigation.
+   page.locator('#sidebar .sidebar-home-link').click()
+   expect(page.get_by_role('heading',name='홈',exact=True)).to_be_visible()
+   assert page.evaluate("async id=>(await fetch('/production/api/data').then(r=>r.json())).projects.find(p=>p.id===id).title",group)=='변경한 업무 그룹'
+   reference=page.evaluate("""async()=>{sourceSection='references';await openRefs();const row=await referenceBridge.create({title:'자료 이름',recordType:'reference'});await openReferenceModules(row);return row.id}""")
+   expect(title_button).to_be_visible();title_button.click();title_input.fill('정리한 자료');title_input.press('Enter');expect(title_input).to_be_hidden()
+   expect(page.get_by_role('heading',name='정리한 자료',exact=True)).to_be_visible()
+   assert page.evaluate("async id=>(await fetch('/production/api/references').then(r=>r.json())).find(r=>r.id===id).title",reference)=='정리한 자료'
+   assert page.locator('.reference-title').count()==0
+   member=page.evaluate("async()=>{await openDatabase('members');await databaseForm();return databasePanel.dataset.searchOwnerId}")
+   expect(title_button).to_be_visible();title_button.click();title_input.fill('공통 이름 멤버');title_input.press('Enter');expect(title_input).to_be_hidden()
+   expect(page.get_by_role('heading',name='공통 이름 멤버',exact=True)).to_be_visible()
+   assert page.evaluate("async id=>(await fetch('/production/api/database/members').then(r=>r.json())).find(r=>r.id===id).name",member)=='공통 이름 멤버'
+
+   page.evaluate("openProduction(undefined,'dashboard')")
+   expect(page.get_by_role('heading',name='홈',exact=True)).to_be_visible()
+   page.evaluate("()=>{const fixture=document.createElement('div');fixture.style.height='2400px';fixture.dataset.scrollFixture='';document.querySelector('.canvas').append(fixture);window.scrollTo(0,500)}")
+   page.wait_for_function('scrollY>400')
+   assert page.locator('#sidebar').bounding_box()['y']==0 and page.locator('#sidebar').bounding_box()['height']==1000
+   assert page.locator('.topbar').bounding_box()['y']==0
+   # Match the content lane and sidebar edge at intermediate animation frames.
+   motion=page.evaluate("""async()=>{document.querySelector('.workspace-rail [data-main-space=home]').click();const samples=[];for(let i=0;i<24;i++){await new Promise(requestAnimationFrame);const s=document.querySelector('#sidebar').getBoundingClientRect(),b=document.querySelector('.topbar').getBoundingClientRect(),m=document.querySelector('.layout').getBoundingClientRect();samples.push({side:s.right,bar:b.left,main:m.left})}return samples}""")
+   assert all(abs(s['bar']-s['main'])<1.5 and abs(s['side']-s['bar'])<1.5 for s in motion),motion
+   assert motion[-1]['bar']==48 and any(50<s['bar']<300 for s in motion),motion
+   expect(page.locator('.sidebar-resize')).to_have_attribute('aria-disabled','true')
+   width=page.evaluate("localStorage.getItem('pn-sidebar-width')")
    page.locator('.sidebar-resize').dispatch_event('keydown',{'key':'ArrowRight'})
    page.locator('.sidebar-resize').dispatch_event('pointerdown',{'clientX':100,'pointerId':1})
    page.locator('.sidebar-resize').dispatch_event('pointermove',{'clientX':200,'pointerId':1})
-   assert page.evaluate("localStorage.getItem('pn-sidebar-width')")==before
-   home.click();expect(page.locator('.sidebar-resize')).to_have_attribute('aria-disabled','false')
+   assert page.evaluate("localStorage.getItem('pn-sidebar-width')")==width
+   nav.locator('[data-main-space=home]').click()
+   page.wait_for_function('Math.abs(document.querySelector(".topbar").getBoundingClientRect().left-(48+Number(localStorage.getItem("pn-sidebar-width"))))<1')
+   expect(page.locator('.sidebar-resize')).to_have_attribute('aria-disabled','false')
    page.locator('.sidebar-resize').focus();page.keyboard.press('ArrowRight')
-   assert int(page.evaluate("localStorage.getItem('pn-sidebar-width')"))==int(before)+10
-   home.click()
-   nav.locator('[data-main-space=references]').click()
-   expect(nav.locator('[data-main-space=references]')).to_have_attribute('aria-pressed','true')
-   expect(nav.locator('[data-main-space=references]')).to_have_attribute('aria-expanded','true')
-   assert not page.evaluate("document.body.classList.contains('sidebar-collapsed')")
-   assert nav.locator('[data-main-space=references] .nav-solid').evaluate('(g)=>getComputedStyle(g).display')!='none'
-   # The front document has an opaque surface, covering the rear outline.
-   fill=nav.locator('[data-main-space=references] .nav-outline>path').first.evaluate('(g)=>getComputedStyle(g).fill')
-   assert fill!='none',fill
-   page.screenshot(path='/tmp/production-sidebar-materials.png',full_page=True)
-   nav.locator('[data-main-space=settings]').click()
-   page.locator('#sidebar [data-settings-category=general]').click()
-   expect(page.locator('.app-version-row')).to_contain_text('v0.1.6')
-   expect(page.get_by_role('heading',name='일반',exact=True)).to_be_visible()
-   assert page.locator('.app-heading-stack .breadcrumbs').bounding_box()['y']>page.locator('#app-page-title').bounding_box()['y']
-   expect(page.locator('#settings-panel .workspace-page-heading')).to_be_hidden()
+   assert int(page.evaluate("localStorage.getItem('pn-sidebar-width')"))==int(width)+10
+   page.evaluate('scrollTo(0,0)')
+   page.locator('[data-scroll-fixture]').evaluate('e=>e.remove()')
+   nav.locator('[data-main-space=settings]').click();page.locator('#sidebar [data-settings-category=general]').click()
+   expect(page.locator('.app-version-row')).to_contain_text('v0.1.7')
    page.screenshot(path='/tmp/production-sidebar-settings.png',full_page=True)
-   page_count=len(context.pages)
-   nav.locator('[data-main-space=documents]').click()
-   document=page.frame_locator('#inline-document-panel iframe')
-   editor=document.get_by_role('textbox',name='문서 본문',exact=True);editor.wait_for()
-   expect(page.locator('#app-page-title')).to_contain_text('제목 없는 문서')
-   expect(document.locator('.document-header')).to_be_hidden()
-   expect(page.locator('.app-document-tools')).to_be_visible()
-   expect(page.locator('.app-heading-stack .breadcrumbs')).to_contain_text('보관함')
-   panel=document.locator('.document-settings');expect(panel).to_be_visible()
-   assert document.locator('.document-toolbar').bounding_box()['height']==44
-   frame_top=page.locator('#inline-document-panel iframe').bounding_box()['y'];bar_bottom=page.locator('.topbar').bounding_box()['height'];assert abs(frame_top-bar_bottom)<2,(frame_top,bar_bottom)
-   assert panel.evaluate('(p)=>getComputedStyle(p).boxShadow')=='none'
-   assert document.locator('.document-workspace').evaluate('(p)=>getComputedStyle(p).backgroundColor')=='rgb(255, 255, 255)'
-   assert document.locator('.document-ruler-top').evaluate('(p)=>getComputedStyle(p).backgroundColor')=='rgb(255, 255, 255)'
-   page.get_by_role('button',name='문서 이름 바꾸기',exact=True).click()
-   page.get_by_role('textbox',name='문서 제목',exact=True).fill('앱 안의 문서')
-   page.get_by_role('textbox',name='문서 제목',exact=True).press('Enter')
-   expect(page.locator('#app-page-title')).to_contain_text('앱 안의 문서')
-   page.get_by_role('button',name='문서 속성',exact=True).click();expect(panel).to_be_hidden()
-   page.get_by_role('button',name='문서 속성',exact=True).click();expect(panel).to_be_visible()
-   expect(page.locator('.app-document-tools svg')).to_be_visible()
-   document.locator('.document-sheet').evaluate('(sheet)=>new Promise(resolve=>setTimeout(resolve,400))')
-   metrics=document.locator('.document-sheet').evaluate('(sheet)=>{const s=sheet.getBoundingClientRect(),v=document.querySelector(".document-scroll").getBoundingClientRect(),p=document.querySelector(".document-settings").getBoundingClientRect();return {sheet:{left:s.left,right:s.right,width:s.width},viewport:{left:v.left,right:v.right,width:v.width},panel:{left:p.left,width:p.width},zoom:getComputedStyle(sheet).zoom}}')
-   print('Document fit:',metrics,flush=True)
-   assert metrics['sheet']['right']<=metrics['panel']['left']+1,metrics
-   assert len(context.pages)==page_count
-   box=page.locator('#inline-document-panel iframe').bounding_box();side=page.locator('#sidebar').bounding_box()
-   assert box['x']>=side['x']+side['width'] and box['x']+box['width']<=1401,box
-   assert document.locator('#document-editor-root').bounding_box()['width']<=box['width']+1
-   editor.fill('Saved before leaving inline document')
-   file_id=document.locator('body').evaluate('()=>new URLSearchParams(location.search).get("document")')
-   page.screenshot(path='/tmp/production-sidebar-document.png',full_page=True)
-   document.locator('body').evaluate('()=>{window.testSaveHook=window.prepareDocumentNavigation;window.prepareDocumentNavigation=async()=>false}')
    nav.locator('[data-main-space=home]').click()
-   expect(nav.locator('[data-main-space=documents]')).to_have_attribute('aria-pressed','true')
-   expect(page.locator('#inline-document-panel')).to_be_visible()
-   document.locator('body').evaluate('()=>{window.prepareDocumentNavigation=window.testSaveHook}')
-   nav.locator('[data-main-space=home]').click()
-   expect(nav.locator('[data-main-space=home]')).to_have_attribute('aria-pressed','true')
-   expect(page.locator('#inline-document-panel')).to_be_hidden()
-   raw=page.evaluate("async id=>btoa(String.fromCharCode(...new Uint8Array(await fetch('/production/api/ref-files/'+id).then(r=>r.arrayBuffer()))))",file_id)
-   with zipfile.ZipFile(io.BytesIO(base64.b64decode(raw))) as saved:assert b'Saved before leaving inline document' in saved.read('word/document.xml')
-   page.wait_for_function("location.hash==='#/home'")
-   page.go_back();expect(nav.locator('[data-main-space=documents]')).to_have_attribute('aria-pressed','true');expect(editor).to_contain_text('Saved before leaving inline document')
-   page.go_forward();expect(nav.locator('[data-main-space=home]')).to_have_attribute('aria-pressed','true')
-   nav.locator('[data-main-space=documents]').click();expect(editor).to_contain_text('Saved before leaving inline document')
+   count=page.evaluate("fetch('/production/api/database/resources').then(r=>r.json()).then(r=>r.length)")
+   assert page.evaluate('window.showInlineDocument()') is False
+   assert page.evaluate('window.openInlineDocument(location.href)') is False
+   assert '준비 중' in page.evaluate("window.openBlankDocument(null).then(()=>'',e=>e.message)")
+   assert page.evaluate("fetch('/production/api/database/resources').then(r=>r.json()).then(r=>r.length)")==count
+   assert page.locator('#inline-document-panel iframe').count()==0
+   file_id=page.evaluate("""async()=>{const id=crypto.randomUUID();const r=await fetch('/production/api/ref-files/'+id+'?name=paused.txt',{method:'PUT',headers:{'Content-Type':'text/plain'},body:'preserved document bytes'});if(!r.ok)throw Error('fixture');return id}""")
+   base='https://pages.test:9443/production/'
+   page.goto(base+'?document='+file_id+'&name=paused.txt')
+   page.wait_for_url(re.compile(r'#/home$'))
+   expect(page.get_by_role('heading',name='홈',exact=True)).to_be_visible()
+   assert page.evaluate("id=>fetch('/production/api/ref-files/'+id).then(r=>r.text())",file_id)=='preserved document bytes'
+   assert not any('/document-app' in r or '/document-style' in r for r in document_requests),document_requests
+   page.screenshot(path='/tmp/production-sidebar-paused.png',full_page=True)
    page.set_viewport_size({'width':390,'height':844})
-   mobile=page.locator('.mobile-bottom-nav')
-   expect(mobile.locator('[data-main-space=documents]')).to_be_visible()
-   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+   mobile=page.locator('.mobile-bottom-nav');expect(mobile.locator('[data-main-space=documents]')).to_be_disabled()
    mobile.locator('[data-main-space=home]').click()
-   mobile.locator('[data-main-space=references]').click()
-   expect(mobile.locator('[data-main-space=references]')).to_have_attribute('aria-pressed','true')
    expect(page.locator('#sidebar')).to_have_class(re.compile('open'))
-   mobile.locator('[data-main-space=references]').click()
-   assert 'open' not in (page.locator('#sidebar').get_attribute('class') or '')
-   mobile.locator('[data-main-space=documents]').click()
-   # Close its contextual drawer without opening another document.
-   mobile.locator('[data-main-space=documents]').click()
-   expect(editor).to_be_visible()
-   assert len(context.pages)==page_count
-   box=page.locator('#inline-document-panel iframe').bounding_box();assert box['x']>=0 and box['x']+box['width']<=391,box
-   page.screenshot(path='/tmp/production-sidebar-document-mobile.png',full_page=True)
-   page.wait_for_function("location.hash==='#/documents'")
-   page.reload();editor=page.frame_locator('#inline-document-panel iframe').get_by_role('textbox',name='문서 본문',exact=True);expect(editor).to_contain_text('Saved before leaving inline document')
-   assert len(context.pages)==page_count
-   mobile.locator('[data-main-space=home]').click();expect(mobile.locator('[data-main-space=home]')).to_have_attribute('aria-pressed','true')
-   page.evaluate("window.openInlineDocument(location.pathname+'?document=00000000-0000-0000-0000-000000000000&name=missing.txt&mime=text/plain')")
-   expect(page.frame_locator('#inline-document-panel iframe').locator('.document-header [role=status]')).to_contain_text('문서를 열지 못했습니다')
-   mobile.locator('[data-main-space=home]').click();expect(mobile.locator('[data-main-space=home]')).to_have_attribute('aria-pressed','true')
+   page.wait_for_function('getComputedStyle(document.querySelector(".topbar")).transform.includes("260")')
+   assert page.locator('#sidebar').bounding_box()['y']==0 and page.locator('#sidebar').bounding_box()['height']==844,page.locator('#sidebar').bounding_box()
+   transforms=page.evaluate('[".topbar",".layout"].map(s=>getComputedStyle(document.querySelector(s)).transform)');assert transforms[0]==transforms[1],transforms
+   mobile.locator('[data-main-space=home]').click()
+   page.wait_for_function('!document.querySelector("#sidebar").classList.contains("open")')
+   page.wait_for_function('getComputedStyle(document.querySelector(".topbar")).transform==="matrix(1, 0, 0, 1, 0, 0)"||getComputedStyle(document.querySelector(".topbar")).transform==="none"')
+   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),page.evaluate('[document.documentElement.scrollWidth,innerWidth]')
+   page.screenshot(path='/tmp/production-sidebar-mobile.png',full_page=True)
    assert not errors,errors
-   print('PASS sidebar: external compact rail, spacing, filled/opaque icons, settings version, icon toggle, resize guards, embedded editor + save on navigation/resume, mobile bounds and toggle',flush=True)
+   print('PASS workspace: namespace/home paths, fixed full-height plain sidebar, synchronized title/page/sidebar motion, scroll isolation, resize guards, shared project/group/reference title persistence/cancel/blur and completion guard, paused editor + intact originals/direct URL guard, mobile layout',flush=True)
    browser.close()
  finally:
   nas.terminate();nas.wait(timeout=10);httpd.shutdown()

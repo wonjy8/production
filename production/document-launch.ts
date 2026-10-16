@@ -1,3 +1,4 @@
+import {appFeatures,documentEditorUnavailable} from '../ui/design-system/features.js';
 import { documentFormat, DOCX_MIME } from "./document-types";
 import { loadDocumentTools } from "./load-document-tools";
 import { storeFile } from "./files";
@@ -30,7 +31,7 @@ export function documentURL(
   return url.href;
 }
 export function openDocument(file: any) {
-  if (!documentFormat(file)) return;
+  if (!appFeatures.documentEditor || !documentFormat(file)) return;
   if ((window as any).openInlineDocument) void (window as any).openInlineDocument(documentURL(file)).catch(()=>{});
   else window.open(documentURL(file), "_blank", "noopener,noreferrer");
 }
@@ -38,6 +39,7 @@ export async function convertTextDocument(
   module: any,
   onChange: (fn: any) => any,
 ) {
+  if(!appFeatures.documentEditor)throw Error(documentEditorUnavailable);
   const inline = (window as any).openInlineDocument;
   const tab = inline ? null : window.open("about:blank", "_blank");
   if (!tab && !inline) throw Error("새 탭 열기를 허용한 뒤 다시 시도하세요.");

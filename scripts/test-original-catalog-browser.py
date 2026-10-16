@@ -69,25 +69,33 @@ with tempfile.TemporaryDirectory() as td:
     rows=page.evaluate("fetch('/production/api/database/resources').then(r=>r.json())")
     original=next(r for r in rows if r['id']==fixture['id']);copy=next(r for r in rows if r['title']=='central.txt 사본')
     assert copy['fileId']!=original['fileId'] and len(original['origins'])==2
-    # A shared document must offer original/copy selection before autosaving.
-    card.get_by_role('button',name='central.txt',exact=True).click()
-    page.locator('#inline-document-panel iframe').wait_for()
-    document=page.locator('#inline-document-panel iframe').element_handle().content_frame()
-    prompt=document.get_by_role('dialog',name='원본 문서 편집',exact=True);prompt.wait_for()
-    assert '프로젝트 A' in prompt.inner_text()
-    prompt.get_by_role('button',name='원본 수정',exact=True).click()
-    document.locator('.tiptap').wait_for();document.get_by_role('textbox',name='문서 본문',exact=True).fill('saved through original editor')
-    document.wait_for_function("document.querySelector('.document-header [role=status]')?.textContent.endsWith('저장됨')")
-    assert page.evaluate("id=>fetch('/production/api/ref-files/'+id).then(r=>r.text())",fixture['id'])=='saved through original editor'
-    page.locator('[data-main-space=references]').first.click()
-    card.get_by_role('button',name='central.txt',exact=True).click()
-    page.locator('#inline-document-panel iframe').wait_for()
-    document=page.locator('#inline-document-panel iframe').element_handle().content_frame()
-    document.get_by_role('dialog',name='원본 문서 편집',exact=True).get_by_role('button',name='사본을 만들어 편집',exact=True).click()
-    document.wait_for_function('(id)=>new URLSearchParams(location.search).get("document")!==id',arg=fixture['id'])
-    document.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
-    assert document.get_by_role('dialog',name='원본 문서 편집',exact=True).count()==0
-    page.locator('[data-main-space=references]').first.click()
+    if page.evaluate('window.appFeatures.documentEditor'):
+     # A shared document must offer original/copy selection before autosaving.
+     card.get_by_role('button',name='central.txt',exact=True).click()
+     page.locator('#inline-document-panel iframe').wait_for()
+     document=page.locator('#inline-document-panel iframe').element_handle().content_frame()
+     prompt=document.get_by_role('dialog',name='원본 문서 편집',exact=True);prompt.wait_for()
+     assert '프로젝트 A' in prompt.inner_text()
+     prompt.get_by_role('button',name='원본 수정',exact=True).click()
+     document.locator('.tiptap').wait_for();document.get_by_role('textbox',name='문서 본문',exact=True).fill('saved through original editor')
+     document.wait_for_function("document.querySelector('.document-header [role=status]')?.textContent.endsWith('저장됨')")
+     assert page.evaluate("id=>fetch('/production/api/ref-files/'+id).then(r=>r.text())",fixture['id'])=='saved through original editor'
+     page.locator('[data-main-space=references]').first.click()
+     card.get_by_role('button',name='central.txt',exact=True).click()
+     page.locator('#inline-document-panel iframe').wait_for()
+     document=page.locator('#inline-document-panel iframe').element_handle().content_frame()
+     document.get_by_role('dialog',name='원본 문서 편집',exact=True).get_by_role('button',name='사본을 만들어 편집',exact=True).click()
+     document.wait_for_function('(id)=>new URLSearchParams(location.search).get("document")!==id',arg=fixture['id'])
+     document.get_by_role('textbox',name='문서 본문',exact=True).wait_for()
+     assert document.get_by_role('dialog',name='원본 문서 편집',exact=True).count()==0
+     page.locator('[data-main-space=references]').first.click()
+    else:
+     # A paused editor keeps original files downloadable and creates no editor/window.
+     pages_before=len(context.pages)
+     with page.expect_download() as downloaded:card.get_by_role('button',name='central.txt',exact=True).click()
+     assert pathlib.Path(downloaded.value.path()).read_text()=='one original'
+     assert len(context.pages)==pages_before and page.locator('#inline-document-panel iframe').count()==0
+     assert page.evaluate('window.showInlineDocument()') is False
     # Editing one original never changes an explicitly created independent copy.
     result=page.evaluate("""async ({original,copy})=>{const file=await fetch('/production/api/ref-files/'+original.fileId);const update=await fetch('/production/api/ref-files/'+original.fileId,{method:'PUT',headers:{'Content-Type':'text/plain','If-Match':file.headers.get('ETag')},body:'edited original'});return {status:update.status,copy:await fetch('/production/api/ref-files/'+copy.fileId).then(r=>r.text())}}""",{'original':original,'copy':copy})
     assert result=={'status':200,'copy':'one original'},result
@@ -97,7 +105,7 @@ with tempfile.TemporaryDirectory() as td:
     page.set_viewport_size({'width':390,'height':844})
     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.set_viewport_size({'width':1400,'height':1000})
-    print('PASS '+mode+': immediate catalog, shared ID, hidden usage, delete protection, usage/copy UI, document consent, independent copy, detach/restore retention',flush=True)
+    print('PASS '+mode+': immediate catalog, shared ID, hidden usage, delete protection, usage/copy UI, document download while paused, independent copy, detach/restore retention',flush=True)
    assert not errors,errors
    browser.close()
  finally:
