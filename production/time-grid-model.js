@@ -1,7 +1,7 @@
 import {minutes,timeLabel,shiftDate,dateDistance} from './timetable-model.js';
-export function moveGridItem(item,targetDate,targetMinute){
+export function moveGridItem(item,targetDate,targetMinute,{toTimed=false}={}){
  const delta=dateDistance(item.date,targetDate),a=minutes(item.startTime),b=minutes(item.endTime);
- if(a===null||b===null)return {date:targetDate,endDate:shiftDate(item.endDate||item.date,delta)};
+ if(a===null||b===null){if(toTimed){const start=Math.max(0,Math.min(item.kind==='task'?1380:1430,Math.round(targetMinute/10)*10)),end=start+60;return {date:targetDate,endDate:shiftDate(targetDate,Math.floor((end-1)/1440)),startTime:timeLabel(start),endTime:timeLabel(end%1440||1440)}}return {date:targetDate,endDate:shiftDate(item.endDate||item.date,delta)}}
  const duration=dateDistance(item.date,item.endDate||item.date)*1440+b-a,start=Math.max(0,Math.min(item.kind==='task'?1440-duration:1430,Math.round(targetMinute/10)*10)),end=start+duration;
  return {date:targetDate,endDate:shiftDate(targetDate,Math.floor((end-1)/1440)),startTime:timeLabel(start),endTime:timeLabel(end%1440||1440)};
 }

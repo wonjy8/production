@@ -1,0 +1,35 @@
+name: Keep documentation current
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.md'
+      - 'scripts/clean-docs.mjs'
+      - '.github/workflows/cleanup-docs.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: documentation-cleanup
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      # Read the latest main so queued cleanup runs do not restore older documents.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node scripts/clean-docs.mjs
+      - name: Save documentation cleanup
+        run: |
+          set -eu
+          git add -- '*.md'
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Keep only current documentation"
+          git push origin HEAD:main

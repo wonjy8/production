@@ -17,6 +17,9 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      - run: node scripts/test-doc-cleanup.mjs
+      - run: npm run docs:clean
+      - run: npm run docs:check
       - run: npm ci
       - run: npm run build
       - run: npm run validate

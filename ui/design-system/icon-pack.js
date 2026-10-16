@@ -1,11 +1,12 @@
+import {identityPaths} from './project-solid-icons.js';
 import {projectIconPaths} from './project-icon-paths.js';
 // Production icon pack: 24px grid, 1.75px stroke, rounded caps and joins.
 export const icons={
- 'columns-2':'<path d="M12 3v18"/>',
- 'columns-3':'<path d="M8 3v18M16 3v18"/>',
- 'columns-4':'<path d="M6 3v18M12 3v18M18 3v18"/>',
- 'section-heading':'<path d="M4 5v14M14 5v14M4 12h10M18 16h4M20 14v6"/>',
- timetable:'<path d="M3 4h18v16H3zM7 4v16M3 9h18M3 14h18M12 9v11M17 9v11"/>',
+ 'columns-2':'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/>',
+ 'columns-3':'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/>',
+ 'columns-4':'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7.5 3v18M12 3v18M16.5 3v18"/>',
+ 'section-heading':'<path d="M6 3v10M17 3v10M6 8h11M3 19h18"/>',
+ timetable:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v18M3 9h18"/>',
  'schedule-list':'<path d="M4 6h2M9 6h11M4 12h2M9 12h11M4 18h2M9 18h11"/>',
  circle:'<circle cx="12" cy="12" r="9"/>',
  divider:'<path d="M4 12h16"/>',
@@ -124,4 +125,6 @@ const solidNavigation={
  settings:'<path fill-rule="evenodd" d="m9 2-.7 3-2.2 1-2.8-.8-2 3.5L3.5 11v2L1.3 15.3l2 3.5 2.8-.8 2.2 1L9 22h6l.7-3 2.2-1 2.8.8 2-3.5-2.2-2.3v-2l2.2-2.3-2-3.5-2.8.8-2.2-1L15 2Zm3 6a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"/>'
 };
 icons.documentEdit='<path d="M14 3H6a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Zm0 0v6h6M8 13h8M8 17h5"/>';
-export function navigationIconSVG(name){if(!solidNavigation[name])return iconSVG(name);return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="nav-outline">'+icons[name]+'</g><g class="nav-solid" fill="currentColor" stroke="none">'+solidNavigation[name]+'</g></svg>'}
+export function navigationIconSVG(name){if(name==='home')return identityIconSVG('home');if(!solidNavigation[name])return iconSVG(name);return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="nav-outline">'+icons[name]+'</g><g class="nav-solid" fill="currentColor" stroke="none">'+solidNavigation[name]+'</g></svg>'}
+
+export function identityIconSVG(name){if(String(name).startsWith('emoji:')||String(name).startsWith('image:'))return iconSVG(name);return '<svg class="ui-icon identity-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">'+(identityPaths[name]||identityPaths.projects)+'</svg>'}

@@ -41,6 +41,7 @@ with tempfile.TemporaryDirectory() as td:
    nav=page.locator('.workspace-rail .sidebar-main-spaces');expect(nav).to_be_visible()
    assert nav.locator('[data-main-space]').evaluate_all('(buttons)=>buttons.map(b=>b.dataset.mainSpace)')==['home','references','documents','settings']
    expect(nav.locator('[data-main-space=home]')).to_have_attribute('aria-label','프로덕션')
+   home_markup=nav.locator('[data-main-space=home] svg').inner_html()
    expect(nav.locator('[data-main-space=documents]')).to_be_disabled()
    expect(page.get_by_role('heading',name='홈',exact=True)).to_be_visible()
    expect(page.locator('.breadcrumbs')).to_have_text('프로덕션/홈')
@@ -63,7 +64,7 @@ with tempfile.TemporaryDirectory() as td:
    page.screenshot(path='/tmp/production-project-title.png',full_page=True)
    # Sidebar actions share the title editor, completion review and deletion confirmation.
    page.evaluate("id=>{state.productions.find(p=>p.id===id).iconColor='#8b5cf6';syncSidebar()}",fixture)
-   side=page.locator('.sidebar-project[data-production-id="'+fixture+'"]');assert side.evaluate('e=>getComputedStyle(e).color')=='rgb(139, 92, 246)';assert side.locator('svg').evaluate('e=>getComputedStyle(e).color')=='rgb(139, 92, 246)'
+   side=page.locator('.sidebar-project[data-production-id="'+fixture+'"]');assert side.evaluate('e=>getComputedStyle(e).color')!='rgb(139, 92, 246)';assert side.locator('svg').evaluate('e=>getComputedStyle(e).color')=='rgb(139, 92, 246)';assert side.locator('svg').get_attribute('fill')=='currentColor'
    side.click(button='right');menu=page.get_by_role('menu',name='항목 메뉴',exact=True);expect(menu).to_be_visible();assert menu.get_by_role('menuitem').count()==3
    menu.get_by_role('menuitem',name='이름 변경',exact=True).click();expect(title_input).to_be_visible();title_input.press('Escape')
    side.click(button='right');page.get_by_role('menuitem',name='아카이브',exact=True).click();review=page.get_by_role('dialog',name='프로젝트 완료 점검',exact=True);expect(review).to_be_visible();review.get_by_role('button',name='취소',exact=True).click()
@@ -99,6 +100,7 @@ with tempfile.TemporaryDirectory() as td:
    expect(page.get_by_role('heading',name='정리한 자료',exact=True)).to_be_visible()
    assert page.evaluate("async id=>(await fetch('/production/api/references').then(r=>r.json())).find(r=>r.id===id).title",reference)=='정리한 자료'
    assert page.locator('.reference-title').count()==0
+   assert nav.locator('[data-main-space=home] svg').inner_html()==home_markup
    member=page.evaluate("async()=>{await openDatabase('members');await databaseForm();return databasePanel.dataset.searchOwnerId}")
    expect(title_button).to_be_visible();title_button.click();title_input.fill('공통 이름 멤버');title_input.press('Enter');expect(title_input).to_be_hidden()
    expect(page.get_by_role('heading',name='공통 이름 멤버',exact=True)).to_be_visible()
@@ -134,7 +136,7 @@ with tempfile.TemporaryDirectory() as td:
    page.evaluate('scrollTo(0,0)')
    page.locator('[data-scroll-fixture]').evaluate('e=>e.remove()')
    nav.locator('[data-main-space=settings]').click();page.locator('#sidebar [data-settings-category=general]').click()
-   expect(page.locator('.app-version-row')).to_contain_text('v0.1.10')
+   expect(page.locator('.app-version-row')).to_contain_text('v0.1.11')
    page.screenshot(path='/tmp/production-sidebar-settings.png',full_page=True)
    nav.locator('[data-main-space=home]').click()
    count=page.evaluate("fetch('/production/api/database/resources').then(r=>r.json()).then(r=>r.length)")

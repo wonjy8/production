@@ -1,20 +1,53 @@
 """Same-origin public viewer and cookie login. Never exposes the NAS service token."""
-import re,json
-from pathlib import Path
+import re,json,os,ssl,time,asyncio
+
 from http.cookies import SimpleCookie
 from urllib.parse import urlsplit
 import httpx
 from starlette.responses import Response,JSONResponse
 COOKIE='__Host-pn-share'
+DEFAULT_VIEWER_URL='https://wonjy8.github.io/production/share-view.html'
+MAX_VIEWER_BYTES=2*1024*1024
+async def fetch_viewer(url):
+    # Fetch only this public, configured asset. No incoming URL, token, cookie or auth header is forwarded.
+    parsed=urlsplit(url)
+    if parsed.scheme!='https' or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise ValueError('The public viewer source must be a plain HTTPS asset URL')
+    async with httpx.AsyncClient(timeout=8,follow_redirects=False,trust_env=False,verify=ssl.create_default_context()) as client:
+        async with client.stream('GET',url,headers={'Accept':'text/html'}) as response:
+            response.raise_for_status()
+            if response.headers.get('content-type','').split(';')[0].strip().lower()!='text/html':raise ValueError('Invalid public viewer content type')
+            content=bytearray()
+            async for chunk in response.aiter_bytes():
+                content.extend(chunk)
+                if len(content)>MAX_VIEWER_BYTES:raise ValueError('Public viewer is too large')
+    if not bytes(content).lstrip().lower().startswith(b'<!doctype html>'):raise ValueError('Invalid public viewer HTML')
+    return bytes(content)
 class PublicGateway:
-    def __init__(self,app,token):self.app,self.token=app,token
+    def __init__(self,app,token):
+        self.app,self.token=app,token
+        self.viewer_url=os.environ.get('PUBLIC_VIEWER_URL') or DEFAULT_VIEWER_URL
+        self.viewer_cache=None;self.viewer_until=0;self.viewer_lock=asyncio.Lock()
+    async def viewer(self):
+        async with self.viewer_lock:
+            if time.monotonic()<self.viewer_until:
+                if self.viewer_cache is None:raise ValueError('Public viewer unavailable')
+                return self.viewer_cache
+            try:
+                self.viewer_cache=await fetch_viewer(self.viewer_url);self.viewer_until=time.monotonic()+300
+            except (httpx.HTTPError,ValueError,OSError):
+                self.viewer_until=time.monotonic()+30
+                if self.viewer_cache is None:raise ValueError('Public viewer unavailable') from None
+            return self.viewer_cache
     async def __call__(self,scope,receive,send):
         if scope['type']!='http' or not scope['path'].startswith('/public/'):return await self.app(scope,receive,send)
         path=scope['path'];method=scope['method'];headers=dict(scope['headers'])
         secure_headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; media-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; connect-src 'self'"}
         async def reply(data,status=200):return await JSONResponse(data,status,headers=secure_headers)(scope,receive,send)
         if re.fullmatch(r'/public/share/[A-Za-z0-9_-]{43}',path) and method=='GET':
-            return await Response(Path(__file__).with_name('share-view.html').read_text(),media_type='text/html',headers=secure_headers)(scope,receive,send)
+            try:html=await self.viewer()
+            except ValueError:return await reply({'error':'공유 화면을 준비하지 못했습니다. 잠시 후 새로고침하세요.'},503)
+            return await Response(html,media_type='text/html',headers=secure_headers)(scope,receive,send)
         try:
             cookies=SimpleCookie();cookies.load(headers.get(b'cookie',b'').decode());session=cookies[COOKIE].value if COOKIE in cookies else ''
         except Exception:session=''

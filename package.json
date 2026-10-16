@@ -6,7 +6,12 @@
     "build": "node scripts/build-production.mjs && bash scripts/build.sh",
     "validate": "node scripts/validate-artifact.mjs",
     "build:production": "node scripts/build-production.mjs",
-    "build:pages": "node scripts/build-pages.mjs"
+    "build:pages": "node scripts/build-pages.mjs",
+    "docs:clean": "node scripts/clean-docs.mjs",
+    "docs:check": "node scripts/clean-docs.mjs --check",
+    "prebuild": "npm run docs:clean",
+    "prebuild:production": "npm run docs:clean",
+    "prebuild:pages": "npm run docs:clean"
   },
   "devDependencies": {
     "esbuild": "0.27.3",

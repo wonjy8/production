@@ -18,8 +18,8 @@ import {parseMemberLines} from '../production/member-import.js';
 window.parseMemberImport=parseMemberLines;
 import {installItemMenus} from './item-menu.js';
 import {observeUI} from './decorate.js';
-import {iconSVG,navigationIconSVG,hydrateSidebarIcons} from './icons.js';
-window.productionUI={createPageTitleEditor,iconSVG,navigationIconSVG,observeUI,hydrateSidebarIcons};hydrateSidebarIcons(document);observeUI(document);
+import {iconSVG,identityIconSVG,navigationIconSVG,hydrateSidebarIcons} from './icons.js';
+window.productionUI={createPageTitleEditor,iconSVG,identityIconSVG,navigationIconSVG,observeUI,hydrateSidebarIcons};hydrateSidebarIcons(document);observeUI(document);
 
 installItemMenus(document,target=>window.productionItemActions?.(target));
 

@@ -1,68 +1,13 @@
-import {useState} from 'react';
-import {IconButton} from './Icon';
-import {Modal} from './Modal';
-export function SectionHeading({ module: m, onChange }: any) {
-  const [editing, setEditing] = useState(false);
-  return (
-    <div className="plan-section">
-      <span className="plan-section-number">{m.sectionNumber || "—"}</span>
-      <div>
-        <h2>{m.title || "섹션 제목"}</h2>
-        {m.sectionNote && <p>{m.sectionNote}</p>}
-      </div>
-      {(window as any).appAccount?.role !== "viewer" && (
-        <IconButton
-          name="edit"
-          label="섹션 편집"
-          onClick={() => setEditing(true)}
-        />
-      )}
-      {editing && (
-        <Modal title="섹션 편집" onClose={() => setEditing(false)}>
-          <form
-            className="merge-form plan-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const f = new FormData(e.currentTarget);
-              onChange((old: any) => ({
-                ...old,
-                title: String(f.get("title")).trim(),
-                sectionNumber: String(f.get("number")).trim(),
-                sectionNote: String(f.get("note")).trim(),
-              }));
-              setEditing(false);
-            }}
-          >
-            <label>
-              번호
-              <input
-                name="number"
-                defaultValue={m.sectionNumber || ""}
-                placeholder="예: 01"
-                maxLength={20}
-              />
-            </label>
-            <label>
-              제목
-              <input
-                name="title"
-                defaultValue={m.title || ""}
-                required
-                maxLength={200}
-              />
-            </label>
-            <label>
-              설명
-              <textarea
-                name="note"
-                defaultValue={m.sectionNote || ""}
-                placeholder="구역에 대한 설명"
-              />
-            </label>
-            <button className="button primary keep-label">적용</button>
-          </form>
-        </Modal>
-      )}
-    </div>
-  );
+import {useEffect,useRef,useState} from 'react';
+import {createPageTitleEditor} from '../ui/design-system/title-editor.js';
+import {openItemMenu} from '../ui/item-menu.js';
+export function SectionHeading({module:m,onChange,drag={},onDelete}:any){
+ const root=useRef<HTMLDivElement>(null),button=useRef<HTMLButtonElement>(null),input=useRef<HTMLInputElement>(null),label=useRef<HTMLSpanElement>(null),editor=useRef<any>(null),press=useRef<any>(null),latest=useRef<any>(null),[error,setError]=useState('');
+ latest.current={m,onChange};const level=Math.min(4,Math.max(1,Number(m.headingLevel)||1));
+ const target=()=>({key:latest.current.m.id,title:latest.current.m.title||'섹션 제목',canEdit:window.appAccount?.role!=='viewer'&&!root.current?.closest('[data-project-readonly="true"]'),rename:async(title:string)=>{latest.current.onChange((old:any)=>({...old,title}));setError('')}});
+ const sync=()=>{const current=target();editor.current?.sync(current.title,current)};
+ useEffect(()=>{if(!button.current||!input.current||!label.current)return;editor.current=createPageTitleEditor({button:button.current,input:input.current,label:label.current,getTarget:target,onRefresh:sync,onError:setError});sync();return()=>{editor.current=null}},[m.id]);
+ useEffect(sync,[m.title]);
+ function menu(e:any){drag.onContextMenu?.(e);if(e.defaultPrevented||!target().canEdit)return;openItemMenu(e,[{label:'이름 변경',icon:'edit',run:()=>button.current?.click()},...[1,2,3,4].map(n=>({label:'제목 '+n,icon:'section-heading',run:()=>onChange((old:any)=>({...old,headingLevel:n}))})),...(onDelete?[{label:'삭제',icon:'trash',danger:true,run:onDelete}]:[])])}
+ return <div className="plan-section" data-heading-level={level} ref={root}><div className="section-heading-line"><span ref={label} role="heading" aria-level={level+1} className="section-heading-title">{m.title||'섹션 제목'}</span><button {...drag} ref={button} type="button" className="module-name-button keep-label section-heading-title" aria-label="섹션 제목 편집" title="클릭해서 제목 편집 · 드래그로 이동" onContextMenu={menu} onPointerDown={e=>{press.current={x:e.clientX,y:e.clientY,moved:false};drag.onPointerDown?.(e)}} onPointerMove={e=>{if(press.current&&Math.hypot(e.clientX-press.current.x,e.clientY-press.current.y)>5)press.current.moved=true;drag.onPointerMove?.(e)}} onClickCapture={e=>{drag.onClickCapture?.(e);if(press.current?.moved){e.preventDefault();e.stopPropagation();press.current=null}}}><span className="app-editable-title-label">{m.title||'섹션 제목'}</span></button><input hidden ref={input} className="section-heading-input" aria-label="섹션 제목"/></div>{m.sectionNote&&<p>{m.sectionNote}</p>}{error&&<p className="form-error" role="alert">{error}</p>}</div>
 }

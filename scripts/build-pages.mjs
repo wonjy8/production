@@ -1,6 +1,7 @@
 import {execFileSync} from 'node:child_process';
 import {mkdir, readFile, writeFile, rm} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import {buildShareViewer} from './share-view-build.mjs';
 import {documentFonts,documentFontLicense} from '../worker/document-font-assets.js';
 import {application} from '../worker/index.js';
 
@@ -11,6 +12,7 @@ if (!/^\/(?:[A-Za-z0-9_-]+\/)*$/.test(base)) throw Error('Invalid PAGES_BASE_PAT
 const output = 'dist/pages';
 await rm(output, {recursive:true, force:true});
 await mkdir(output, {recursive:true});
+await writeFile(output+'/share-view.html',await buildShareViewer());
 execFileSync('python3',['scripts/package-nas.py','--output-dir',output],{stdio:'inherit'});
 const routes = {'/':'app.html', '/document-app':'document-app.js', '/document-pdf':'document-pdf.js', '/document-tools':'document-tools.js', '/document-style':'document-style.css', '/production-app':'production-app.js', '/production-style':'production-style.css', '/ui-app':'ui-app.js', '/ui-style':'ui-style.css', '/account-app':'account-app.js'};
 for (const name of Object.keys(documentFonts)) await writeFile(output+'/document-font-'+name+'.ttf',Buffer.from(documentFonts[name],'base64'));

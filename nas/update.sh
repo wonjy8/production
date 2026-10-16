@@ -5,3 +5,6 @@ if [ ! -f .env ]; then echo '기존 프로젝트 폴더에 업데이트 파일�
 if command -v docker >/dev/null 2>&1; then task_docker=$(command -v docker); else task_docker=/usr/local/bin/docker; fi
 "$task_docker" compose exec -T database python -c 'import sqlite3,datetime,pathlib; root=pathlib.Path("/data"); folder=root/"backups"; folder.mkdir(exist_ok=True); src=sqlite3.connect(root/"production.sqlite3"); dst=sqlite3.connect(folder/("before-auth-"+datetime.datetime.now().strftime("%Y%m%d-%H%M%S")+".sqlite3")); src.backup(dst); dst.close(); src.close(); print("업데이트 전 DB 백업 완료")'
 "$task_docker" compose up -d --build
+
+# Public presentation now comes from the web deployment; the old local copy is unused.
+rm -f share-view.html

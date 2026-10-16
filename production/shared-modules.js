@@ -1,5 +1,5 @@
 import {figmaEmbedURL} from './figma-connection.js';
-export const moduleKinds=[['section-heading','섹션 제목','list'],['grade-calculator','학점 계산기','table'],['schedule-list','일정 목록','schedule-list'],['text','메모','file'],['image','사진','reference'],['video','영상','video'],['file','파일','file'],['link','링크','link'],['embed','임베드','video'],['divider','구분선','list'],['accounting','회계','table'],['tracker','현황표','table'],['tasks','할 일','tasks'],['schedule','캘린더','calendar'],['timetable','타임테이블','timetable']];
+export const moduleKinds=[['section-heading','섹션 제목','section-heading'],['grade-calculator','학점 계산기','table'],['schedule-list','일정 목록','schedule-list'],['text','메모','file'],['image','사진','reference'],['video','영상','video'],['file','파일','file'],['link','링크','link'],['embed','임베드','video'],['divider','구분선','list'],['accounting','회계','table'],['tracker','현황표','table'],['tasks','할 일','tasks'],['schedule','캘린더','calendar'],['timetable','타임테이블','timetable']];
 export function referenceModules(r){
  if(Array.isArray(r.tabs))return r.tabs.flatMap(t=>t.modules||[]);
  if(Array.isArray(r.modules))return r.modules;

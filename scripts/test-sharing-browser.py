@@ -8,11 +8,11 @@ nas_python=os.environ.get('NAS_PYTHON', __import__('sys').executable)
 with tempfile.TemporaryDirectory() as td:
  t=pathlib.Path(td)
  cert=t/'cert.pem';key=t/'key.pem'
- subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-keyout',str(key),'-out',str(cert),'-days','1','-subj','/CN=pages.test','-addext','subjectAltName=DNS:pages.test,DNS:nas.test'],check=True,capture_output=True)
+ subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-keyout',str(key),'-out',str(cert),'-days','1','-subj','/CN=pages.test','-addext','subjectAltName=DNS:pages.test,DNS:nas.test,DNS:localhost'],check=True,capture_output=True)
  pub=subprocess.run(['openssl','x509','-in',str(cert),'-pubkey','-noout'],check=True,capture_output=True).stdout
  der=subprocess.run(['openssl','pkey','-pubin','-outform','DER'],input=pub,check=True,capture_output=True).stdout
  spki=base64.b64encode(hashlib.sha256(der).digest()).decode()
- env={**os.environ,'ADMIN_EMAIL':'admin@example.com','ADMIN_NAME':'Example Administrator','DATA_DIR':str(t/'data'),'NAS_API_TOKEN':'test-'+ 'x'*40,'PAGES_ORIGINS':'https://pages.test:9443'}
+ env={**os.environ,'ADMIN_EMAIL':'admin@example.com','ADMIN_NAME':'Example Administrator','DATA_DIR':str(t/'data'),'NAS_API_TOKEN':'test-'+ 'x'*40,'PAGES_ORIGINS':'https://pages.test:9443','PUBLIC_VIEWER_URL':'https://localhost:9443/production/share-view.html','SSL_CERT_FILE':str(cert)}
  subprocess.run([nas_python,'-c',"import server; from local_auth import bootstrap_admin; bootstrap_admin(server.database,server.write_lock,server.save_workspace,server.now,'StrongPassword2026!')"],cwd=root/'nas',env=env,check=True)
  subprocess.run(['npm','run','build:pages'],cwd=root,env=env,check=True)
  (t/'production').symlink_to(root/'dist/pages',target_is_directory=True)

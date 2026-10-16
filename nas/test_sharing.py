@@ -1,5 +1,6 @@
 """Public sharing: selection, identities, live content, completion, revocation and transport."""
 import copy,json,time,hashlib,unittest
+from unittest.mock import patch,AsyncMock
 from uuid import uuid4
 import test_server
 from local_auth import hash_password
@@ -64,7 +65,8 @@ class SharingTest(unittest.TestCase):
   self.assertEqual(self.client.put('/api/shares/'+share['id'],headers={**self.auth,'If-Match':'"1"'},json={'revoked':True}).status_code,200)
  def test_page_and_public_transport_do_not_open_workspace_routes(self):
   a,b,f,g=self.fixture();share=self.create(a)
-  page=self.client.get('/public/share/'+share['token']);self.assertEqual(page.status_code,200);self.assertIn('공유 자료',page.text);self.assertIn('no-referrer',page.headers['referrer-policy']);self.assertNotIn(self.module.TOKEN,page.text)
+  with patch('public_gateway.fetch_viewer',new=AsyncMock(return_value='<!doctype html><html>공유 자료</html>')):page=self.client.get('/public/share/'+share['token'])
+  self.assertEqual(page.status_code,200);self.assertIn('공유 자료',page.text);self.assertIn('no-referrer',page.headers['referrer-policy']);self.assertNotIn(self.module.TOKEN,page.text)
   for path in ['/public/api/data','/public/auth/me','/public/shares/'+share['token']+'/files/../../api/data']:
    self.assertNotEqual(self.client.get(path).status_code,200)
   self.assertEqual(self.client.put('/public/shares/'+share['token'],json={}).status_code,404)

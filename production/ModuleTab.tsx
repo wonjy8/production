@@ -689,6 +689,8 @@ export function ModuleTab({
                   <hr className="module-divider" />
                 ) : m.kind === "section-heading" ? (
                   <SectionHeading
+                    drag={drag}
+                    onDelete={()=>deleteModule(m.id)}
                     module={m}
                     onChange={(fn) => updateModule(m.id, fn)}
                   />

@@ -11,3 +11,9 @@ Edit shared page code in `ui/page.html`, its `{{source:ui/...}}` files, and `wor
 ## Persistent user preference: NAS update delivery
 
 Whenever a release requires NAS file additions or replacements, always give the user a downloadable ZIP directly in the chat. The ZIP must contain the exact additional/replacement files for the stated previous NAS version and a short application/verification guide. Name it with the target release version. Never include `.env`, user data, databases, account keys, or unrelated configuration. A file list or repository/download-page link alone does not satisfy this preference. Keep explaining the rebuild requirements and preserve existing settings/data. If the prior NAS version is unknown, state the required baseline instead of assuming the user's NAS was updated.
+
+## Current documentation only
+
+Keep installation, operations, development, product policy and design guides current in their existing roles. Use fixed `nas/UPDATE.md`, `docs/VALIDATION.md` and `docs/PRODUCT-AUDIT.md` paths; overwrite their current content instead of adding versioned copies. Keep only policy plus the latest release in `RELEASES.md`. Preserve unresolved product scope, legal/license files, application/runtime files and all Git rollback tags/history.
+
+Run `npm run docs:clean` before committing an update and `npm run docs:check` to verify it. Builds clean automatically; the main-branch documentation workflow also commits cleanup of directly pushed old versioned documents. Generated documentation-only cleanup commits do not create a new application release. NAS packages use current canonical guides only.

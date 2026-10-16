@@ -10,8 +10,8 @@ action.svg=true;decorateUI({querySelectorAll:()=>[action]});assert(!action.class
 console.log('Icon regressions: fallback/SVG exclusivity, navigation classes, dynamic labels and tooltip passed');
 
 // Simulate shell creation before the deferred icon bundle becomes available.
-const {hydrateSidebarIcons,icons}=await import('../ui/icons.js');
-const navigation=['home','reference','database','settings'].map(name=>({dataset:{navigationIcon:name},svg:null,inserts:0,querySelector(){return this.svg},insertAdjacentHTML(position,html){assert.equal(position,'afterbegin');assert.ok(html.includes(icons[name]));this.svg=html;this.inserts++}}));
+const {hydrateSidebarIcons,icons,navigationIconSVG}=await import('../ui/icons.js');
+const navigation=['home','reference','database','settings'].map(name=>({dataset:{navigationIcon:name},svg:null,inserts:0,querySelector(){return this.svg},insertAdjacentHTML(position,html){assert.equal(position,'afterbegin');assert.ok(html.includes(name==='home'?navigationIconSVG('home'):icons[name]));this.svg=html;this.inserts++}}));
 const shell={querySelectorAll:selector=>{assert.equal(selector,'[data-navigation-icon]');return navigation}};
 assert.ok(navigation.every(button=>!button.svg));hydrateSidebarIcons(shell);hydrateSidebarIcons(shell);
 assert.ok(navigation.every(button=>button.svg&&button.inserts===1));

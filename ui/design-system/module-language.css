@@ -15,3 +15,12 @@
 .snap-canvas .module-fixed-height>.workspace-module:not(:has(.timetable-module))>:not(.workspace-module-heading):not(.module-bottom-actions){overflow:visible!important;flex:0 0 auto!important;min-height:min-content}
 .snap-canvas .module-fixed-height>.workspace-module>.timetable-module{overflow:hidden!important}
 .workspace-module :is(.schedule-list-rows,.media-items,.tracker-module,.task-list,.task-board,.photo-gallery-host){max-height:none!important;overflow-y:visible!important}
+/* Heading blocks have no card border, numbering or separate rename icon. */
+.fluid-box:has(.plan-section)>.module-outside-title{display:none!important}
+.snap-canvas .workspace-module:has(>.plan-section){padding:0!important;border:0!important;background:transparent!important}
+.plan-section{--heading-size:30px;display:block!important;border:0!important;padding:4px 0!important}
+.plan-section[data-heading-level="2"]{--heading-size:25px}.plan-section[data-heading-level="3"]{--heading-size:21px}.plan-section[data-heading-level="4"]{--heading-size:17px}
+.plan-section :is(.section-heading-title,.section-heading-input){font-size:var(--heading-size)!important;font-weight:650!important;line-height:1.35!important;letter-spacing:-.025em;text-align:left}
+.plan-section .section-heading-title{height:auto!important;min-height:0!important;width:auto!important;max-width:100%;border:0!important;padding:2px 3px!important;background:transparent;white-space:normal!important;overflow-wrap:anywhere;cursor:grab}
+.plan-section .section-heading-title[hidden],.plan-section .section-heading-input[hidden]{display:none!important}
+.plan-section .section-heading-input{width:100%;box-sizing:border-box;border:0!important;border-bottom:1px solid var(--ui-line)!important;background:var(--ui-surface);padding:2px 3px!important;height:auto!important;min-height:0!important}
