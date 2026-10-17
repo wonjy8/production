@@ -39,6 +39,8 @@ with tempfile.TemporaryDirectory() as td:
    for mode in ['local','nas']:
     if mode=='nas':
      context.close();context=browser.new_context(viewport={'width':1400,'height':1000});page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:print('CONSOLE',m.text[:700],flush=True) if m.type=='error' else None)
+    import datetime
+    page.clock.set_fixed_time(datetime.datetime(2026,10,16,3,tzinfo=datetime.timezone.utc))
     base='https://pages.test:9443/production/'+('nas.test:9444/' if mode=='nas' else '')
     page.goto(base)
     if mode=='nas':
@@ -65,9 +67,9 @@ with tempfile.TemporaryDirectory() as td:
     assert '10.17' in page.locator('.work-task').filter(has_text='매일 할일').first.inner_text() or page.locator('.work-task').filter(has_text='매일 할일').count()>0
     page.locator('.task-title').filter(has_text='매일 할일').first.click();dialog.get_by_role('button',name='삭제',exact=True).click();scope=page.get_by_role('dialog',name='반복 항목 삭제',exact=True);scope.get_by_role('button',name='이번부터 이후',exact=True).click();assert page.evaluate('window.productionBridge.read().projects[0].tasks[0].repeat.segments[0].deleted')
     page.evaluate('window.flushDocumentModules()');page.goto(base+'#/work-groups/child/schedule');page.reload();page.locator('.calendar-grid').wait_for();day=page.locator('[data-calendar-date="2026-10-16"]')
-    all_day=day.get_by_role('button',name='종일 디자인',exact=True);timed=day.locator('.calendar-timed').filter(has_text='오전 디자인');assert timed.locator('time').inner_text()=='오전 10:30';assert all_day.evaluate('e=>getComputedStyle(e).backgroundColor')!='rgba(0, 0, 0, 0)';assert timed.evaluate('e=>getComputedStyle(e,":before").backgroundColor')=='rgb(59, 130, 246)'
+    all_day=day.locator('.calendar-all-day').filter(has_text='종일 디자인');timed=day.locator('.calendar-timed').filter(has_text='오전 디자인');assert timed.locator('time').inner_text()=='오전 10:30';assert all_day.evaluate('e=>getComputedStyle(e).backgroundColor')!='rgba(0, 0, 0, 0)';assert timed.evaluate('e=>getComputedStyle(e,":before").backgroundColor')=='rgb(59, 130, 246)'
     task_check=day.locator('.calendar-task-check').first;assert not task_check.evaluate('e=>e.classList.contains("ui-add-action")');assert task_check.bounding_box()['height']==14
-    scroll=page.locator('.calendar-resizable');old=scroll.bounding_box()['height'];page.get_by_role('button',name='일정 높이 늘리기',exact=True).click();assert scroll.bounding_box()['height']>old+100
+    scroll=page.locator('.calendar-resizable');old=scroll.bounding_box()['height'];handle=page.get_by_role('separator',name='일정 높이 조절',exact=True);handle.scroll_into_view_if_needed();r=handle.bounding_box();page.mouse.move(r['x']+30,r['y']+7);page.mouse.down();page.mouse.move(r['x']+30,r['y']+147,steps=8);page.mouse.up();assert scroll.bounding_box()['height']>old+100
     day.get_by_role('button',name='2026-10-16 할 일·일정 추가',exact=True).click();form=page.get_by_role('dialog',name='추가',exact=True);form.get_by_role('textbox',name='일정 이름',exact=True).fill('반복 주간');form.get_by_label('반복 주기',exact=True).select_option('weekly');form.get_by_role('button',name='저장',exact=True).click();page.wait_for_timeout(300)
     event=page.locator('[data-calendar-date="2026-10-23"] .calendar-event').filter(has_text='반복 주간');event.click();editor=page.get_by_role('dialog',name='일정 편집',exact=True);assert editor.get_by_role('textbox',name='일정 이름',exact=True).evaluate('e=>getComputedStyle(e).backgroundColor')=='rgb(245, 245, 246)';editor.get_by_role('textbox',name='일정 이름',exact=True).fill('이번만 변경');editor.get_by_role('button',name='저장',exact=True).click();scope=page.get_by_role('dialog',name='반복 항목 수정',exact=True);scope.get_by_role('button',name='이번 항목만',exact=True).click();page.wait_for_timeout(250)
     assert page.evaluate('window.productionBridge.read().projects[0].schedules.find(s=>s.repeat).repeat.exceptions["2026-10-23"].title')=='이번만 변경'

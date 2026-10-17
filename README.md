@@ -1,6 +1,6 @@
 # Production Note
 
-프로젝트·업무 그룹·할일·캘린더·자료·멤버·장비를 관리하는 웹 앱입니다. 현재 버전은 [VERSION](VERSION), 최신 변경 내용과 롤백 규칙은 [RELEASES.md](RELEASES.md)에서 확인합니다.
+프로젝트·업무/행사 그룹·할일·캘린더·자료·멤버·장비를 관리하는 웹 앱입니다. 현재 버전은 [VERSION](VERSION), 최신 변경 내용과 롤백 규칙은 [RELEASES.md](RELEASES.md)에서 확인합니다.
 
 ## 실행과 배포
 
@@ -8,6 +8,7 @@ Node.js 24와 npm, Bash를 사용합니다.
 
 ```sh
 npm ci
+npm run typecheck:modules
 npm run build
 npm run validate
 npm run build:pages

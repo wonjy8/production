@@ -1,3 +1,5 @@
+import {holidayName,redCalendarDate} from './calendar-holidays.js';
+import {projectColorStyle} from './project-colors.js';
 import { useState } from "react";
 import { IconButton } from "./Icon";
 import { localDay } from "./admin-home-model.js";
@@ -48,7 +50,7 @@ export function ScheduleCalendar({
       </header>
       <div className="schedule-month-grid">
         {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
-          <strong className="schedule-weekday" key={day}>
+          <strong className={"schedule-weekday"+(["일","토"].includes(day)?" calendar-red":"")} key={day}>
             {day}
           </strong>
         ))}
@@ -62,14 +64,14 @@ export function ScheduleCalendar({
           return (
             <div
               className={
-                "schedule-month-day" +
+                "schedule-month-day" +(redCalendarDate(key)?" calendar-red":"") +
                 (date.getMonth() !== month.getMonth() ? " outside-month" : "")
               }
               data-date={key}
               key={key}
             >
               <span aria-current={key === today ? "date" : undefined}>
-                {date.getDate()}
+                {date.getDate()}{holidayName(key)&&<small className="calendar-holiday">{holidayName(key)}</small>}
               </span>
               {rows.map((s) => (
                 <button
@@ -77,6 +79,7 @@ export function ScheduleCalendar({
                     "keep-label schedule-month-event" +
                     (s.done ? " is-done" : "")
                   }
+                  style={projectColorStyle(s.color)}
                   key={s.key || s.id}
                   title={
                     (s.startTime || "종일") +

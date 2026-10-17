@@ -1,30 +1,40 @@
-# 최신 검증 결과 — 0.1.11
+# 최신 검증 결과 — 0.1.12
 
-## 공유 화면·개인정보
+## 모듈 언어와 빌드
 
-- NAS의 정적 `share-view.html`과 Docker/ZIP 의존성을 제거했다. `share-view-build.mjs`가 공용 화면을 Pages 배포에 생성하며 NAS가 화면 파일만 받아 기존 NAS 공유 URL에서 제공한다.
-- NAS unittest **52개 통과**. 새 검사는 화면 요청에 공유 토큰·인증 헤더·쿠키·참조 URL·개인정보를 보내지 않는지, HTTPS 검증과 리디렉션 차단, 잘못된 MIME/과대 응답 거절, 캐시 갱신·실패 시 공개 HTML만 재사용·최초 실패 503을 확인한다.
-- `test-sharing-browser.py` 로컬/NAS 통과. 실제 임시 HTTPS 화면 호스트에서 NAS가 공용 HTML을 받아 기존 링크로 익명/지정 사용자 열람·로그인·다운로드 제한·공유 중지·완료/재개를 검증했다. 임시 인증서만 신뢰하며 HTTPS 검증을 끄지 않았다. 운영 NAS에 접속한 검사는 아니다.
+- 모듈 UI는 React TypeScript(`.tsx`), 공통 동작 25개는 `production/modules/*.ts`로 통일했다. 같은 이름의 이전 `.js` 파일은 재내보내기만 하며 저장 ID·원본 ID·호환 import를 유지한다.
+- `npm run typecheck:modules` 통과: 호환 파일에 구현이 섞이지 않았는지 검사하고 25개 TypeScript 구현 및 공통 계약을 검사한다. 기존 동적 JSON 구조 때문에 이 범위의 `strict`는 false이며, 앱 전체 `.tsx`의 엄격 타입 검사 완료를 뜻하지 않는다.
+- `npm run build`, `npm run validate`, `npm run build:pages`, `docs:clean/check`, `git diff --check` 통과. CI에도 모듈 언어/타입 검사와 신규 workflow 모델 검사를 추가했다.
+- 현행 JavaScript 모델/통합 검사 **38개 통과**: production, auth-gateway, grade-calculator, figma-connection, pages-route, document-library, planning, resource-schema, completion-summary, completion-policy, sharing, module-placement, module-transfer, task-status, icons, module-tabs, photo-editor, unified-projects, history, title-editor, module-hub, imported-modules, module-undo, module-resize, module-height, columns, recurrence, project-identity, task-composer, production-calendar, admin-home, schedule-time, project-overview, schedule-list, timetable, module-language, doc-cleanup, workflow-models.
+- 예전 `test-admin-home-ui.mjs`는 이미 사라진 홈 구조를 기대하는 구형 검사로 이번 현행 38개 범위에 포함하지 않았다. 이전 실패를 전체 검사 통과로 합산하지 않는다.
 
-## 아이콘과 앱 회귀
+## 일정·행사·템플릿·자료
 
-- JavaScript 검사 **37개 통과**: 기존 36개(production, auth-gateway, grade-calculator, figma-connection, pages-route, document-library, planning, resource-schema, completion-summary, completion-policy, sharing, module-placement, module-transfer, task-status, icons, module-tabs, photo-editor, unified-projects, history, title-editor, module-hub, imported-modules, module-undo, module-resize, module-height, columns, recurrence, project-identity, task-composer, production-calendar, admin-home, schedule-time, project-overview, schedule-list, timetable, module-language)와 doc-cleanup.
-- 모든 프로젝트 아이콘 선택지에 채움형 SVG 도형이 있는지, 공통 렌더러·워크스페이스 도형·이모지/이미지 경로를 검사했다. 아이콘 시트도 브라우저로 렌더링해 확인했다.
-- `test-sidebar-rail-browser.py` 통과: 사이드바 아이콘만 지정색, 텍스트 중립색, 프로덕션 워크스페이스 도형의 선택 전후 동일함, 기존 메뉴·제목 편집·구분선·모바일·v0.1.11 표시 유지.
-- `test-scheduling-browser.py` 로컬/NAS 통과: 채움형 제목 아이콘과 색 선택, 이모지 검색·업로드, 기존 반복 일정/할일·보드·캘린더·저장 재접속 동작 유지.
+- `test-workflow-browser.py` **로컬/NAS 통과**. 실제 임시 HTTPS 앱/서버에서 아래 항목을 검증했다.
+  - 일정 추가 버튼, 링크/파일/사진 첨부 3개, 개별 숫자 속성과 속성 템플릿 저장, 새로고침 후 보존.
+  - 소속 전체 선택/해제와 할일 표시, 보기를 해제해도 다른 그룹의 원본이 보존됨.
+  - 하단 높이 드래그, 오늘, 토/일·한글날·개천절 대체공휴일 표시.
+  - 일정→행사 그룹 전환 시 첨부·속성 보존, 개요에서 다른 그룹을 지정해 일정 추가, 프로젝트 색, 행사 그룹 생성과 기간.
+  - 업무그룹 템플릿 저장/생성과 새로운 ID, 담당자 초기화.
+  - 프로젝트 멤버 Shift 범위 선택, 팀 전체 선택과 추가.
+  - 문서 일반/임베드 전환과 로컬 본문 미리보기, 사진 프레임 높이 증가 시 그리드 확대, 사진→파일 실제 마우스 드래그와 원본 ID 유지.
+  - 링크 이름 변경과 sandbox/no-referrer 임베드, 모바일 본문 가로 넘침 방지, 사이드바 수평 스크롤 차단, 뒤로가기 왼쪽 정렬, 자료 표의 관리 버튼이 속성 영역을 침범하지 않음.
+- `test-workflow-models.mjs`: 한국 음력/대체/선거 공휴일, 소유자 이동, 행사 전환과 일정 목록 키 갱신, 첨부/속성 보존, 원본/일정 연결을 비운 그룹 템플릿, 호환 자료의 원자적 이동과 거절, 다양한 높이의 사진 맞춤 검사.
+- `test-document-embed-browser.py` 통과: 로컬 DOCX, 이스케이프된 텍스트, 빈 문서 표시, HTML 스크립트/외부 이미지·프레임 요청 미실행을 확인했다. 문서 임베드는 PDF 및 DOCX/텍스트의 안전한 본문 미리보기다. DOCX 원본 서식 전체나 HWP/구형 Office의 렌더링 검증은 아니다. 외부 사이트가 프레임을 차단하면 원래 링크로 열 수 있다.
 
-## 캘린더·모듈·모바일
+## 권한·개인정보
 
-- `test-module-language-browser.py` 로컬/NAS 통과: 종일→시간 드래그 시 1시간, 기존 일정 날짜·시간 이동과 메모 보존, 10개 색 프리셋 선택·저장, 네 크기의 섹션 제목 직접 편집·크기 변경·제목 드래그 이동, 일간/주간/월간 순서와 초기 월간·뷰 전환을 확인했다.
-- `test-time-grid-gestures-browser.py` 실제 Chromium 터치/펜 입력 통과: 빠른 스와이프는 스크롤하며 항목을 생성/이동하지 않음, 350ms 대기 뒤 종일 일정 드래그, 움직임 없는 길게 누르기 메뉴, 메뉴를 연 뒤 중복 클릭 방지, 펜 대기 후 이동 한 번만 저장. 원래 터치 DOM을 유지하고 해제된 포인터 캡처를 다시 해제하지 않도록 수정했다.
-- `test-touch-drag-browser.py`의 기존 터치 정렬·부모 컨테이너 이벤트 전달도 통과했다. 실제 iOS/Pencil 기기 검사는 수행하지 않았다.
-- 위 37개 현행 JS 검사를 통과했다. 별도 구형 `test-admin-home-ui.mjs`는 현재 홈에 없는 `admin-home-heading` 구조를 기대해 실패하며, 해당 검사와 AdminHome 구현은 이전 릴리스와 동일하다.
+- NAS unittest **55개 통과**. 새 검사 3개는 일정 설정/속성 템플릿의 일정 권한, 원본 탭 권한에 따른 업무그룹 템플릿 숨김 및 저장 시 숨겨진 원본 보존, 실제 행사 대표 일정에 한정된 제목 동기화를 확인한다. 일반 프로젝트에 행사 표식을 붙여 제목 권한을 우회하는 요청은 거절한다.
+- 일정 첨부는 기존 보관함·파일 권한 체계를 사용한다. 그룹별 보기 선택은 원본을 삭제하거나 복제하지 않는다. 완료 원본은 기존 잠금을 따르며 서버가 최종 권한을 검사한다.
+- PDF/DOCX/텍스트는 브라우저에서 읽으며 외부 변환 서비스로 보내지 않는다. 일반 외부 링크 임베드는 사용자가 선택했을 때만 열며 sandbox와 no-referrer를 사용한다.
+- 기존 공유 화면은 공용 HTML만 NAS가 받아 동일 출처에서 제공한다. 공유 토큰·계정·자료를 UI 호스트로 보내지 않는 기존 경계를 유지한다.
 
-## 문서와 배포 산출물
+## 회귀와 적용 범위
 
-- 구버전 업데이트·검증·기획 점검 24개와 중복 디자인 검증 문서를 최신 고정 문서로 정리했다. `RELEASES.md`는 정책과 최신 릴리스만 남긴다. 역할별 최신 안내·미완료 제품 정책·라이선스·Git 태그는 유지한다.
-- `test-doc-cleanup.mjs`: 숫자 버전 비교, 최신본 통합과 링크, 릴리스 정책 보존, 반복 실행, 검사 모드, 최신 고정 파일 보존, 같은 버전 충돌/버전 없는 수동 편집/심볼릭 링크 거절, 실행 파일·설치 안내·라이선스 유지.
-- 빌드의 자동 정리 및 GitHub 직접 push 문서 정리 workflow를 추가했다. `npm run docs:clean`, `docs:check`, 빌드·산출물·Pages 패키징 및 로컬 Markdown 링크를 확인한다.
-- NAS 0.1.10 기준 교체 파일: `public_gateway.py`, `Dockerfile`, `update.sh`, `README.md`, `UPDATE.md`. ZIP에는 설정·data/DB·계정 키를 넣지 않는다. 한 번 재빌드 후에는 공유 화면만 바꾸는 업데이트에 NAS 파일 교체가 필요하지 않다. 과거 기록은 Git 태그에서 확인한다.
+- `test-scheduling-browser.py` 로컬/NAS 통과: 아이콘·색·이모지·업로드, 완료 보드/목록, 반복 할일과 일정의 이번/이후/전체 수정·삭제·재접속. 새 소속 표시와 하단 높이 핸들에 맞춰 검사를 갱신하고 날짜를 고정했다.
+- `test-module-language-browser.py` 로컬/NAS 통과: 시간표 크기·시간/할일 설정·캘린더 제외, 날짜/시간 드래그·색, 제거 모듈 내용 보존, 섹션 제목 직접 편집/크기/드래그와 캘린더 보기.
+- `test-sidebar-rail-browser.py` 통과: 제목/사이드바 동기화·고정·모바일·완료 잠금·문서 편집기 비활성화와 원본 유지·설정의 버전.
+- `test-time-grid-gestures-browser.py`, `test-touch-drag-browser.py` 통과: 빠른 스와이프 스크롤, 터치/펜 대기 후 종일→1시간 드래그, 정지한 길게 누르기 메뉴, 클릭 중복 방지와 부모 이벤트 전달. 물리 iOS/Pencil 기기 검사는 수행하지 않았다.
+- `test-sharing-browser.py` 로컬/NAS 통과: 기존 익명/지정 계정 열람·선택 범위·다운로드 제한·완료/재개 URL·공유 중지·모바일 범위를 유지한다. NAS 0.1.11 기준 ZIP은 `access.py`, `README.md`, `UPDATE.md` 세 파일만 포함하며 `.env`, DB/data, 계정 키를 포함하지 않는다. 새 스키마/환경변수/서버 의존성은 없다.
 
-이번 변경이 미완료 제작 템플릿·새 권한 승인 흐름의 구현을 뜻하지 않는다. 실제 운영 NAS 파일은 사용자가 ZIP으로 적용하며, 데이터·키·설정은 유지한다.
+운영 NAS에 직접 접속한 검사는 아니다. 사용자가 ZIP을 적용하고 재빌드한다. 업무그룹 틀 구현을 전체 프로젝트 제작 템플릿·새 권한 승인 흐름 완료로 간주하지 않는다.

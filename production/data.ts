@@ -18,6 +18,7 @@ export type Task = {
   description: string;
 };
 export type Schedule = {
+ attachments?:any[];properties?:any[];eventGroupId?:string;_ownerKey?:string;
  repeat?:any;repeatBaseId?:string;repeatDate?:string;
   done?: boolean;
   projectLinked?: boolean;
@@ -56,6 +57,7 @@ export type MaterialGroup = {id:string;name:string;items:MaterialItem[]};
 export type WorkspaceModule = {blockLayout?:boolean;parentSlot?:string;columnSlots?:string[];columnWeights?:number[];databaseCategories?:string[];databaseFields?:{id:string;label:string;type:string}[];databaseView?:string;gradeScale?:string;courses?:{id:string;name:string;credits:number|string;grade:string}[];columnId?:string;rowBreakBefore?:boolean;rowBreakAfter?:boolean;frameHeight?:number;tags?:string[];x?:number;y?:number;width?:number;height?:number;span?:number;groups?:MaterialGroup[];legacyImported?:boolean;scheduleKeys?:string[];id:string;title?:string;planData?:any;dataModuleId?:string|null;planView?:string;planColumns?:number;planGroupBy?:string;hiddenPlanFields?:string[];sectionNumber?:string;sectionNote?:string;kind:'columns'|'section-heading'|'group-list'|'progress-table'|'info-cards'|'assignment-table'|'database'|'wordcraft'|'grade-calculator'|'schedule-list'|'timetable'|'tasks'|'schedule'|'materials'|'text'|'image'|'video'|'file'|'link'|'embed'|'divider'|'accounting'|'checklist'|'tracker';fields?:string[];states?:string[];items?:{id:string;text:string;done:boolean}[];text?:string;url?:string;files?:MaterialItem[];rows?:{id:string;label:string;amount:number;type:'income'|'expense'}[];sourceCopy?:boolean;importSource?:{kind:'reference'|'project'|'production';ownerId:string;moduleId:string};source?:{kind:'reference'|'project'|'production';ownerId:string;moduleId:string};projectId?:string;config?:{slotHeight?:number;start?:string;end?:string;days?:number;projectIds?:string[]}};
 export type CustomTab = {icon?:string;defaultBoard?:boolean;boardSection?:string;categories?:string[];tags?:string[];id:string;name:string;modules:WorkspaceModule[]};
 export type Project = {
+ groupType?:string;eventScheduleId?:string;calendarPreferences?:any;scheduleTemplates?:any[];
   completion?:any;completionRequested?:boolean;
   archives?:any[];
   customTabs?: CustomTab[];
@@ -85,6 +87,7 @@ export type Project = {
 export type Team = {memberSort?:string;groupId?:string;id:string;name:string;leaderId:string;members:{memberId:string;role:string}[]};
 export type ProjectCategory = {id:string;name:string;stages:string[];stageGroups?:Record<string,string>};
 export type Production = {
+ calendarPreferences?:any;scheduleTemplates?:any[];groupTemplates?:any[];
   completion?:any;completionRequested?:boolean;
   archives?:any[];
   status?:Status;

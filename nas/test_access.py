@@ -26,6 +26,50 @@ class AccessTest(unittest.TestCase):
    db.execute('INSERT INTO tab_permissions VALUES(?,?,?,?)',(self.gid,'materials',json.dumps({'operator':{'view':False,'edit':False}}),'admin'))
    restricted=apply_tab_visibility(db,scope(full,actor),actor)
    self.assertEqual(restricted['productions'][0]['archives'],[])
+ def test_schedule_preferences_and_templates_use_schedule_permissions(self):
+  from access import scope,apply_tab_visibility,merge_workspace
+  actor={'role':'advanced','member_id':self.mid}
+  full=copy.deepcopy(self.data)
+  full['projects'][0].update(schedules=[{'id':'schedule','title':'private','attachments':[{'id':'original','kind':'image'}]}],calendarPreferences={},scheduleTemplates=[])
+  with self.s.database() as db:
+   visible=apply_tab_visibility(db,scope(full,actor),actor)
+   visible['projects'][0]['calendarPreferences']={'sources':['project:project-a'],'showTasks':False}
+   visible['projects'][0]['scheduleTemplates']=[{'id':'tpl','name':'속성 틀','fields':[{'name':'인원','type':'number'}]}]
+   merged=merge_workspace(db,full,visible,actor)
+   self.assertEqual(merged['projects'][0]['calendarPreferences']['showTasks'],False)
+   self.assertEqual(merged['projects'][0]['schedules'][0]['attachments'][0]['id'],'original')
+   db.execute('INSERT INTO tab_permissions VALUES(?,?,?,?)',('project-a','schedule',json.dumps({'advanced':{'view':False,'edit':False}}),'admin'))
+   hidden=apply_tab_visibility(db,scope(merged,actor),actor)
+   self.assertEqual(hidden['projects'][0]['schedules'],[])
+   self.assertEqual(hidden['projects'][0]['scheduleTemplates'],[])
+   self.assertEqual(hidden['projects'][0]['calendarPreferences'],{})
+   denied=copy.deepcopy(hidden);denied['projects'][0]['scheduleTemplates']=[{'id':'attack'}]
+   with self.assertRaises(Exception):merge_workspace(db,merged,denied,actor)
+ def test_group_templates_respect_source_tab_visibility(self):
+  from access import scope,apply_tab_visibility
+  actor={'role':'operator','member_id':self.mid}
+  full=copy.deepcopy(self.data)
+  full['productions'][0]['groupTemplates']=[{'id':'safe','sourceOwnerId':'project-a','sourceTabIds':['private']},{'id':'hidden','sourceOwnerId':'project-b','sourceTabIds':[]}]
+  with self.s.database() as db:
+   shown=apply_tab_visibility(db,scope(full,actor),actor)
+   self.assertEqual([t['id'] for t in shown['productions'][0]['groupTemplates']],['safe'])
+   db.execute('INSERT INTO tab_permissions VALUES(?,?,?,?)',('project-a','tab:private',json.dumps({'operator':{'view':False}}),'admin'))
+   hidden=apply_tab_visibility(db,scope(full,actor),actor)
+   self.assertEqual(hidden['productions'][0]['groupTemplates'],[])
+   from access import merge_workspace
+   hidden['productions'][0]['description']='수정'
+   self.assertEqual(len(merge_workspace(db,full,hidden,actor)['productions'][0]['groupTemplates']),2)
+ def test_event_title_projection_requires_real_event_group(self):
+  from access import scope,apply_tab_visibility,merge_workspace
+  actor={'role':'advanced','member_id':self.mid};full=copy.deepcopy(self.data)
+  full['projects'][0].update(groupType='event',eventScheduleId='event',schedules=[{'id':'event','title':'A','date':'2026-10-17','endDate':'2026-10-17','eventGroupId':'project-a'}])
+  with self.s.database() as db:
+   visible=apply_tab_visibility(db,scope(full,actor),actor)
+   visible['projects'][0]['schedules'][0]['title']='새 행사'
+   visible['projects'][0]['title']='새 행사'
+   self.assertEqual(merge_workspace(db,full,visible,actor)['projects'][0]['title'],'새 행사')
+   normal=copy.deepcopy(full);normal['projects'][0].pop('groupType');normal['projects'][0].pop('eventScheduleId')
+   with self.assertRaises(Exception):merge_workspace(db,normal,visible,actor)
  def tearDown(self):self.folder.cleanup()
  def session(self,uid,role,mid,email='person@example.com',aal=2):
   raw=str(uuid4())

@@ -1,3 +1,5 @@
+import {projectColorStyle} from './project-colors.js';
+import {NewSchedule} from './NewSchedule';
 import { ScheduleCalendar } from "./ScheduleCalendar";
 import { projectEntries } from "./project-structure.js";
 import { useEffect, useState, useRef, useLayoutEffect } from "react";
@@ -20,6 +22,7 @@ export function AdminHome({
   view = "dashboard",
   onNavigate = (section: string) => (window as any).openHomeSection?.(section),
 }: any) {
+  const [addingSchedule,setAddingSchedule]=useState(false);
   const [period, setPeriod] = useState("today"),
     [mine, setMine] = useState(false),
     [references, setReferences] = useState<any[]>([]),
@@ -162,6 +165,7 @@ export function AdminHome({
             </button>
             <button
               className="admin-schedule-open"
+              style={projectColorStyle(s.color)}
               onClick={() => open(s, "schedule")}
             >
               <span className="admin-schedule-time">
@@ -290,7 +294,7 @@ export function AdminHome({
             </section>
             <section className="admin-section">
               <div className="admin-section-heading">
-                <h2>일정</h2>
+                <h2>일정</h2><button className="button keep-label" aria-label="홈 일정 추가" onClick={()=>setAddingSchedule(true)}>+ 일정</button>
                 <button
                   className="keep-label"
                   onClick={() => onNavigate("schedule")}
@@ -490,6 +494,7 @@ export function AdminHome({
           )}
         </>
       )}
+      {addingSchedule&&<NewSchedule workspace={w} onChange={onChange} onClose={()=>setAddingSchedule(false)}/>}
       {detail && (
         <Modal title={detail.title || "일정"} onClose={() => setDetail(null)}>
           <p>

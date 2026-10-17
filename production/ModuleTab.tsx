@@ -1,3 +1,4 @@
+import {moveModuleFile} from './media-transfer.js';
 import {migrateRetiredModules} from './retired-modules.js';
 import { migrateColumns, applyBlockDrop } from "./column-layout.js";
 import { snapBoxes } from "./snap-layout.js";
@@ -672,6 +673,7 @@ export function ModuleTab({
                     "embed",
                   ].includes(m.kind) ? (
                   <ContentModule
+                    onTransfer={(from:string,to:string,fileId:string,before:string)=>{if((window as any).appAccount?.role==='viewer')return false;const moved=moveModuleFile(tab.modules,from,to,fileId,before);if(moved===tab.modules)return false;onTabChange((old:any)=>({...old,modules:moveModuleFile(old.modules,from,to,fileId,before)}));return true}}
                     module={m}
                     onChange={(fn) => updateModule(m.id, fn)}
                     footerTools={
@@ -770,6 +772,8 @@ export function ModuleTab({
                     onChange={onChange}
                     onAddMember={onAddMember}
                   />
+                ) : p?.productionId ? (
+                  <ProductionCalendar workspace={w} productionId={p.productionId} ownerId={p.id} section={m.kind} preferences={m.calendarPreferences||{}} onPreferences={(v:any)=>updateModule(m.id,(old:any)=>({...old,calendarPreferences:v}))} onChange={onChange} onAddMember={onAddMember}/>
                 ) : p ? (
                   <ProjectWorkspace
                     defaultColor={w.productions.find(owner=>owner.id===p.productionId)?.iconColor}

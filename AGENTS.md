@@ -17,3 +17,7 @@ Whenever a release requires NAS file additions or replacements, always give the 
 Keep installation, operations, development, product policy and design guides current in their existing roles. Use fixed `nas/UPDATE.md`, `docs/VALIDATION.md` and `docs/PRODUCT-AUDIT.md` paths; overwrite their current content instead of adding versioned copies. Keep only policy plus the latest release in `RELEASES.md`. Preserve unresolved product scope, legal/license files, application/runtime files and all Git rollback tags/history.
 
 Run `npm run docs:clean` before committing an update and `npm run docs:check` to verify it. Builds clean automatically; the main-branch documentation workflow also commits cleanup of directly pushed old versioned documents. Generated documentation-only cleanup commits do not create a new application release. NAS packages use current canonical guides only.
+
+## Shared module implementation language
+
+Implement module screens in React TypeScript (`.tsx`) and module behavior in `production/modules/*.ts`. Use `production/modules/types.ts` for shared state, file, update and component contracts. Existing same-name `production/*.js` paths are compatibility re-exports only; do not add implementations there. Shared colors, controls, spacing and motion come from `ui/design-system`. Run `npm run typecheck:modules`, the relevant module model checks and browser flows after changing shared module behavior. Preserve saved IDs, file originals and links during refactors.

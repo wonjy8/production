@@ -1,6 +1,2 @@
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-export function moveLayer(layer,dx,dy){const x=clamp(layer.x+dx,0,1-layer.w),y=clamp(layer.y+dy,0,1-layer.h),sx=x-layer.x,sy=y-layer.y;return {...layer,x,y,...(['line','arrow'].includes(layer.kind)?{ax:layer.ax+sx,ay:layer.ay+sy,bx:layer.bx+sx,by:layer.by+sy}:{})}}
-export function resizeLayer(layer,corner,p){const left=corner.includes('w')?clamp(p.x,0,layer.x+layer.w-.005):layer.x,right=corner.includes('e')?clamp(p.x,layer.x+.005,1):layer.x+layer.w,top=corner.includes('n')?clamp(p.y,0,layer.y+layer.h-.005):layer.y,bottom=corner.includes('s')?clamp(p.y,layer.y+.005,1):layer.y+layer.h;const next={...layer,x:left,y:top,w:right-left,h:bottom-top};if(['line','arrow'].includes(layer.kind)){next.ax=left+(layer.ax-layer.x)/Math.max(.005,layer.w)*next.w;next.bx=left+(layer.bx-layer.x)/Math.max(.005,layer.w)*next.w;next.ay=top+(layer.ay-layer.y)/Math.max(.005,layer.h)*next.h;next.by=top+(layer.by-layer.y)/Math.max(.005,layer.h)*next.h}return next}
-export function commitEdit(state,edit){return {past:[...state.past,state.edit].slice(-50),edit,future:[]}}
-export function undoEdit(state){return state.past.length?{past:state.past.slice(0,-1),edit:state.past.at(-1),future:[state.edit,...state.future]}:state}
-export function redoEdit(state){return state.future.length?{past:[...state.past,state.edit],edit:state.future[0],future:state.future.slice(1)}:state}
+// Compatibility entry. Implement module behavior in TypeScript only.
+export * from './modules/photo-interactions.ts';

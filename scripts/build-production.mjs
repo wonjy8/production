@@ -4,7 +4,7 @@ import {readFile,writeFile,readdir} from 'node:fs/promises';
 const require=createRequire(import.meta.url);
 const esbuild=process.env.PRODUCTION_ESBUILD?require(process.env.PRODUCTION_ESBUILD):require('esbuild');
 const result=await esbuild.build({entryPoints:['production/entry.tsx'],bundle:true,write:false,minify:true,format:'iife',target:['es2020'],jsx:'automatic',define:{'process.env.NODE_ENV':'"production"'},nodePaths:process.env.PRODUCTION_NODE_PATH?[process.env.PRODUCTION_NODE_PATH]:[]});
-const designCSS=(await Promise.all(['tokens','typography','buttons','navigation','surfaces','motion','columns','project-identity','scheduling','module-language','time-grid'].map(name=>readFile('ui/design-system/'+name+'.css','utf8')))).join('\n');
+const designCSS=(await Promise.all(['tokens','typography','buttons','navigation','surfaces','motion','columns','project-identity','scheduling','module-language','time-grid','workflow'].map(name=>readFile('ui/design-system/'+name+'.css','utf8')))).join('\n');
 const fixes=await readFile('ui/fixes.css','utf8')+'\n'+await readFile('ui/motion.css','utf8')+'\n'+await readFile('ui/home.css','utf8')+'\n'+await readFile('ui/theme.css','utf8');
 const css=await readFile('production/styles.css','utf8')+'\n'+await readFile('ui/controls.css','utf8')+'\n'+await readFile('production/merged.css','utf8')+'\n'+await readFile('production/timetable.css','utf8')+'\n'+await readFile('production/planning.css','utf8')+'\n'+fixes+'\n'+await readFile('production/document-library.css','utf8')+'\n'+await readFile('production/font-manager.css','utf8');
 const ui=await esbuild.build({entryPoints:['ui/dom.js'],bundle:true,write:false,minify:true,format:'iife',target:['es2020']});

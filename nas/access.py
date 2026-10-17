@@ -47,10 +47,14 @@ def apply_tab_visibility(conn,data,actor):
     for key in ('productions','projects'):
         for obj in data.get(key,[]):
             if not permitted(conn,actor,obj['id'],'tasks','view'):obj['tasks']=[]
-            if not permitted(conn,actor,obj['id'],'schedule','view'):obj['schedules']=[]
+            if not permitted(conn,actor,obj['id'],'schedule','view'):
+                obj['schedules']=[];obj['calendarPreferences']={};obj['scheduleTemplates']=[]
             if not permitted(conn,actor,obj['id'],'materials','view'):
                 obj['modules']=[];obj['productionAssets']=[]
             if 'customTabs' in obj:obj['customTabs']=[t for t in obj['customTabs'] if permitted(conn,actor,obj['id'],'tab:'+t['id'],'view')]
+            if 'groupTemplates' in obj:
+                visible_owners={p['id'] for name in ('projects','productions') for p in data.get(name,[])}
+                obj['groupTemplates']=[t for t in obj['groupTemplates'] if permitted(conn,actor,obj['id'],'overview','view') and (not t.get('sourceOwnerId') or t['sourceOwnerId'] in visible_owners and all(permitted(conn,actor,t['sourceOwnerId'],tab,'view') for tab in ['overview','tasks','schedule','materials']+['tab:'+tid for tid in t.get('sourceTabIds',[])]))]
             # Frozen records still contain tasks and files; hide an archive if any captured scope is unavailable.
             visible_ids={item['id'] for collection in ('productions','projects') for item in data.get(collection,[])}
             if 'archives' in obj:
@@ -90,7 +94,16 @@ def merge_workspace(conn,full,incoming,actor):
             for field in set(before)|set(obj):
                 if before.get(field)==obj.get(field):continue
                 a,b=before.get(field),obj.get(field)
-                tab='tasks' if field=='tasks' else 'schedule' if field=='schedules' else 'people' if field in ('memberIds','teams','teamGroups','memberOrder') else 'materials' if field in ('modules','productionAssets') else 'overview'
+                tab='tasks' if field=='tasks' else 'schedule' if field in ('schedules','calendarPreferences','scheduleTemplates') else 'people' if field in ('memberIds','teams','teamGroups','memberOrder') else 'materials' if field in ('modules','productionAssets') else 'overview'
+                if field=='groupTemplates':
+                    visible_ids={t['id'] for t in before.get('groupTemplates',[])}
+                    hidden=[t for t in old[ident].get('groupTemplates',[]) if t['id'] not in visible_ids]
+                    if {t['id'] for t in hidden}&{t['id'] for t in b or []}:deny()
+                    validate_list_changes(conn,actor,ident,'overview',a or [],b or [])
+                    visible_owner_ids={p['id'] for collection in ('productions','projects') for p in visible.get(collection,[])}
+                    for template in b or []:
+                        if template.get('sourceOwnerId') and template['sourceOwnerId'] not in visible_owner_ids:deny()
+                    merged[field]=hidden+(b or []);continue
                 if field=='archives':
                     visible_archive_ids={a['id'] for a in before.get('archives',[])}
                     hidden_archives=[a for a in old[ident].get('archives',[]) if a['id'] not in visible_archive_ids]
@@ -108,8 +121,10 @@ def merge_workspace(conn,full,incoming,actor):
                 if isinstance(a,list) and isinstance(b,list) and field in ('tasks','schedules','modules','productionAssets','teams','teamGroups'):
                     validate_list_changes(conn,actor,ident,tab,a,b)
                 elif not permitted(conn,actor,ident,tab,'edit'):
-                    linked=[item for item in obj.get('schedules',[]) if item.get('projectLinked') and item not in before.get('schedules',[])]
+                    linked=[item for item in obj.get('schedules',[]) if (item.get('projectLinked') or item.get('eventGroupId')==ident) and item not in before.get('schedules',[])]
                     projected=field in ('due','description') and linked and any((item.get('endDate') if field=='due' else item.get('note',''))==b for item in linked) and permitted(conn,actor,ident,'schedule','edit')
+                    if field in ('name','title') and before.get('groupType')=='event':
+                        projected=any(item.get('id')==before.get('eventScheduleId') and item.get('eventGroupId')==ident and item.get('title')==b for item in linked) and permitted(conn,actor,ident,'schedule','edit')
                     if not projected:deny()
                 merged[field]=b
             result[key]=[merged if p['id']==ident else p for p in result.get(key,[])]

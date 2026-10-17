@@ -1,6 +1,6 @@
 /* Module language: content sets the minimum height; only time grids fit their frame. */
-.workspace-module:not(:has(.timetable-module)){min-height:min-content!important;overflow:visible!important}
-.workspace-module:not(:has(.timetable-module)) :is(.module-body,.content-module,.production-workbench,.schedule-list,.module-fixed-body){max-height:none!important;overflow-y:visible!important}
+.workspace-module:not(:has(.timetable-module,.photo-gallery-host)){min-height:min-content!important;overflow:visible!important}
+.workspace-module:not(:has(.timetable-module,.photo-gallery-host)) :is(.module-body,.content-module,.production-workbench,.schedule-list,.module-fixed-body){max-height:none!important;overflow-y:visible!important}
 .content-module>textarea{resize:none;overflow:hidden!important;min-height:120px}
 .workspace-module .calendar-resizable{height:auto!important;overflow:visible!important;resize:none}
 .workspace-module .calendar-grid{min-height:560px!important}
@@ -11,8 +11,8 @@
 .module-import-list .hub-card>svg{width:24px!important;height:24px!important;flex:none}
 .admin-home-nav.sidebar-project{width:100%;padding:8px 10px!important;gap:8px!important;background:transparent;color:var(--text-muted);text-align:left;display:flex;align-items:center}
 .admin-home-nav.sidebar-project.active{background:var(--surface-subtle,#f3f3f3);color:var(--text)}
-.snap-canvas .module-fixed-height>.workspace-module:not(:has(.timetable-module)){overflow:visible!important;min-height:min-content}
-.snap-canvas .module-fixed-height>.workspace-module:not(:has(.timetable-module))>:not(.workspace-module-heading):not(.module-bottom-actions){overflow:visible!important;flex:0 0 auto!important;min-height:min-content}
+.snap-canvas .module-fixed-height>.workspace-module:not(:has(.timetable-module,.photo-gallery-host)){overflow:visible!important;min-height:min-content}
+.snap-canvas .module-fixed-height>.workspace-module:not(:has(.timetable-module,.photo-gallery-host))>:not(.workspace-module-heading):not(.module-bottom-actions){overflow:visible!important;flex:0 0 auto!important;min-height:min-content}
 .snap-canvas .module-fixed-height>.workspace-module>.timetable-module{overflow:hidden!important}
 .workspace-module :is(.schedule-list-rows,.media-items,.tracker-module,.task-list,.task-board,.photo-gallery-host){max-height:none!important;overflow-y:visible!important}
 /* Heading blocks have no card border, numbering or separate rename icon. */

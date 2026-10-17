@@ -50,3 +50,9 @@ Squircle는 버튼을 포함한 모든 둥근 UI 모서리에 적용하며 각 �
 - `project-solid-icons.js`, `Icon.tsx`의 `IdentityIcon`, `icon-pack.js`의 `identityIconSVG`: 동일 채움형 도형을 제목·선택기·프로젝트 카드·사이드바에서 사용한다. 사이드바 글자는 중립색을 유지한다.
 - `navigationIconSVG('home')`: 선택 상태와 무관한 같은 프로덕션 도형.
 - `scripts/share-view-build.mjs`: 공통 CSS와 `ui/share-view.html/js`로 공용 화면을 Pages에 생성한다. NAS는 `public_gateway.py`에서 화면 파일만 받아 동일 출처로 제공하며 개인정보를 UI 호스트에 전달하지 않는다.
+
+## 일정 확장·자료 이동·공통 구현
+
+- `workflow.css`: 일정 첨부/속성/보기 설정·오늘/리사이즈·공휴일·자료 표·버튼 줄바꿈·사이드바 수평 차단·뒤로가기 정렬.
+- `ScheduleDetails.tsx`, `CalendarSettings.tsx`, `CalendarResize.tsx`, `DocumentEmbed.tsx`: 공유 편집·미리보기 UI.
+- `production/modules/*.ts`, `types.ts`: 모듈 공통 동작 25개와 상태/파일/수정/컴포넌트 계약. JavaScript 경로는 호환 재내보내기. `npm run typecheck:modules`로 검사한다.

@@ -1,3 +1,8 @@
+import {Icon} from './Icon';
+import {ScheduleDetails} from './ScheduleDetails';
+import {CalendarSettings} from './CalendarSettings';
+import {CalendarResize} from './CalendarResize';
+import {holidayName,redCalendarDate} from './calendar-holidays.js';
 import {ScheduleGrid} from './ScheduleGrid';
 import {baseId,expandRepeats,taskOccurrences,changeRepeating,repeatAt,sameRepeat} from './recurrence.js';
 import {RepeatFields,readRepeat} from './RepeatFields';
@@ -104,6 +109,7 @@ function dateString(d: Date) {
 }
 export function ProjectWorkspace({
   project,
+  calendarContext,
   members,
   onAddMember,
   section,
@@ -121,6 +127,7 @@ export function ProjectWorkspace({
   taskStageGroups,
   taskMemberOptions,
 }: {
+  calendarContext?:any;
   stageGroups?: Record<string, string>;
   taskStageGroups?: Record<string, Record<string, string>>;
   stageOptions?: readonly string[];
@@ -198,6 +205,10 @@ export function ProjectWorkspace({
   const [scheduleEditor, setScheduleEditor] = useState<Schedule | null>(null);
   const [calendarHeight,setCalendarHeight]=useState(()=>{try{return Number(localStorage.getItem('pn-calendar-height:'+project.id))||660}catch{return 660}});
   const [calendarView,setCalendarView]=useState('month');
+  const [calendarSettings,setCalendarSettings]=useState(false),[localPreferences,setLocalPreferences]=useState<any>(()=>{try{return JSON.parse(localStorage.getItem('pn-calendar-filters:'+project.id)||'{}')}catch{return {}}});
+  const ctx=calendarContext||{},calendarSources=ctx.sources||[{id:project.id,label:project.name,color:project.iconColor||defaultColor}],preferences=(window as any).appAccount?.role==='viewer'?localPreferences:ctx.value||localPreferences;
+  const visibleSource=(item:any)=>!preferences.sources||preferences.sources.includes(ctx.origins?.[baseId(item)]||ctx.ownerKey||project.id);
+  const resizeCalendar=(height:number)=>{setCalendarHeight(height);localStorage.setItem('pn-calendar-height:'+project.id,String(height))};
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -258,7 +269,7 @@ export function ProjectWorkspace({
     }
   }, [project.id, section]);
   const today = dateString(new Date());
-  const displayedTasks = taskOccurrences(project.tasks,today);
+  const displayedTasks = taskOccurrences(project.tasks,today).filter(visibleSource);
   const sourceFor=(item:any)=>taskSources?.[baseId(item)];
   const colorFor=(item:any)=>projectColorStyle(item.color||itemColors?.[baseId(item)]||project.iconColor||defaultColor) as any;
   const tasks = displayedTasks.filter(
@@ -299,6 +310,7 @@ export function ProjectWorkspace({
     : members;
   const [repeatAction,setRepeatAction]=useState<any>(null);
   function mutate(kind:string,item:any,patch:any={},remove=false,ask=true){
+    if(ctx.canEdit&&!ctx.canEdit(item,kind)){setError('이 항목을 수정할 권한이 없거나 완료된 프로젝트입니다.');return;}
     const field=kind==='task'?'tasks':'schedules';
     const original=(project[field]||[]).find((i:any)=>i.id===baseId(item));
     const target=original?.repeat?.frequency&&!item.repeatDate?{...item,repeatBaseId:original.id,repeatDate:item.date||item.due}:item;
@@ -721,8 +733,8 @@ export function ProjectWorkspace({
   );
   const calendarDays=calendarView==='month'?monthCalendarDays:Array.from({length:calendarView==='week'?7:1},(_,i)=>new Date(month.getFullYear(),month.getMonth(),month.getDate()+(calendarView==='week'?-month.getDay():0)+i));
   const calendarFrom=dateString(calendarDays[0]),calendarTo=dateString(calendarDays.at(-1)!);
-  const calendarSchedules=expandRepeats(project.schedules.filter((s:any)=>!s.calendarExcluded),calendarFrom,calendarTo).sort((a,b)=>Number(!!a.startTime)-Number(!!b.startTime)||(a.startTime||'').localeCompare(b.startTime||''));
-  const calendarTasks=expandRepeats(project.tasks,calendarFrom,calendarTo);
+  const calendarSchedules=expandRepeats(project.schedules.filter((s:any)=>!s.calendarExcluded&&visibleSource(s)),calendarFrom,calendarTo).sort((a,b)=>Number(!!a.startTime)-Number(!!b.startTime)||(a.startTime||'').localeCompare(b.startTime||''));
+  const calendarTasks=preferences.showTasks===false?[]:expandRepeats(project.tasks.filter(visibleSource),calendarFrom,calendarTo);
   return (
     <div className="production-workbench">
       {!hideNavigation && (
@@ -745,6 +757,7 @@ export function ProjectWorkspace({
           {error}
         </div>
       )}
+      {section==='tasks'&&calendarContext&&<div className="task-source-settings"><button className="button keep-label" onClick={()=>setCalendarSettings(true)}><Icon name="settings"/>표시할 일정 / 할일</button></div>}
       {section === "tasks" && (
         <section>
           <div className="work-toolbar task-view-toolbar">
@@ -966,20 +979,8 @@ export function ProjectWorkspace({
               {month.getFullYear()}년 {month.getMonth() + 1}월
             </h3>
             <div>
-              <button
-                className="button"
-                onClick={() =>
-                  setMonth(
-                    new Date(
-                      new Date().getFullYear(),
-                      new Date().getMonth(),
-                      1,
-                    ),
-                  )
-                }
-              >
-                이번 달
-              </button>
+              <button type="button" className="icon-button" aria-label="일정 추가" onClick={()=>openCalendarDraft(today)}><Plus size={17}/></button>
+              <button type="button" className="icon-button" aria-label="일정 설정" onClick={()=>setCalendarSettings(true)}><Icon name="settings"/></button>
               <button
                 className="icon-button"
                 aria-label={calendarView==='month'?'이전 달':'이전 날짜'}
@@ -991,6 +992,7 @@ export function ProjectWorkspace({
               >
                 <ChevronLeft size={17} />
               </button>
+              <button type="button" className="button keep-label" onClick={()=>setMonth(new Date())}>오늘</button>
               <button
                 className="icon-button"
                 aria-label={calendarView==='month'?'다음 달':'다음 날짜'}
@@ -1004,11 +1006,10 @@ export function ProjectWorkspace({
               </button>
             </div>
           </div>
-          <div className="calendar-scroll calendar-resizable" style={{height:calendarHeight}} onPointerUp={e=>{const height=Math.round(e.currentTarget.getBoundingClientRect().height);if(Math.abs(height-calendarHeight)>1){setCalendarHeight(height);localStorage.setItem('pn-calendar-height:'+project.id,String(height));}}}>
-            <div className="calendar-height-tools"><button type="button" className="keep-label" aria-label="일정 높이 늘리기" onClick={()=>{const h=calendarHeight+140;setCalendarHeight(h);localStorage.setItem('pn-calendar-height:'+project.id,String(h));}}>높이 늘리기</button></div>
+          <div className="calendar-scroll calendar-resizable" style={{height:calendarHeight}}>
             {calendarView!=='month'?<ScheduleGrid dates={calendarDays.map(dateString)} items={[...calendarSchedules.map(s=>({...s,key:'schedule:'+s.id,kind:'schedule',color:(s as any).color||itemColors?.[baseId(s)]||project.iconColor||defaultColor,source:s,endDate:s.endDate||s.date})),...calendarTasks.map(t=>({...t,key:'task:'+t.id,kind:'task',color:(t as any).color||itemColors?.[baseId(t)]||project.iconColor||defaultColor,source:t,date:t.due,endDate:t.due}))]} onEdit={(i:any)=>{setCalendarDraft(false);if(i.kind==='task')setTaskEditor(i.source);else setScheduleEditor(i.source)}} onCreate={(range:any)=>{setCalendarDraft(true);setScheduleEditor({id:crypto.randomUUID(),title:'',location:'',note:'',...range})}} onDelete={(i:any)=>mutate(i.kind,i.source,{},true)} onMove={(i:any,patch:any)=>mutate(i.kind,i.source,i.kind==='task'?{due:patch.date,startTime:patch.startTime,endTime:patch.endTime}:patch)}/>:<div className="calendar-grid" style={{minHeight:calendarHeight-48}}>
               {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
-                <div className="weekday" key={d}>
+                <div className={"weekday"+(["토","일"].includes(d)?" calendar-red":"")} key={d}>
                   {d}
                 </div>
               ))}
@@ -1016,7 +1017,7 @@ export function ProjectWorkspace({
                 const value = dateString(d);
                 return (
                   <div
-                    className={`calendar-day ${d.getMonth() !== month.getMonth() ? "outside" : ""} ${value === today ? "today" : ""} ${calendarDropDay === value ? "calendar-drop-target" : ""}`}
+                    className={`calendar-day ${redCalendarDate(value)?"calendar-red":""} ${d.getMonth() !== month.getMonth() ? "outside" : ""} ${value === today ? "today" : ""} ${calendarDropDay === value ? "calendar-drop-target" : ""}`}
                     key={value}
                     data-calendar-date={value}
                     onDragOver={(e) => {
@@ -1050,7 +1051,7 @@ export function ProjectWorkspace({
                   >
                     <div className="calendar-day-heading">
                       <span aria-current={value === today ? "date" : undefined}>
-                        {d.getDate()}
+                        {d.getDate()}{holidayName(value)&&<small className="calendar-holiday">{holidayName(value)}</small>}
                         {value === today && <small>오늘</small>}
                       </span>
                       <button
@@ -1147,7 +1148,7 @@ export function ProjectWorkspace({
                 );
               })}
             </div>}
-          </div>
+          </div><CalendarResize height={calendarHeight} onChange={resizeCalendar}/>
         </section>
       )}
       {section === "assets" && (
@@ -1294,6 +1295,7 @@ export function ProjectWorkspace({
           </div>
         </section>
       )}
+      {calendarSettings&&<CalendarSettings sources={calendarSources} value={preferences} onChange={((window as any).appAccount?.role!=='viewer'&&ctx.onPreferences)||((v:any)=>{setLocalPreferences(v);localStorage.setItem('pn-calendar-filters:'+project.id,JSON.stringify(v))})} onClose={()=>setCalendarSettings(false)}/>}
       {taskTools && (
         <Modal title="필터·그룹화·정렬" onClose={() => setTaskTools(false)}>
           <div className="merge-form">
@@ -1524,6 +1526,9 @@ export function ProjectWorkspace({
           ) : scheduleEditor ? (
             <ScheduleForm
               value={scheduleEditor}
+              owners={ctx.sources} ownerKey={ctx.origins?.[baseId(scheduleEditor)]||ctx.ownerKey}
+              templates={ctx.templates} onTemplates={ctx.onTemplates}
+              onUpgrade={ctx.onUpgrade&&!scheduleEditor.eventGroupId&&project.schedules.some(s=>s.id===baseId(scheduleEditor))?(item:any)=>{ctx.onUpgrade(item);setScheduleEditor(null)}:undefined}
               onDelete={
                 project.schedules.some((s) => s.id === baseId(scheduleEditor))
                   ? () => {
@@ -1608,13 +1613,15 @@ export function ProjectWorkspace({
 export function ScheduleForm({
   value,
   onSave,
-  onDelete,
+  onDelete, owners, ownerKey, templates, onTemplates, onUpgrade,
 }: {
+  owners?:any[];ownerKey?:string;templates?:any[];onTemplates?:any;onUpgrade?:any;
   onDelete?: () => void;
   value: Schedule;
   onSave: (s: Schedule) => void;
 }) {
   const [error, setError] = useState("");
+  const [details,setDetails]=useState<any>({attachments:value.attachments||[],properties:value.properties||[]}),[uploading,setUploading]=useState(false),[chosenOwner,setChosenOwner]=useState(ownerKey||'');
   const [dates, setDates] = useState({
     ...value,
     endDate: value.endDate || value.date,
@@ -1643,8 +1650,10 @@ export function ScheduleForm({
           return;
         }
         let repeat;try{repeat=readRepeat(d,date,value.repeat)}catch(error:any){setError(error.message);return;}
-        onSave({
+        const saved={
           ...value,
+          ...details,
+          ...(chosenOwner?{_ownerKey:chosenOwner}:{}),
           repeat,
           startTime,
           endTime,
@@ -1653,7 +1662,8 @@ export function ScheduleForm({
           endDate,
           location: field(d, "location"),
           note: field(d, "note"),
-        });
+        };
+        try{if((e.nativeEvent as SubmitEvent)?.submitter?.getAttribute('value')==='upgrade')onUpgrade?.(saved);else onSave(saved)}catch(error:any){setError(error.message)}
       }}
     >
       <label>
@@ -1668,6 +1678,7 @@ export function ScheduleForm({
           pattern=".*\S.*"
         />
       </label>
+      {owners?.length>0&&<label>프로젝트 / 그룹<select aria-label="일정 프로젝트" value={chosenOwner} disabled={!!value.repeat||!!value.repeatBaseId||!!value.eventGroupId} onChange={e=>setChosenOwner(e.target.value)}>{owners.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}</select></label>}
       <ScheduleDateTime value={dates} onChange={setDates} />
       <RepeatFields value={value.repeat}/>
       {error && (
@@ -1694,6 +1705,8 @@ export function ScheduleForm({
           rows={3}
         />
       </label>
+      <ScheduleDetails value={details} onChange={setDetails} templates={owners?.find(o=>o.id===chosenOwner)?.templates||templates} onTemplates={onTemplates?(v:any)=>onTemplates(v,chosenOwner):undefined} scopeOwner={chosenOwner.slice(chosenOwner.indexOf(':')+1)} onBusy={setUploading}/>
+      {onUpgrade&&<button type="submit" name="action" value="upgrade" className="button keep-label" disabled={uploading}>행사 그룹으로 전환</button>}
       <div className="dialog-actions">
         {onDelete && (
           <button
@@ -1704,7 +1717,7 @@ export function ScheduleForm({
             삭제
           </button>
         )}
-        <button className="button primary keep-label">저장</button>
+        <button className="button primary keep-label" disabled={uploading}>저장</button>
       </div>
     </form>
   );

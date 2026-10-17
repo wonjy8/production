@@ -56,8 +56,9 @@ export function updateProductionTasks(
     .forEach((p) => byProject.set(p.id, []));
   for (const task of next.tasks) {
     const origin = origins.get(task.id);
-    const actual = { ...task, id: origin?.taskId ?? task.id };
-    if (origin?.projectId) byProject.get(origin.projectId)!.push(actual);
+    const {_ownerKey,...stored}=task as any,actual = { ...stored, id: origin?.taskId ?? task.id };
+    const target=_ownerKey?.startsWith('project:')?_ownerKey.slice(8):origin?.projectId;
+    if (target&&byProject.has(target)) byProject.get(target)!.push(actual);
     else own.push(actual);
   }
   return {

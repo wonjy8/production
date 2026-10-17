@@ -21,12 +21,11 @@ Current baseline: **version 0 (`0.0.0`)**, commit `b2fafdd`.
 
 Whenever NAS changes are needed, describe the exact files and paths, changes or replacement package, commands or Container Manager steps, rebuild/restart requirements, and verification in the chat. Do not merely say to update NAS.
 
-## 0.1.11
+## 0.1.12
 
-- Add one-hour all-day-to-time dragging, delayed touch/Pencil gestures and shared long-press context menus. Calendar uses a day/week/month segmented control with month default. Timetable colors share project presets.
-- Add four inline-editable, draggable section heading sizes without borders or numbers, and simplify heading/column/timetable icons.
-
-- Move public-viewer presentation to Pages. NAS fetches only the generic HTTPS asset, caches markup in memory, and serves it at the existing NAS share URL. No share tokens, credentials, cookies or workspace data are forwarded to the UI host. Sharing authorization and same-origin data/file requests remain on NAS. Remove the local HTML dependency from Docker and NAS packages.
-- Add filled silhouette glyphs for all project/title icon choices; preserve uploaded images and emoji. Sidebar colors apply only to icons, with neutral text. The production workspace glyph keeps identical geometry before/after selection.
-- Consolidate current documentation under fixed UPDATE.md, VALIDATION.md and PRODUCT-AUDIT.md paths. Keep policy plus the latest release; retain legal files and Git rollback references. Clean before builds and automatically commit cleanup of directly pushed old documentation.
-- NAS 0.1.10 baseline: replace public_gateway.py, Dockerfile, update.sh, README.md and UPDATE.md, then rebuild once. Future presentation-only updates no longer require NAS file replacement. Existing share URLs/settings/data/keys remain; no API, schema or dependency changes.
+- Extend schedules with links, original file/photo attachments, per-event custom fields and reusable property definitions. Refresh overview previews, apply owner colors, and create assigned schedules from overview.
+- Add peer event groups and lossless one-off schedule promotion. Groups can view and filter their project's schedules/tasks. Save clean workgroup templates without file/source/assignee links.
+- Add Today between date arrows, a working add action, source/task settings, hover resize handle and offline Korean weekend/lunar/substitute holiday labels.
+- Add local PDF/DOCX/text document embeds, named HTTPS link embeds with sandbox/no-referrer, compatible atomic media transfers, and adaptive photo grids. Add roster Shift selection and team select-all; repair overflow, resource table actions, sidebar horizontal scrolling and back alignment.
+- Standardize module screens on React TypeScript and 25 shared module implementations under production/modules/*.ts, with shared types, compatibility exports, architecture/type checks and CI validation.
+- NAS 0.1.11 baseline: replace access.py, README.md and UPDATE.md, then rebuild. Preserve hidden templates and enforce source-tab/schedule permissions; project title projection is limited to the bound representative event schedule. No schema, secret, environment or server dependency changes.

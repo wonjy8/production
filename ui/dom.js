@@ -32,3 +32,7 @@ window.renderNASAliasSettings=renderNASAliasSettings;
 
 window.dispatchEvent(new Event("production-ui-ready"));
 import './workspace-nav.js';
+
+// Sidebar navigation has one vertical scroll axis, including focus-driven scrolling.
+const navigationSidebar=document.querySelector('#sidebar');
+navigationSidebar?.addEventListener('scroll',event=>{const node=event.target;if(node instanceof HTMLElement&&node.matches('#sidebar,.sidebar-project-area,.sidebar-projects,.sidebar-main-spaces,.sidebar-scroll,.sidebar-footer')&&node.scrollLeft)node.scrollLeft=0},true);
