@@ -34,6 +34,7 @@ context.render=()=>{};
 b.operations('existing');b.detachOperations();assert.equal(node('#paper').slot,undefined);assert.equal(node('#paper').hidden,true);
 b.select('new','tasks');
 
+context.homeSections=node('home-sections');
 vm.runInContext(await readFile(new URL('../ui/workspaces.js',import.meta.url),'utf8'),context);
 const transitions=[];context.openProduction=(id,section)=>transitions.push({id,section});vm.runInContext('switchProductionSpace()',context);assert.deepEqual(transitions.pop(),{id:'new',section:'tasks'});
 preferences.set('pn-project','missing');vm.runInContext('switchProductionSpace()',context);assert.equal(transitions.pop().id,undefined);
@@ -41,7 +42,7 @@ context.loaded=true;context.refPage=true;context.refs=[{category:'촬영',delete
 context.refPage=false;vm.runInContext('syncSpaceChrome()',context);assert.equal(node('#space-name').textContent,'프로덕션');assert.equal(context.window.activeWorkspace,'home');assert.equal(vm.runInContext('sidebarProjects.hidden',context),false);
 context.databaseCollection='members';context.databasePanel=node('database-panel');context.databasePanel.hidden=false;context.databaseScope=node('database-scope');context.settingsPanel=node('settings-panel');context.settingsPanel.hidden=true;
 vm.runInContext('syncSpaceChrome()',context);assert.equal(node('#space-name').textContent,'자료');assert.equal(preferences.get('pn-space'),'references');assert.equal(vm.runInContext('sidebarProjects.hidden',context),true);assert.equal(vm.runInContext('referenceScope.hidden',context),false);assert.equal(context.databaseScope.hidden,true);
-context.settingsScope=node('settings-scope');context.databasePanel.hidden=true;context.settingsPanel.hidden=false;vm.runInContext('syncSpaceChrome()',context);assert.equal(node('#space-name').textContent,'설정');assert.equal(context.window.activeWorkspace,'settings');assert.equal(preferences.get('pn-space'),'settings');assert.equal(context.settingsScope.hidden,false);assert.equal(context.databaseScope.hidden,true);
+context.settingsScope=node('settings-scope');context.databasePanel.hidden=true;context.settingsPanel.hidden=false;vm.runInContext('syncSpaceChrome()',context);assert.equal(node('#space-name').textContent,'설정');assert.equal(context.window.activeWorkspace,'settings');assert.equal(preferences.get('pn-space'),'settings');assert.equal(context.settingsScope.hidden,false);assert.equal(context.databaseScope.hidden,true);assert.equal(context.homeSections.hidden,true);
 context.settingsPanel.hidden=true;context.refPage=true;vm.runInContext('syncSpaceChrome()',context);assert.equal(context.window.activeWorkspace,'references');assert.equal(node('#space-name').textContent,'자료');assert.equal(context.databaseScope.hidden,true);
 let openedDatabase=false;context.openDatabase=()=>{openedDatabase=true};node('#space-menu').onclick({target:{closest:()=>({dataset:{space:'database'}})}});assert.equal(openedDatabase,true);let openedSettings=false;context.openSettings=()=>{openedSettings=true};node('#space-menu').onclick({target:{closest:()=>({dataset:{space:'settings'}})}});assert.equal(openedSettings,true);context.refPage=false;
 const objects=new Map(),env={BUCKET:{async get(key){return objects.has(key)?{text:async()=>objects.get(key)}:null},async put(key,value){objects.set(key,value)}}};
