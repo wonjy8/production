@@ -92,3 +92,10 @@ body:not(.workspace-layout-ready):has(>.workspace-rail)>.topbar,body:not(.worksp
 .member-list-toolbar>.member-registration-filters{order:4;flex-basis:100%}
 .member-list-toolbar>.member-view-controls,.member-list-toolbar>#member-select-toggle{order:5}
 .member-list-toolbar>#member-bulk-toolbar{order:6}
+
+/* Home, global views and projects share one alignment grid. */
+#sidebar .sidebar-project{box-sizing:border-box;width:100%!important;margin-left:0!important;margin-right:0!important;padding:0 12px!important;gap:8px!important;justify-content:flex-start!important;color:var(--ui-text)!important}
+#sidebar .sidebar-project>svg,#sidebar .sidebar-project>.sidebar-project-icon{width:17px!important;min-width:17px!important;height:17px!important;flex:0 0 17px;display:inline-flex;align-items:center;justify-content:center}
+#sidebar .sidebar-home-link{margin:0 0 5px!important}
+#sidebar .sidebar-home-sections{margin:0 0 14px;gap:5px}
+#sidebar .sidebar-home-sections[hidden]{display:none!important}

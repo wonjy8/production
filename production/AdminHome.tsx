@@ -22,7 +22,7 @@ export function AdminHome({
   view = "dashboard",
   onNavigate = (section: string) => (window as any).openHomeSection?.(section),
 }: any) {
-  const [addingSchedule,setAddingSchedule]=useState(false);
+  const [addingSchedule,setAddingSchedule]=useState<string|boolean>(false);
   const [period, setPeriod] = useState("today"),
     [mine, setMine] = useState(false),
     [references, setReferences] = useState<any[]>([]),
@@ -421,6 +421,7 @@ export function AdminHome({
             scheduleView === "calendar" ? (
               <ScheduleCalendar
                 schedules={data.allSchedules}
+                onAdd={date=>setAddingSchedule(date)}
                 onOpen={(s) => open(s, "schedule")}
               />
             ) : (
@@ -494,7 +495,7 @@ export function AdminHome({
           )}
         </>
       )}
-      {addingSchedule&&<NewSchedule workspace={w} onChange={onChange} onClose={()=>setAddingSchedule(false)}/>}
+      {addingSchedule&&<NewSchedule date={typeof addingSchedule==='string'?addingSchedule:undefined} workspace={w} onChange={onChange} onClose={()=>setAddingSchedule(false)}/>}
       {detail && (
         <Modal title={detail.title || "일정"} onClose={() => setDetail(null)}>
           <p>

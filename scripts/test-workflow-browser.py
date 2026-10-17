@@ -47,6 +47,23 @@ with tempfile.TemporaryDirectory() as td:
      page.locator('#account-form [name=email]').fill('admin@example.com');page.locator('#account-form [name=password]').fill('StrongPassword2026!');page.locator('#account-form button').click()
     page.wait_for_function('!!window.productionBridge && typeof window.mountProduction==="function"');page.locator('.admin-home').wait_for()
     page.evaluate("""async()=>{const w=window.productionBridge.read();w.members=Array.from({length:4},(_,i)=>({id:'member'+i,name:'멤버'+i}));w.productions=[{id:'parent',name:'테스트 프로젝트',iconColor:'#8b5cf6',tasks:[],schedules:[{id:'own',title:'프로젝트 일정',date:'2026-10-17',endDate:'2026-10-17',location:'',note:''}],memberIds:w.members.map(m=>m.id),teams:[{id:'team',name:'제작팀',members:[],leaderId:''}]}];w.projects=['a','b'].map((id,i)=>({id,name:'그룹'+id,productionId:'parent',iconColor:i?'#3b82f6':'#f59e0b',status:'진행 중',tasks:[{id:'task'+id,title:'할일'+id,done:false,stage:'기획',owner:'미지정',due:'2026-10-17',description:'',priority:'보통'}],schedules:[{id:'schedule'+id,title:'일정'+id,date:'2026-10-17',endDate:'2026-10-17',startTime:'10:00',endTime:'11:00',location:'',note:''}],assets:[],feedback:[],customTabs:id==='a'?[{id:'media',name:'미디어',modules:[{id:'photo',kind:'image',title:'사진',files:[],frameHeight:450,blockLayout:true},{id:'files',kind:'file',title:'파일',files:[],blockLayout:true},{id:'link',kind:'link',title:'처음 링크',url:'https://example.com',blockLayout:true}]}]:[]}));window.productionBridge.write(w);await window.flushDocumentModules()}""")
+    # Global navigation alignment, readable holiday label and date-specific creation.
+    page.evaluate('window.openHomeSection("schedule")');page.locator('.schedule-month-grid').wait_for()
+    for selector in ['.admin-home-nav','.sidebar-home-section']:
+     buttons=page.locator('#sidebar '+selector)
+     for i in range(buttons.count()):
+      assert abs(buttons.nth(i).locator('svg').first.bounding_box()['x']-page.locator('#sidebar [data-production-id="parent"] svg').first.bounding_box()['x'])<1
+    holiday=page.locator('.schedule-month-day[data-date="2026-10-05"] .calendar-holiday');assert holiday.bounding_box()['width']>60
+    event=page.locator('.schedule-month-event').filter(has_text='프로젝트 일정').first
+    assert event.evaluate('e=>getComputedStyle(e).color') in ['rgb(34, 34, 34)','rgb(36, 37, 38)']
+    assert event.evaluate('e=>getComputedStyle(e).backgroundColor')!='rgb(241, 245, 249)'
+    page.get_by_role('button',name='2026-10-22 일정 추가',exact=True).click();new=page.get_by_role('dialog',name='일정 추가',exact=True)
+    assert new.locator('input[type=date]').first.input_value()=='2026-10-22'
+    new.get_by_label('일정 이름',exact=True).fill('날짜 지정 일정');new.get_by_label('일정 프로젝트',exact=True).select_option('project:b');new.get_by_role('button',name='저장',exact=True).click()
+    expect(page.locator('.schedule-month-day[data-date="2026-10-22"] .schedule-month-event')).to_contain_text('날짜 지정 일정')
+    page.evaluate("""async()=>{const w=window.productionBridge.read();w.projects.find(p=>p.id==='b').schedules=w.projects.find(p=>p.id==='b').schedules.filter(s=>s.title!=='날짜 지정 일정');window.productionBridge.write(w);await window.flushDocumentModules()}""")
+    page.locator('#sidebar [data-home-section=tasks]').click();page.locator('[data-home-view=tasks]').wait_for()
+    page.locator('#sidebar [data-home-section=schedule]').click();page.locator('.schedule-month-grid').wait_for()
     page.goto(base+'#/work-groups/a/schedule');page.reload();page.locator('.calendar-grid').wait_for();assert page.locator('.calendar-event').count()==3
     # Working plus; attachments, custom properties and reusable property definitions.
     page.get_by_role('button',name='일정 추가',exact=True).click();editor=page.get_by_role('dialog',name='추가',exact=True);editor.get_by_label('일정 이름',exact=True).fill('첨부 일정');editor.get_by_label('첨부 링크 이름').fill('행사 안내');editor.get_by_label('첨부 링크 주소').fill('https://example.com/event');editor.get_by_role('button',name='일정 링크 추가',exact=True).click();editor.get_by_label('일정 파일',exact=True).set_input_files({'name':'안내.txt','mimeType':'text/plain','buffer':'일정 첨부 본문'.encode()});editor.get_by_text('안내.txt',exact=True).wait_for()

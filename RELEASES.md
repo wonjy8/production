@@ -21,11 +21,9 @@ Current baseline: **version 0 (`0.0.0`)**, commit `b2fafdd`.
 
 Whenever NAS changes are needed, describe the exact files and paths, changes or replacement package, commands or Container Manager steps, rebuild/restart requirements, and verification in the chat. Do not merely say to update NAS.
 
-## 0.1.12
+## 0.1.13
 
-- Extend schedules with links, original file/photo attachments, per-event custom fields and reusable property definitions. Refresh overview previews, apply owner colors, and create assigned schedules from overview.
-- Add peer event groups and lossless one-off schedule promotion. Groups can view and filter their project's schedules/tasks. Save clean workgroup templates without file/source/assignee links.
-- Add Today between date arrows, a working add action, source/task settings, hover resize handle and offline Korean weekend/lunar/substitute holiday labels.
-- Add local PDF/DOCX/text document embeds, named HTTPS link embeds with sandbox/no-referrer, compatible atomic media transfers, and adaptive photo grids. Add roster Shift selection and team select-all; repair overflow, resource table actions, sidebar horizontal scrolling and back alignment.
-- Standardize module screens on React TypeScript and 25 shared module implementations under production/modules/*.ts, with shared types, compatibility exports, architecture/type checks and CI validation.
-- NAS 0.1.11 baseline: replace access.py, README.md and UPDATE.md, then rebuild. Preserve hidden templates and enforce source-tab/schedule permissions; project title projection is limited to the bound representative event schedule. No schema, secret, environment or server dependency changes.
+- Repair global calendar holiday labels and event text wrapping; use project-tinted backgrounds and black event text.
+- Add an accessible add button to every day, initializing schedule dates while retaining project/group selection and permission checks.
+- Add all schedules and all tasks immediately below Home in the Production sidebar. Align icon and text columns with project rows and preserve active states.
+- Frontend-only release: no NAS file replacements or container rebuild required for NAS 0.1.12.

@@ -136,7 +136,7 @@ with tempfile.TemporaryDirectory() as td:
    page.evaluate('scrollTo(0,0)')
    page.locator('[data-scroll-fixture]').evaluate('e=>e.remove()')
    nav.locator('[data-main-space=settings]').click();page.locator('#sidebar [data-settings-category=general]').click()
-   expect(page.locator('.app-version-row')).to_contain_text('v0.1.12')
+   expect(page.locator('.app-version-row')).to_contain_text('v'+(root/'VERSION').read_text().strip())
    page.screenshot(path='/tmp/production-sidebar-settings.png',full_page=True)
    nav.locator('[data-main-space=home]').click()
    count=page.evaluate("fetch('/production/api/database/resources').then(r=>r.json()).then(r=>r.length)")

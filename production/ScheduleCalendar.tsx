@@ -6,8 +6,10 @@ import { localDay } from "./admin-home-model.js";
 export function ScheduleCalendar({
   schedules,
   onOpen,
+  onAdd,
 }: {
   schedules: any[];
+  onAdd: (date: string) => void;
   onOpen: (schedule: any) => void;
 }) {
   const [month, setMonth] = useState(
@@ -70,9 +72,9 @@ export function ScheduleCalendar({
               data-date={key}
               key={key}
             >
-              <span aria-current={key === today ? "date" : undefined}>
+              <div className="schedule-month-date"><span aria-current={key === today ? "date" : undefined}>
                 {date.getDate()}{holidayName(key)&&<small className="calendar-holiday">{holidayName(key)}</small>}
-              </span>
+              </span><IconButton name="plus" label={`${key} 일정 추가`} onClick={()=>onAdd(key)}/></div>
               {rows.map((s) => (
                 <button
                   className={
