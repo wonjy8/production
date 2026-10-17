@@ -6,7 +6,7 @@ import {contentHeightResize} from '../production/module-resize.js';
 import {moveGridItem,gridTicks} from '../production/time-grid-model.js';
 import {moveTimetableEntry,normalizeConfig,writeTimetableEntry} from '../production/timetable-model.js';
 assert.deepEqual(hubCategories.map(c=>c.label),['전체','기본','일정','미디어','나누기']);
-assert.deepEqual(moduleTemplates.map(c=>c.name),['메모','캘린더','타임테이블','일정 목록','할일','사진','영상','파일','링크','섹션 제목','섹션 제목 2','섹션 제목 3','섹션 제목 4','구분선','2단 열','3단 열','4단 열']);
+assert.deepEqual(moduleTemplates.map(c=>c.name),['메모','회계','캘린더','타임테이블','일정 목록','할일','사진','영상','파일','링크','섹션 제목','섹션 제목 2','섹션 제목 3','섹션 제목 4','구분선','2단 열','3단 열','4단 열']);
 for(const kind of retiredModuleKinds){
  const original={id:'old',kind,title:'기존 자료',parentSlot:'left',items:[{text:'보존할 메모'}],groups:[{name:'분류',items:[{id:'original',kind:'file',name:'자료.pdf',mime:'application/pdf'},{kind:'text',text:'모임 내용'}]}]};
  const copy=structuredClone(original),migrated=migrateRetiredModules([original]);assert.deepEqual(original,copy);assert.equal(migrated[0].kind,'text');assert.match(migrated[0].text,/모임 내용/);for(const [key,value] of Object.entries(original))assert.deepEqual(JSON.parse(migrated[0].retiredSnapshot)[key],value);assert.equal(migrated[1].files[0].id,'original');assert.equal(migrated[1].parentSlot,'left');assert.equal(migrateRetiredModules(migrated),migrated);

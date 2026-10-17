@@ -5,6 +5,7 @@ export const hubCategories=[{id:'all',label:'전체'},{id:'basic',label:'기본'
 export const hubGroup=item=>item.category;
 export const moduleTemplates:ModuleTemplate[]=[
  {id:'note',category:'basic',name:'메모',description:'자유롭게 작성하는 텍스트',icon:'file',kind:'text'},
+ {id:'accounting',category:'basic',name:'회계',description:'행사 예산·계약·지급·증빙',icon:'table',kind:'accounting'},
  {id:'schedule',category:'schedule',name:'캘린더',description:'월간·주간·일간 일정',icon:'calendar',kind:'schedule'},
  {id:'timetable',category:'schedule',name:'타임테이블',description:'날짜와 시간에 맞춰 일정 배치',icon:'timetable',kind:'timetable'},
  {id:'schedule-list',category:'schedule',name:'일정 목록',description:'등록된 일정 모아 보기',icon:'schedule-list',kind:'schedule-list'},

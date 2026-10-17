@@ -21,9 +21,11 @@ Current baseline: **version 0 (`0.0.0`)**, commit `b2fafdd`.
 
 Whenever NAS changes are needed, describe the exact files and paths, changes or replacement package, commands or Container Manager steps, rebuild/restart requirements, and verification in the chat. Do not merely say to update NAS.
 
-## 0.1.13
+## 0.1.14
 
-- Repair global calendar holiday labels and event text wrapping; use project-tinted backgrounds and black event text.
-- Add an accessible add button to every day, initializing schedule dates while retaining project/group selection and permission checks.
-- Add all schedules and all tasks immediately below Home in the Production sidebar. Align icon and text columns with project rows and preserve active states.
-- Frontend-only release: no NAS file replacements or container rebuild required for NAS 0.1.12.
+- Preserve distinct member IDs and every imported row. Existing-member reuse is explicit; task pickers retain IDs for namesakes.
+- Keep date-free projects in planning, show explicit ongoing status, advise on duplicate creation, and unify 160-character names / 2000-character notes with NAS validation. Team pickers have a fieldset/legend.
+- Add optional structured event period, location, budget range, goals, lead, stakeholders and risks; search/filter and representative schedule synchronization preserve existing records.
+- Add team and multi-person schedule/task assignments, individual call/end times and roles, daily call-sheet CSV, and overlap / under-60-minute rest review before saving, including calendar movement.
+- Restore Accounting in the module hub and reuse existing modules. Compare planned, quoted, contracted and actual amounts; calculate VAT, split payments, overdue payments, actual balance and committed availability. Keep original evidence in the library. Invalid amount drafts never become zero.
+- NAS baseline 0.1.12 (including web-only 0.1.13): replace access.py, README.md and UPDATE.md, then rebuild. Validate edited metadata and monetary values, hide denied overview planning, and narrowly synchronize schedule dates while retaining hidden planning fields. No schema or dependency changes.

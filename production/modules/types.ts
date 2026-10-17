@@ -16,3 +16,6 @@ export interface ModuleTemplate {
  count?:number;headingLevel?:number;requiresUrl?:boolean;
 }
 export type ModuleTransfer=(from:string,to:string,fileId:string,before?:string)=>boolean;
+
+export type EventAssignment={memberId:string;role?:string;callTime?:string;endTime?:string;date?:string;endDate?:string};
+export type EventPlanning={startDate?:string;endDate?:string;location?:string;budgetMin?:number;budgetMax?:number;goal?:string;leadId?:string;stakeholders?:string;risk?:string};

@@ -1,10 +1,11 @@
-# 모듈 구현 규칙 — 0.1.12
+# 모듈 구현 규칙 — 0.1.14
 
 모든 모듈 화면은 React·TypeScript(`.tsx`), 모듈의 순수 동작은 이 폴더의 TypeScript(`.ts`)로 구현한다. `types.ts`가 모듈 상태·파일·수정 함수·컴포넌트·자료 이동의 공통 계약이다. UI 크기·색·여백·Squircle 규칙은 `ui/design-system`에서 가져온다.
 
 - 카탈로그·생성: `module-hub.ts`, 기존 파일과 공유 원본: `shared-modules.ts`.
 - 배치·열·리사이즈: `column-layout.ts`, `snap-layout.ts`, `module-resize.ts`, `fluid-layout.ts`.
 - 자료 이동·메뉴·사진: `media-transfer.ts`, `module-item-menu.ts`, `photo-model.ts`, `justified-gallery.ts`.
+- 행사·예산·인력: `event-operations.ts` (입력 검증, VAT·지급 집계, 행사 일정 동기화, 충돌 검사).
 - 일정: `timetable-model.ts`, `time-grid-model.ts`, `schedule-list-model.ts`.
 - 저장·이동·복원: `module-transfer.ts`, `module-upload.ts`, `module-undo.ts`, `imported-modules.ts`, `retired-modules.ts`.
 

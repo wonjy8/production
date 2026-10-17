@@ -1,5 +1,5 @@
 import {useState} from 'react';
-export function overviewStatus(status:string,due?:string){return !due&&status!=='완료'?'상시':status}
+export function overviewStatus(status:string,due?:string){return status||'기획 중'}
 export function DueField({value,onChange,name,label='마감일',ariaLabel=label}:{value?:string;onChange?:(value:string)=>void;name?:string;label?:string;ariaLabel?:string}){
  const [local,setLocal]=useState(''),[none,setNone]=useState(!value),date=value??local;
  function update(next:string){setLocal(next);onChange?.(next)}

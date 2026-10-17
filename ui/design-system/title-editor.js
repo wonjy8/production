@@ -14,6 +14,7 @@ export function createPageTitleEditor({button,input,label,getTarget,onRefresh,on
   const target=getTarget(),name=input.value.trim();
   if(!target?.canEdit||target.key!==editing.key){onError('편집 권한이나 현재 페이지를 확인하세요.');return false}
   if(!name){onError('제목을 입력하세요.');input.focus();return false}
+  if(name.length>(target.maxLength||200)){onError('제목은 '+(target.maxLength||200)+'자까지 입력하세요.');input.focus();return false}
   if(name===editing.title){editing=null;onRefresh();return true}
   const original=editing;
   pending=Promise.resolve().then(async()=>{try{if(await target.rename(name)===false)throw Error('이름을 저장하지 못했습니다.');editing=null;return true}catch(error){editing=original;onError(error.message||'이름을 저장하지 못했습니다.');return false}finally{pending=null;input.disabled=false;onRefresh();if(editing)input.focus()}});

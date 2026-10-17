@@ -7,7 +7,7 @@ import type { Member } from "./data";
 export function AssigneePicker({
   members,
   value,
-  defaultValue = "미지정",
+  defaultValue = "미지정",defaultId="",
   name,
   onChange,
   onAdd,
@@ -15,12 +15,13 @@ export function AssigneePicker({
 }: {
   members: Member[];
   value?: string;
-  defaultValue?: string;
+  defaultValue?: string;defaultId?:string;
   name?: string;
-  onChange?: (name: string) => void;
+  onChange?: (name: string,id?:string) => void;
   onAdd: (name: string) => void;
   allowAdd?: boolean;
 }) {
+  const [selectedId,setSelectedId]=useState(defaultId);
   const [selected, setSelected] = useState(defaultValue),
     [open, setOpen] = useState(false),
     [query, setQuery] = useState(""),
@@ -56,8 +57,8 @@ export function AssigneePicker({
   }, [open]);
   function choose(option: (typeof options)[number]) {
     if (option.add) onAdd(option.name);
-    setSelected(option.name);
-    onChange?.(option.name);
+    setSelected(option.name);setSelectedId(option.add||option.key==='unassigned'?'':option.key);
+    onChange?.(option.name,option.add||option.key==='unassigned'?'':option.key);
     setOpen(false);
     trigger.current?.focus();
   }
@@ -68,7 +69,7 @@ export function AssigneePicker({
       onBlur={()=>requestAnimationFrame(()=>{const focused=(root.current?.getRootNode() as Document|ShadowRoot)?.activeElement;if(!root.current?.contains(focused))setOpen(false)})}
 
     >
-      {name && <input type="hidden" name={name} value={current} />}
+      {name && <><input type="hidden" name={name} value={current}/><input type="hidden" name={name+'Id'} value={selectedId}/></>}
       <button
         type="button"
         ref={trigger}
@@ -82,7 +83,7 @@ export function AssigneePicker({
           setActive(0);
         }}
       >
-        {assigneeLabel(members,current)}
+        {assigneeLabel(members,current,selectedId)}
         <ChevronDown size={12} style={{pointerEvents:"none",transform:open?"rotate(180deg)":undefined}} />
       </button>
       {open && (
@@ -142,7 +143,7 @@ export function AssigneePicker({
                 key={o.key}
                 id={`${id}-${i}`}
                 role="option" draggable={sort==='custom'&&!o.add&&o.key!=='unassigned'} onDragStart={e=>{e.dataTransfer.setData('application/x-assignee',o.key);e.dataTransfer.effectAllowed='move'}} onDragOver={e=>{if(sort==='custom'&&e.dataTransfer.types.includes('application/x-assignee'))e.preventDefault()}} onDrop={e=>{e.preventDefault();const key=e.dataTransfer.getData('application/x-assignee');if(!members.some(m=>m.id===key)||!members.some(m=>m.id===o.key))return;const order=reorderMembers(sortMembers(members,'custom',customOrder).map(m=>m.id),key,o.key,e.clientY>e.currentTarget.getBoundingClientRect().top+e.currentTarget.getBoundingClientRect().height/2);setCustomOrder(order);localStorage.setItem('pn-assignee-order',JSON.stringify(order))}}
-                aria-selected={current === o.name && !o.add}
+                aria-selected={(selectedId?selectedId===o.key:current===o.name)&&!o.add}
                 className={active === i ? "highlighted" : ""}
                 onMouseDown={(e) => e.preventDefault()}
                 onMouseEnter={() => setActive(i)}
@@ -158,8 +159,8 @@ export function AssigneePicker({
                     <span className="avatar">
                       {o.name === "미지정" ? "—" : o.name.slice(-2)}
                     </span>
-                    <span>{assigneeLabel(members,o.name)}</span>
-                    {current === o.name && <Check size={13} />}
+                    <span>{assigneeLabel(members,o.name,o.key)+(members.filter(m=>m.name===o.name).length>1?' · '+[members.find(m=>m.id===o.key)?.contact,o.key.slice(0,6)].filter(Boolean).join(' · '):'')}</span>
+                    {(selectedId?selectedId===o.key:current===o.name) && <Check size={13} />}
                   </>
                 )}
               </button>

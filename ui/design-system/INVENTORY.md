@@ -55,4 +55,6 @@ Squircle는 버튼을 포함한 모든 둥근 UI 모서리에 적용하며 각 �
 
 - `workflow.css`: 일정 첨부/속성/보기 설정·오늘/리사이즈·공휴일·자료 표·버튼 줄바꿈·사이드바 수평 차단·뒤로가기 정렬.
 - `ScheduleDetails.tsx`, `CalendarSettings.tsx`, `CalendarResize.tsx`, `DocumentEmbed.tsx`: 공유 편집·미리보기 UI.
-- `production/modules/*.ts`, `types.ts`: 모듈 공통 동작 25개와 상태/파일/수정/컴포넌트 계약. JavaScript 경로는 호환 재내보내기. `npm run typecheck:modules`로 검사한다.
+- `production/modules/*.ts`, `types.ts`: 모듈 공통 동작 26개와 상태/파일/수정/컴포넌트 계약. JavaScript 경로는 호환 재내보내기. `npm run typecheck:modules`로 검사한다.
+
+- 행사 상세 정보 `PlanningFields.tsx`, 공통 인력/콜시트 `ScheduleStaffing.tsx`, 회계 `AccountingModule.tsx`는 `workflow.css`의 공통 입력·간격·줄바꿈을 사용한다.

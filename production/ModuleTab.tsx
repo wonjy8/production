@@ -311,6 +311,7 @@ export function ModuleTab({
     const start = dates[0] || todayLocal(),
       end = dates.at(-1) || shiftDate(start, 2);
     const module = createHubModule(templateId, {
+      ...(template.kind==='accounting'?{budget:[...w.productions,...w.projects].find(p=>p.id===(parentScope?productionId:defaultIds[0]))?.planning?.budgetMax}:{}),
       ...(url ? { url, ...(templateId === "bookmark" ? {kind: linkKind, bookmarkPreview:false} : {}) } : {}),
       projectId: parentScope ? "" : defaultIds[0] || "",
       ...(template.kind === "timetable"
@@ -337,6 +338,7 @@ export function ModuleTab({
       return;
     }
     const module = createHubModule(templateId, {
+      ...(template.kind==='accounting'?{budget:[...w.productions,...w.projects].find(p=>p.id===(parentScope?productionId:defaultIds[0]))?.planning?.budgetMax}:{}),
       projectId: parentScope ? "" : defaultIds[0] || "",
       ...(template.kind === "timetable"
         ? {
@@ -708,7 +710,8 @@ export function ModuleTab({
                   />
                 ) : m.kind === "accounting" ? (
                   <AccountingModule
-                    module={m}
+                    scopeOwner={(window as any).referenceEditorOpen?undefined:parentScope?productionId:defaultIds?.[0]}
+                    module={{...m,_tabId:tab.id}}
                     onChange={(fn) => updateModule(m.id, fn)}
                   />
                 ) : m.kind === "tracker" ? (

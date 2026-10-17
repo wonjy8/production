@@ -26,6 +26,7 @@ export function TaskComposer({
   const [title, setTitle] = useState(""),
     [expanded, setExpanded] = useState(false),
     [owner, setOwner] = useState("미지정");
+  const [ownerId,setOwnerId]=useState('');
   const [repeatKey,setRepeatKey]=useState(0),[error,setError]=useState('');
   const input = useRef<HTMLInputElement>(null);
   return (
@@ -44,7 +45,7 @@ export function TaskComposer({
           repeat,
           ...newTask(name),
           owner,
-          ownerId: members.find((m) => m.name === owner)?.id || "",
+          ownerId:ownerId||(members.filter(m=>m.name===owner).length===1?members.find(m=>m.name===owner)?.id:"")||"",
           due: String(d.get("due") || ""),
           stage: (d.get("stage") || stage) as Task["stage"],
           priority: (d.get("priority") || "보통") as Task["priority"],
@@ -52,7 +53,7 @@ export function TaskComposer({
           flagged: d.has("flagged"),
         });
         setTitle("");
-        setOwner("미지정");
+        setOwner("미지정");setOwnerId('');
         form.reset();setRepeatKey(n=>n+1);
         input.current?.focus();
       }}
@@ -104,11 +105,11 @@ export function TaskComposer({
               <input type="checkbox" name="flagged" />
               깃발
             </label>
-            <AssigneePicker
+            <AssigneePicker key={repeatKey}
               allowAdd={allowMemberAdd}
               members={members}
               value={owner}
-              onChange={setOwner}
+              onChange={(name,id)=>{setOwner(name);setOwnerId(id||'')}}
               onAdd={onAddMember}
             />
             <label className="task-composer-option">

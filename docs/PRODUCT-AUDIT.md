@@ -1,4 +1,4 @@
-# 합의 기획 구현 점검 — 0.1.13
+# 합의 기획 구현 점검 — 0.1.14
 
 판정 기준은 최신 합의인 PRODUCT-DECISIONS.md이다. 기능 코드를 대조했으며, 예전 선택 번호만으로 새 정책을 추정하지 않았다. **전체 완료는 아니다.** 1~3단계는 구현되어 있고 제작 템플릿과 새 권한 승인 흐름은 남아 있다.
 
@@ -25,4 +25,22 @@
 
 이 문서는 최신 합의에 맞춰 기존 점검을 정리한 것이다. 이번 문서 정리가 전체 기획의 추가 구현이나 전체 기능의 재검증을 의미하지 않는다. 새 권한 승인 체계·사용자 제작 묶음 템플릿은 미완료 상태를 유지한다. 최신 실행 검사는 [VALIDATION.md](VALIDATION.md)를 참고한다.
 
-0.1.12 추가 구현: 일정 첨부·개별 속성/정의 템플릿, 행사 그룹/단발 일정 전환, 프로젝트 전체 일정·할일 선택 보기, 업무그룹 템플릿, 공휴일/오늘/설정/하단 높이 조절, 로컬 문서 임베드·링크 이름/임베드·호환 자료 이동, 사진 높이 맞춤, 멤버 Shift/팀 전체 선택과 공통 overflow 수정. 모듈 공통 동작 25개는 TypeScript로 이관하고 JS 호환 경로·공통 타입을 유지한다.
+기존 구현: 일정 첨부·개별 속성/정의 템플릿, 행사 그룹/단발 일정 전환, 프로젝트 전체 일정·할일 선택 보기, 업무그룹 템플릿, 공휴일/오늘/설정/하단 높이 조절, 로컬 문서 임베드·링크 이름/임베드·호환 자료 이동, 사진 높이 맞춤, 멤버 Shift/팀 전체 선택과 공통 overflow 수정. 모듈 공통 동작 26개는 TypeScript로 이관하고 JS 호환 경로·공통 타입을 유지한다.
+
+## PFT 행사 운영 점검
+
+| 항목 | 반영 | 근거 |
+| --- | --- | --- |
+| PFT-001 | 행사 정보 구조화·검색/필터·대표 일정 동기화 | PlanningFields, event-operations, entry, bridge |
+| PFT-002 | 날짜 미정은 기획 중, 상시는 명시 선택, 개요 상태 표시 | entry, OverviewFields, 두 Overview |
+| PFT-003 | 생성 시 중복 이름 안내, 날짜/상위 경로 표시 | DuplicateNameNotice, planningPeriod |
+| PFT-004 | 팀 선택 접근성 그룹 | ProjectCreateFields fieldset/legend |
+| PFT-005 | 이름·메모 제한과 저장 검증 | validateProject / validate_event_changes |
+| PFT-006 | 계획·견적·계약·실제·VAT·공급사·지급·증빙 | AccountingModule / budgetSummary |
+| PFT-007 | 회계 추가와 기존 모듈 불러오기 | module-hub / sharedChoices |
+| PFT-008 | 입력 문자열 분리, 잘못된 금액 보존/서버 거절 | MoneyField / money / NAS validation |
+| PFT-009 | 고유 ID 기반 복수 인력·팀·콜타임·콜시트 | ScheduleStaffing / CallSheet |
+| PFT-010 | 자동 이름 병합 제거, 가져오기 행 보존·명시적 기존 인원 선택 | people-model / member-import / database |
+| PFT-011 | 겹침·휴식 경고와 저장 전 확인 | staffingWarnings / changedStaffingWarnings |
+
+충돌 검사는 사용자가 열람 가능한 데이터에 한정하며, 날짜·시간 미정 할일은 검사에서 제외한다. 반복 항목의 편집 기준 날짜를 검사하며 무기한 미래 충돌을 보장하지 않는다. 외부 회계 연동·세금 신고·교대 자동 편성은 제공하지 않는다. 이미 병합·누락된 과거 인원을 자동 복원하지 않는다. 기존 상시 상태를 임의 변경하지 않는다.

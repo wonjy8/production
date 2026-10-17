@@ -1,3 +1,5 @@
+import {validateAssignments} from './event-operations.js';
+import {ScheduleStaffing,CallSheet} from './ScheduleStaffing';
 import {Icon} from './Icon';
 import {ScheduleDetails} from './ScheduleDetails';
 import {CalendarSettings} from './CalendarSettings';
@@ -974,7 +976,7 @@ export function ProjectWorkspace({
               <span className="view-context-label">일정</span>
             </div>
           </div>
-          <div className="calendar-heading"><div className="calendar-view-switch" role="group" aria-label="캘린더 보기">{[['day','일간'],['week','주간'],['month','월간']].map(([view,label])=><button type="button" className="button keep-label" key={view} aria-pressed={calendarView===view} onClick={()=>{setCalendarView(view);if(view!=='month'&&month.getDate()===1)setMonth(new Date(month.getFullYear(),month.getMonth(),new Date().getDate()))}}>{label}</button>)}</div>
+          <div className="calendar-heading"><CallSheet ownerId={project.id}/><div className="calendar-view-switch" role="group" aria-label="캘린더 보기">{[['day','일간'],['week','주간'],['month','월간']].map(([view,label])=><button type="button" className="button keep-label" key={view} aria-pressed={calendarView===view} onClick={()=>{setCalendarView(view);if(view!=='month'&&month.getDate()===1)setMonth(new Date(month.getFullYear(),month.getMonth(),new Date().getDate()))}}>{label}</button>)}</div>
             <h3>
               {month.getFullYear()}년 {month.getMonth() + 1}월
             </h3>
@@ -1384,7 +1386,7 @@ export function ProjectWorkspace({
         >
           {draftPicker}
           {taskEditor ? (
-            <form
+            <form onChange={e=>{const input=e.target as HTMLInputElement;if(['due','startTime','endTime'].includes(input.name))setTaskEditor(old=>old?{...old,[input.name]:input.value}:old)}}
               onSubmit={(e) => {
                 e.preventDefault();
                 const d = new FormData(e.currentTarget);
@@ -1409,8 +1411,7 @@ export function ProjectWorkspace({
                   title,
                   owner: field(d, "owner") || "미지정",
                   ownerId:
-                    editorMembers.find((m) => m.name === field(d, "owner"))
-                      ?.id || "",
+                    field(d,"ownerId") || (editorMembers.filter(m=>m.name===field(d,"owner")).length===1?editorMembers.find(m=>m.name===field(d,"owner"))?.id:"") || "",
                   due: field(d, "due"),
                   stage: field(d, "stage") as Task["stage"],
                   priority: field(d, "priority") as Task["priority"],
@@ -1466,6 +1467,7 @@ export function ProjectWorkspace({
                   <AssigneePicker
                     members={editorMembers}
                     allowAdd={allowMemberAdd}
+                    defaultId={taskEditor.ownerId||''}
                     defaultValue={
                       editorMembers.find((m) => m.id === taskEditor.ownerId)
                         ?.name || taskEditor.owner
@@ -1505,7 +1507,7 @@ export function ProjectWorkspace({
                   rows={4}
                 />
               </label>
-              <RepeatFields value={taskEditor.repeat}/>{error&&<p role="alert" className="form-error">{error}</p>}
+              <ScheduleStaffing value={{...taskEditor,date:taskEditor.due}} scopeOwner={project.id} onChange={setTaskEditor}/><RepeatFields value={taskEditor.repeat}/>{error&&<p role="alert" className="form-error">{error}</p>}
               <div className="dialog-actions">
                 {project.tasks.some((t) => t.id === baseId(taskEditor)) && (
                   <button
@@ -1621,7 +1623,7 @@ export function ScheduleForm({
   onSave: (s: Schedule) => void;
 }) {
   const [error, setError] = useState("");
-  const [details,setDetails]=useState<any>({attachments:value.attachments||[],properties:value.properties||[]}),[uploading,setUploading]=useState(false),[chosenOwner,setChosenOwner]=useState(ownerKey||'');
+  const [details,setDetails]=useState<any>({attachments:value.attachments||[],properties:value.properties||[],assignments:value.assignments||[],teamIds:value.teamIds||[],excludedMemberIds:value.excludedMemberIds||[]}),[uploading,setUploading]=useState(false),[chosenOwner,setChosenOwner]=useState(ownerKey||'');
   const [dates, setDates] = useState({
     ...value,
     endDate: value.endDate || value.date,
@@ -1663,7 +1665,7 @@ export function ScheduleForm({
           location: field(d, "location"),
           note: field(d, "note"),
         };
-        try{if((e.nativeEvent as SubmitEvent)?.submitter?.getAttribute('value')==='upgrade')onUpgrade?.(saved);else onSave(saved)}catch(error:any){setError(error.message)}
+        try{validateAssignments(saved);if((e.nativeEvent as SubmitEvent)?.submitter?.getAttribute('value')==='upgrade')onUpgrade?.(saved);else onSave(saved)}catch(error:any){setError(error.message)}
       }}
     >
       <label>
@@ -1705,7 +1707,7 @@ export function ScheduleForm({
           rows={3}
         />
       </label>
-      <ScheduleDetails value={details} onChange={setDetails} templates={owners?.find(o=>o.id===chosenOwner)?.templates||templates} onTemplates={onTemplates?(v:any)=>onTemplates(v,chosenOwner):undefined} scopeOwner={chosenOwner.slice(chosenOwner.indexOf(':')+1)} onBusy={setUploading}/>
+      <ScheduleDetails value={{...dates,...details}} onChange={setDetails} templates={owners?.find(o=>o.id===chosenOwner)?.templates||templates} onTemplates={onTemplates?(v:any)=>onTemplates(v,chosenOwner):undefined} scopeOwner={chosenOwner.slice(chosenOwner.indexOf(':')+1)} onBusy={setUploading}/>
       {onUpgrade&&<button type="submit" name="action" value="upgrade" className="button keep-label" disabled={uploading}>행사 그룹으로 전환</button>}
       <div className="dialog-actions">
         {onDelete && (
